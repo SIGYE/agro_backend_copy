@@ -1,0 +1,474 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+model DemoRequest {
+  id           String            @id @default(uuid())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  organisation String
+  category     String
+  website      String
+  location     Location          @relation(fields: [locationId], references: [id] , onDelete: Cascade)
+  locationId   Int
+  fullnames    String
+  email        String
+  status       DemoRequestStatus @default(PENDING)
+  zoomlink     String?
+  comment      String?
+
+  @@map("demo_request")
+}
+
+model User {
+  id                      String                    @id @default(uuid())
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  username                String                    @unique
+  telephone               String?                   @unique
+  firstName               String
+  lastName                String
+  nationalId              String?                   @unique
+  email                   String                    @unique
+  password                String
+  code                    String?
+  isDefaultPassword       Boolean                   @default(false)
+  roles                   Role[]                    @relation("user_roles")
+  status                 Status                    @default(ACTIVE)
+  questionaires           Questionnaire[]
+  resetCodeExpires        DateTime?
+  responses               Response[]
+  organisationAdmins      OrganisationAdmins[]
+  organisationSurveyers   OrganisationSurveyers[]
+  approvals               Approval[]
+  internalSupport         InternalSupport[]
+  internalSupportMessages InternalSupportMessages[]
+  commentThread           CommentThread[] 
+
+  @@map("user")
+}
+
+model Role {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique
+  users     User[]   @relation("user_roles")
+
+  @@map("role")
+}
+
+model Organisation {
+  id                      String                   @id @default(uuid())
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  name                    String
+  type                    String
+  allowBulkMessages       Boolean                  @default(true)
+  website                 String
+  messagesLeft            Int?                     @default(200)
+  senderId                String
+  contact                 String
+  location                Location                 @relation(fields: [locationId], references: [id]  , onDelete: Cascade)
+  locationId              Int
+  teams                   Team[]
+  organisationAdmins      OrganisationAdmins[]
+  messages                Messages[]
+  surveys                 Survey[]
+  organisationSurveyers   OrganisationSurveyers[]
+  purchasedMessageHistory MessagePurchaseHistory[]
+
+  @@map("organisation")
+}
+
+model locationLevel {
+  id           Int        @id @default(autoincrement())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  order_number Int
+  name         String     @unique
+  code         String     @unique
+  locations    Location[]
+
+  @@map("location_level")
+}
+
+model Location {
+  id                Int            @id @default(autoincrement())
+  createdAt         DateTime?      @default(now())
+  updatedAt         DateTime?      @updatedAt
+  locationId        Int?
+  parentLocation    Location?      @relation("LocationToLocation", fields: [locationId], references: [id]  , onDelete: Cascade)
+  childrenLocations Location[]     @relation("LocationToLocation")
+  name              String
+  locationLevel     locationLevel  @relation(fields: [locationLevelId], references: [id]  , onDelete: Cascade)
+  locationLevelId   Int
+  demoRequests      DemoRequest[]
+  surveys           Survey[]       @relation("location_survey")
+  organisation      Organisation[]
+
+  @@map("location")
+}
+
+model Survey {
+  id             String          @id @default(uuid())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  name           String
+  description    String?
+  purpose        String?
+  startDate      DateTime?
+  EndDate        DateTime?
+  status         SurveyStatus    @default(NOT_STARTED)
+  organisation   Organisation    @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
+  organisationId String
+  location       Location[]      @relation("location_survey")
+  questionnaire  Questionnaire[]
+  comments       Comment[]
+
+  @@map("survey")
+}
+
+model Messages {
+  id              String            @id @default(uuid())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  senderId        String
+  content         String
+  approvals       Approval[]
+  organisation    Organisation      @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
+  organisationId  String
+  groupedMessages GroupedMessages[]
+
+  @@map("messages")
+}
+
+model MessagePurchaseHistory {
+  id               String         @id @default(uuid())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt()
+  numberOfMessages Int
+  organisation     Organisation   @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
+  organisationId   String
+  requestId        String?        @unique
+  amountSpent      Int
+  purchaseStatus   PurchaseStatus @default(PENDING)
+
+  @@map("message_purchase_history")
+}
+
+model GroupedMessages {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  message   Messages @relation(fields: [messageId], references: [id]  , onDelete: Cascade)
+  messageId String
+  receiver  String
+
+  @@map("grouped_messages")
+}
+
+model Approval {
+  id             String         @id @default(uuid())
+  createdAt      DateTime       @default(now())
+  updateAt       DateTime       @updatedAt
+  message        Messages       @relation(fields: [messageId], references: [id]  , onDelete: Cascade)
+  messageId      String
+  approver       User           @relation(fields: [approverId], references: [id]  , onDelete: Cascade)
+  approverId     String
+  approvalStatus ApprovalStatus @default(PENDING)
+
+  @@map("approval")
+}
+
+model OrganisationAdmins {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id]  , onDelete: Cascade)
+  userId         String
+  organisation   Organisation @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
+  organisationId String
+
+  @@map("organisation_admin")
+}
+
+model OrganisationSurveyers {
+  id             String          @id @default(uuid())
+  user           User            @relation(fields: [userId], references: [id]  , onDelete: Cascade)
+  userId         String
+  organisation   Organisation    @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
+  organisationId String
+  team           Team[]          @relation("organisation_surveyer_team")
+  questionnire   Questionnaire[] @relation("organisation_surveyer_questionnaire")
+
+  @@map("organisation_surveyers")
+}
+
+model Team {
+  id                    String                  @id @default(uuid())
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  name                  String
+  organisation          Organisation            @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
+  organisationId        String
+  questionnaire         Questionnaire[]
+  organisationSurveyors OrganisationSurveyers[] @relation("organisation_surveyer_team")
+
+  @@map("team")
+}
+
+model Questionnaire {
+  id                    String                  @id @default(uuid())
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  title                 String
+  type                  QuestionnaireType
+  description           String?
+  introduction          String?
+  team                  Team?                   @relation(fields: [teamId], references: [id]  , onDelete: Cascade)
+  teamId                String?
+  organisationSurveyers OrganisationSurveyers[] @relation("organisation_surveyer_questionnaire")
+  survey                Survey                  @relation(fields: [surveyId], references: [id]  , onDelete: Cascade)
+  surveyId              String
+  createdBy             User                    @relation(fields: [createdById], references: [id]  , onDelete: Cascade)
+  createdById           String
+  questions             Question[]
+  responses             Response[]
+  skip                  Skip[]
+  comments              Comment[]
+
+  @@map("questionaire")
+}
+
+model Question {
+  id                String              @id @default(uuid())
+  questionText      String
+  questionType      QuestionType // e.g., 'Multiple Choice', 'Text'
+  questionnaire     Questionnaire       @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
+  questionnaireId   String
+  questionGroup     QuestionGroup
+  questionNumber    Int                 @default(1)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  options           Option[]
+  answer            Answer[]
+  questionCondition QuestionCondition[]
+  skippingTo        Skip[]              @relation(name: "skippingTo")
+  skippingFrom      Skip[]              @relation(name: "skippingFrom")
+
+  @@map("question")
+}
+
+model Skip {
+  id                     String        @id @default(uuid())
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  questionnaire          Questionnaire @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
+  questionnaireId        String
+  skippingFrom           Question      @relation(name: "skippingFrom", fields: [skippingFromQuestionId], references: [id]  , onDelete: Cascade)
+  skippingFromQuestionId String
+  skippingTo             Question      @relation(name: "skippingTo", fields: [skippingToQuestionId], references: [id]  , onDelete: Cascade)
+  skippingToQuestionId   String
+
+  @@map("skip")
+}
+
+model Option {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  optionText String
+  question   Question @relation(fields: [questionId], references: [id]  , onDelete: Cascade)
+  questionId String
+  answer     Answer[] @relation("answer_option")
+
+  @@map("option")
+}
+
+model Comment {
+  id              String          @id @default(uuid())
+  fullNames       String          @default("Anonymous")
+  role            String
+  telephone       String
+  comment         String
+  fileName        String?
+  status          CommentStatus   @default(PENDING)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  survey          Survey          @relation(fields: [surveyId], references: [id]  , onDelete: Cascade)
+  surveyId        String
+  questionnaire   Questionnaire   @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
+  questionnaireId String
+  commentThread   CommentThread[]
+
+  @@map("comment")
+}
+
+model CommentThread {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+  comment   Comment  @relation(fields: [commentId], references: [id]  , onDelete: Cascade)
+  commentId String
+  message   String
+  creator   User     @relation(fields: [creatorId], references: [id]  , onDelete: Cascade )
+  creatorId String
+
+  @@map("comment_thread")
+}
+
+model Response {
+  id              String        @id @default(uuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  comment         String?
+  user            User?         @relation(fields: [userId], references: [id]  , onDelete: Cascade)
+  userId          String?
+  questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
+  questionnaireId String
+  submittedAt     DateTime      @default(now())
+  answers         Answer[]
+
+  @@map("response")
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  response   Response @relation(fields: [responseId], references: [id]  , onDelete: Cascade)
+  responseId String
+  question   Question @relation(fields: [questionId], references: [id]  , onDelete: Cascade)
+  questionId String
+  answerText String? // For text responses
+  option     Option[] @relation("answer_option")
+
+  @@map("answer")
+}
+
+model Condition {
+  id                String              @id @default(uuid())
+  conditionName     String              @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  questionCondition QuestionCondition[]
+
+  @@map("condition")
+}
+
+model QuestionCondition {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  question    Question  @relation(fields: [questionId], references: [id]  , onDelete: Cascade)
+  questionId  String
+  condition   Condition @relation(fields: [conditionId], references: [id]  , onDelete: Cascade)
+  conditionId String
+
+  @@map("question_condition")
+}
+
+model InternalSupport {
+  id                      String                    @id @default(uuid())
+  createdAt               DateTime                  @default(now())
+  updateAt                DateTime                  @updatedAt
+  user                    User                      @relation(fields: [userId], references: [id]  , onDelete: Cascade)
+  userId                  String
+  title                   String                    @default("The New Title ")
+  status                  InternalSupportStatus     @default(IN_PROGRESS)
+  internalSupportMessages InternalSupportMessages[]
+
+  @@map("internal_suppport")
+}
+
+model InternalSupportMessages {
+  id                String          @id @default(uuid())
+  createdAt         DateTime        @default(now())
+  updateAt          DateTime        @updatedAt
+  internalSupport   InternalSupport @relation(fields: [internalSupportId], references: [id]  , onDelete: Cascade)
+  internalSupportId String
+  user              User            @relation(fields: [userId], references: [id]  , onDelete: Cascade)
+  userId            String
+  message           String
+  photoLink         String?
+
+  @@map("internal_support_message")
+}
+
+model ExternalSupport {
+  id               String   @id @default(uuid())
+  createdAt        DateTime @default(now())
+  updateAt         DateTime @updatedAt
+  organisationName String
+  fullName         String
+  email            String
+  role             String
+  query            String
+
+  @@map("external_support")
+}
+
+enum PurchaseStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum InternalSupportStatus {
+  PAUSED
+  IN_PROGRESS
+  ANSWERED
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  MULTIPLE_CHOICE_WITH_TEXT
+  RADIO
+  OPEN
+}
+
+enum CommentStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum ApprovalStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum SurveyStatus {
+  COMPLETED
+  NOT_STARTED
+  PAUSED
+  STARTED
+}
+
+enum QuestionnaireType {
+  OPEN
+  SELF_CONDUCTED
+}
+
+enum QuestionGroup {
+  INTRODUCTORY
+  SURVEY
+}
+
+enum DemoRequestStatus {
+  APPROVED
+  REJECTED
+  PENDING
+}

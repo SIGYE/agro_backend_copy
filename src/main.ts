@@ -1,0 +1,90 @@
+import { NestFactory } from '@nestjs/core'
+import { AppModule } from './app.module'
+import { BadRequestException, ValidationPipe } from '@nestjs/common'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import { ValidationError } from 'class-validator'
+import { AppExceptionFilter } from './filter/exception.filter'
+import { WinstonModule } from 'nest-winston'
+import { winstonLoggerConfig } from './logs/winston-logger.config'
+
+
+async function bootstrap() {
+
+   // Handle uncaught exceptions
+   process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    // Handle or log the error as necessary
+    // Optionally, you can add custom logic here, like shutting down the app gracefully
+  });
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Handle or log the rejection as necessary
+    // Optionally, you can add custom logic here, like shutting down the app gracefully
+  });
+
+
+  const app = await NestFactory.create(AppModule , {
+    logger : WinstonModule.createLogger(winstonLoggerConfig)
+  })
+
+  // enable cors 
+  app.enableCors()
+
+  app.useGlobalFilters(new AppExceptionFilter());
+  
+  app.useGlobalPipes(new ValidationPipe(
+ {
+  transform : true,
+  exceptionFactory : (errors : ValidationError[]) => {
+    // Extracting and formatting error messages
+    const messages = errors.map((error) => {
+      // Check if there are constraints in the error
+      if (error.constraints) {
+        // Join all the constraints messages into a single string
+        return Object.values(error.constraints).join(', ');
+      }
+      // If no constraints, return a generic message
+      return `${error.property} has an invalid value`;
+    });
+
+    return new BadRequestException(messages)
+  }
+ }
+  ))
+
+
+  const config = new DocumentBuilder()
+    .setTitle('SURVEY HUB BACKEND APIS')
+    .setDescription('The survey hub backend app apis')
+    .setVersion('1.0')
+    .addTag('Users')
+    .addTag('Organisation-Surveyor')
+    .addTag('Organisation')
+    .addTag('Team')
+    .addTag('Survey')
+    .addTag('Demo Requests')
+    .addTag('Comments')
+    .addTag('Uploads')
+    .addTag('Questionnaire')
+    .addTag('Response')
+    .addTag('External Support')
+    .addTag('Settings')
+    .addTag('Internal Support')
+    .addTag('Messages')
+    .addTag('Analytics')
+    .addTag('Location')
+    .addTag('Auth')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-doc', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'none',
+    },
+  });
+  await app.listen(process.env.PORT || 8000)
+}
+bootstrap()
