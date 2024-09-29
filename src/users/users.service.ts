@@ -9,17 +9,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 type UserWithRoles = Prisma.UserGetPayload<{
   include: { 
-    roles: true,
-    organisationAdmins: {
-      include: {
-        organisation: true
-      }
-    },
-    organisationSurveyers : {
-      include : {
-        organisation : true
-      }
-    }
+    role: true
   }
 }>;
 
@@ -47,6 +37,26 @@ export class UsersService {
     throw new BadRequestException("The user with the national Id , telephone and email already exists")
   }
 
+  let role = await this.databaseService.role.findUnique({
+    where: {
+      id: createUserDto.roleId
+    }
+  })
+
+  if(!role){
+    throw new NotFoundException("The role does not exist")
+  }
+
+  let location = await this.databaseService.location.findUnique({
+    where: {
+      id: createUserDto.locationId
+    }
+  })
+
+  if(!location){
+    throw new NotFoundException("The location does not exist")
+  }
+
     return await this.databaseService.user.create({
       data: {
         firstName: createUserDto.firstName,
@@ -56,13 +66,26 @@ export class UsersService {
         nationalId : createUserDto.nationalId,
         status: createUserDto.status,
         username: username,
+        role : {
+          connect : {
+            id : role.id
+          }
+        },
+        location : {
+          connect : {
+            id : location.id
+          }
+        }
       }
     });
   }
 
   async findAll() {
     return this.databaseService.user.findMany({
-      include: { roles: true }
+      include: { 
+        role: true ,
+        location : true
+       }
     });
   }
 
@@ -72,13 +95,8 @@ export class UsersService {
         id,
       },
       include: { 
-        roles: true ,
-        organisationAdmins : {
-          include : {
-            organisation : true,
-            user : false
-          }
-        }
+        role: true ,
+        location : true
        }
     });
   }
@@ -88,17 +106,8 @@ export class UsersService {
         email: email,
       },
       include: {
-        roles: true,
-        organisationAdmins: {
-          include : {
-            organisation : true
-          }
-        },
-        organisationSurveyers : {
-          include : {
-            organisation : true
-          }
-        }
+        role: true ,
+        location : true
       }
     });
 
@@ -115,17 +124,8 @@ export class UsersService {
         username: username,
       },
       include: {
-        roles: true,
-        organisationAdmins: {
-          include : {
-            organisation : true
-          }
-        },
-        organisationSurveyers : {
-          include : {
-            organisation : true
-          }
-        }
+        role: true ,
+        location : true
       }
     });
 
@@ -141,17 +141,8 @@ export class UsersService {
         telephone: telephone,
       },
       include: {
-        roles: true,
-        organisationAdmins: {
-          include : {
-            organisation : true
-          }
-        },
-        organisationSurveyers : {
-          include : {
-            organisation : true
-          }
-        }
+        role: true ,
+        location : true
       }
     });
 

@@ -1,4 +1,4 @@
-import { Organisation, Role, Status } from "@prisma/client"
+import { Role, Status } from "@prisma/client"
 
 export class LoginPayload {
     id: string
@@ -6,7 +6,6 @@ export class LoginPayload {
     userName: string
     token: string
     isDefaultPassword : boolean
-    organisation : Organisation[] | []
-    roles: Role[]
+    role: Role
     status: Status
 }

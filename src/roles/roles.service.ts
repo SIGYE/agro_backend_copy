@@ -2,7 +2,6 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { DatabaseService } from 'src/database/database.service';
-import { AssignRoleDto } from './dto/assign-role.dto';
 import { UsersService } from 'src/users/users.service';
 import { Role } from '@prisma/client';
 
@@ -16,9 +15,10 @@ export class RolesService {
   async initiateRoles(): Promise<boolean> {
     try {
         const sampleRoles: string[] = [
-            "DEV_ACCESS",
-            "SUPER_ADMIN",
-            "SURVEYOR"
+            "UMUFASHAMYUMVIRE",
+            "AGRONOMIST",
+            "VETERINARIAN",
+            "FARMER"
         ];
 
         // Create an array of promises for role creation
@@ -86,46 +86,5 @@ export class RolesService {
       where: { id }
     })
   }
-  async assignRoles(assignRole: AssignRoleDto) {
-    const { roleId, userIds } = assignRole;
-
-    try {
-      await this.dataBaseService.$transaction(async () => {
-        for (const userId of userIds) {
-          try {
-            const user = await this.userService.findOne(userId)
-            if (user) {
-              if (!user.roles.some(role => role.id === roleId)) {
-                await this.dataBaseService.user.update({
-                  where: { id: userId },
-                  data: {
-                    roles: {
-                      connect: { id: roleId }
-                    }
-                  }
-                });
-              }
-            } else {
-              throw new NotFoundException(`User with id ${userId} not found.`);
-            }
-
-          } catch (error) {
-            if (error instanceof NotFoundException) {
-              throw new NotFoundException(error.message);
-            }
-            throw error
-
-          }
-
-        }
-      });
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException(error.message);
-      }
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
 
 }

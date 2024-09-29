@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { loginDto } from './dto/login.dto';
 import { UsersService } from 'src/users/users.service';
-import { Prisma, User, Status, Role, Organisation } from '@prisma/client';
+import { Prisma, User, Status, Role } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginPayload } from 'src/categories/dto/login-payload.dto';
@@ -17,22 +17,13 @@ export type TokenProps = {
     id: string
     email: string
     userName: string
-    roles: Role[]
+    role: Role
     status: Status
 }
+
 type UserWithRoles = Prisma.UserGetPayload<{
   include: { 
-    roles: true,
-    organisationAdmins: {
-      include: {
-        organisation: true
-      }
-    },
-    organisationSurveyers : {
-      include : {
-        organisation : true
-      }
-    }
+    role: true
   }
 }>;
 
@@ -58,55 +49,54 @@ export class AuthService {
     };
     
 
-    async createDevAdmin(createDevAdmin : CreateDevAdminDto) : Promise<User> {
-        // check if the registration code is valid 
-        if(createDevAdmin.registration_code == process.env.DEV_ADMIN_KEY){
-            createDevAdmin.password = await bcrypt.hash(createDevAdmin.password, 10)
-            let usersnumber = await this.databaseService.user.count();
-            const username = createDevAdmin.firstName.toLowerCase()  + usersnumber; 
+    // async createDevAdmin(createDevAdmin : CreateDevAdminDto) : Promise<User> {
+    //     // check if the registration code is valid 
+    //     if(createDevAdmin.registration_code == process.env.DEV_ADMIN_KEY){
+    //         createDevAdmin.password = await bcrypt.hash(createDevAdmin.password, 10)
+    //         let usersnumber = await this.databaseService.user.count();
+    //         const username = createDevAdmin.firstName.toLowerCase()  + usersnumber; 
         
-            let userPresent = await this.databaseService.user.findFirst({
-                where: {
-                  OR: [
-                    { email: createDevAdmin.email },
-                    { telephone: createDevAdmin.telephone },
-                    {nationalId :  createDevAdmin.nationalId}
-                  ]
-                }
-              });
+    //         let userPresent = await this.databaseService.user.findFirst({
+    //             where: {
+    //               OR: [
+    //                 { email: createDevAdmin.email },
+    //                 { telephone: createDevAdmin.telephone },
+    //                 {nationalId :  createDevAdmin.nationalId}
+    //               ]
+    //             }
+    //           });
               
         
-            if(userPresent){
-              throw new BadRequestException("The user with email , natinal Id or telephone already exists")
-            }
+    //         if(userPresent){
+    //           throw new BadRequestException("The user with email , natinal Id or telephone already exists")
+    //         }
             
         
-            let user : User = await await this.databaseService.user.create({
-              data: {
-                firstName: createDevAdmin.firstName,
-                lastName: createDevAdmin.lastName,
-                email: createDevAdmin.email,   
-                nationalId : createDevAdmin.nationalId,
-                password: createDevAdmin.password,
-                status: createDevAdmin.status,
-                username: username,
-                telephone: createDevAdmin.telephone,
-                roles : {
-                  connect : [
-                   {
-                       name : 'DEV_ACCESS'
-                   }
-                  ] 
-               }
-              }
-            });
-            user = excludeFields(user , ['password'])
-            this.mailService.sendWelcomeEmail(createDevAdmin.email , 'Innovative VAS')
-            return user;
-        }else{
-            throw new BadRequestException("Invalid Registration Key")
-        }
-    }
+    //         let user : User = await await this.databaseService.user.create({
+    //           data: {
+    //             firstName: createDevAdmin.firstName,
+    //             lastName: createDevAdmin.lastName,
+    //             email: createDevAdmin.email,   
+    //             nationalId : createDevAdmin.nationalId,
+    //             password: createDevAdmin.password,
+    //             status: createDevAdmin.status,
+    //             username: username,
+    //             telephone: createDevAdmin.telephone,
+    //             role : {
+    //               connect : 
+    //                {
+    //                    name : 'DEV_ACCESS'
+    //                }
+    //            }
+    //           }
+    //         });
+    //         user = excludeFields(user , ['password'])
+    //         this.mailService.sendWelcomeEmail(createDevAdmin.email , 'Innovative VAS')
+    //         return user;
+    //     }else{
+    //         throw new BadRequestException("Invalid Registration Key")
+    //     }
+    // }
 
     async login(loginDto: loginDto): Promise<LoginPayload> {
             let user : UserWithRoles = null;
@@ -141,35 +131,16 @@ export class AuthService {
                 email: user.email,
                 userName: user.firstName,
                 status: user.status,
-                roles: user.roles
+                role: user.role
             }   
-    
-            let organisations : Organisation[] = [] ;
-            if(user.roles.filter(role => {
-              return role.name == 'SUPER_ADMIN'
-            }).length > 0){
-              console.log();
-               organisations = user.organisationAdmins.map(orgAdmin => {
-                return orgAdmin.organisation
-               })
-            }
-    
-            if(user.roles.filter(role => {
-              return role.name == 'SURVEYOR'
-            }).length > 0){
-              console.log("Same here ");
-               organisations = user.organisationSurveyers.map(orgSurveyor => {
-                return orgSurveyor.organisation
-               })
-            }
+  
     
             const loginPayload: LoginPayload = {
                 id: user.id,
                 email: user.email,
                 userName: user.firstName,
                 status: user.status,
-                organisation : organisations,
-                roles: user.roles,
+                role: user.role,
                 isDefaultPassword : user.isDefaultPassword,
                 token: this.jwtService.sign(tokenProps)
             };

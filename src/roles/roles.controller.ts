@@ -4,9 +4,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
-import { AssignRoleDto } from './dto/assign-role.dto';
 import { ApiResponse } from 'src/responses/api.response';
-import { FindOneParam } from 'src/pipes/param-validation.pipe';
 
 @UseGuards(AuthGuard)
 @ApiTags('Roles')
@@ -35,18 +33,6 @@ export class RolesController {
   @ApiParam({ name: "id", type: String })
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRoleDto: UpdateRoleDto) {
     return new ApiResponse(true, "Updated Role", await this.rolesService.update(id, updateRoleDto) , null);
-  }
-  @Put('assign-roles')
-  async assignRoles(@Body() assignRoleDto: AssignRoleDto) {
-    try {
-      await this.rolesService.assignRoles(assignRoleDto)
-      return new ApiResponse(true, "Assigned Roles", [] , null)
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException(error.message);
-      }
-      throw error
-    }
   }
 
   @Delete(':id')

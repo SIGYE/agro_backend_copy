@@ -36,6 +36,7 @@ model User {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   username          String             @unique
+  email             String?            @unique
   telephone         String?            @unique
   firstName         String
   lastName          String
@@ -50,7 +51,7 @@ model User {
   resetCodeExpires  DateTime?
   location          Location           @relation(fields: [locationId], references: [id])
   locationId        Int
-  farmer            Farmer?
+  farmer            Farmer[]
   agronomies        Agronomy[]
   veterinaries      Veterinary[]
   umufashamyumvire  Umufashamyumvire[]

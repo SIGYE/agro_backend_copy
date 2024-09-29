@@ -12,7 +12,6 @@ export class SettingsController {
     ){}
 
     // get the sms price per message
-    @Roles(Role_Enum.DEV_ACCESS)
     @Get('sms-price')
 
     async getSmsPrice() : Promise<number> {
@@ -20,7 +19,6 @@ export class SettingsController {
     }
 
     // get the admin creation code
-    @Roles(Role_Enum.DEV_ACCESS)
     @Get('admin-creation-code')
     async getAdminCreationCode() : Promise<string> {
         return await this.settingsService.getAdminCreationCode();

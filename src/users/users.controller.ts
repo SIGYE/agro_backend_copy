@@ -13,7 +13,6 @@ import { Status } from '@prisma/client';
 
 @Controller('users')
 @UseGuards(AuthGuard)
-@Roles(Role_Enum.SUPER_ADMIN , Role_Enum.DEV_ACCESS )
 @ApiTags('Users')
 @ApiBearerAuth()
 export class UsersController {
@@ -62,7 +61,6 @@ export class UsersController {
   }
 
   // changing the user account status
-  @Roles(Role_Enum.DEV_ACCESS , Role_Enum.SUPER_ADMIN)
   @Patch('change-account-status/:userId')
   @UseGuards(AuthGuard)
   @ApiQuery({ name: "status", enum: Status })

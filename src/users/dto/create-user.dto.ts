@@ -37,4 +37,14 @@ export class CreateUserDto {
     password: string
     @ApiProperty()
     status?: Status
+
+
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    roleId : string 
+
+    @ApiProperty()
+    @IsNotEmpty()
+    locationId : number
 }

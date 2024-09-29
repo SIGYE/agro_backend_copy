@@ -23,11 +23,11 @@ export class AuthController {
         return new ApiResponse(true, "Logged in Successfully", await this.authService.login(loginDto) , null)
     }
 
-    @Allow()
-    @Post('signup/dev-admin')
-    async registerDevAdmin(@Body() createDevAdminDto : CreateDevAdminDto) {
-        return new ApiResponse(true , "Created Dev Admin Successfully" , await this.authService.createDevAdmin(createDevAdminDto) , null)
-    }
+    // @Allow()
+    // @Post('signup/dev-admin')
+    // async registerDevAdmin(@Body() createDevAdminDto : CreateDevAdminDto) {
+    //     return new ApiResponse(true , "Created Dev Admin Successfully" , await this.authService.createDevAdmin(createDevAdminDto) , null)
+    // }
 
     @ApiBearerAuth()
     @UseGuards(AuthGuard)
