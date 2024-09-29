@@ -7,48 +7,60 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model DemoRequest {
-  id           String            @id @default(uuid())
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  organisation String
-  category     String
-  website      String
-  location     Location          @relation(fields: [locationId], references: [id] , onDelete: Cascade)
-  locationId   Int
-  fullnames    String
-  email        String
-  status       DemoRequestStatus @default(PENDING)
-  zoomlink     String?
-  comment      String?
+enum Status {
+  ACTIVE
+  INACTIVE
+}
 
-  @@map("demo_request")
+enum HealthStatus {
+  HEALTHY
+  SICK
+  RECOVERING
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Purpose {
+  DAIRY
+  MEAT
+  WORK
+  OTHER
 }
 
 model User {
-  id                      String                    @id @default(uuid())
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
-  username                String                    @unique
-  telephone               String?                   @unique
-  firstName               String
-  lastName                String
-  nationalId              String?                   @unique
-  email                   String                    @unique
-  password                String
-  code                    String?
-  isDefaultPassword       Boolean                   @default(false)
-  roles                   Role[]                    @relation("user_roles")
-  status                 Status                    @default(ACTIVE)
-  questionaires           Questionnaire[]
-  resetCodeExpires        DateTime?
-  responses               Response[]
-  organisationAdmins      OrganisationAdmins[]
-  organisationSurveyers   OrganisationSurveyers[]
-  approvals               Approval[]
-  internalSupport         InternalSupport[]
-  internalSupportMessages InternalSupportMessages[]
-  commentThread           CommentThread[] 
+  id                String             @id @default(uuid())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  username          String             @unique
+  telephone         String?            @unique
+  firstName         String
+  lastName          String
+  nationalId        String?            @unique
+  password          String
+  otp               String?
+  code              String?
+  isDefaultPassword Boolean            @default(false)
+  roleId            String
+  role              Role               @relation(fields: [roleId], references: [id])
+  status            Status             @default(ACTIVE)
+  resetCodeExpires  DateTime?
+  location          Location           @relation(fields: [locationId], references: [id])
+  locationId        Int
+  farmer            Farmer?
+  agronomies        Agronomy[]
+  veterinaries      Veterinary[]
+  umufashamyumvire  Umufashamyumvire[]
+
+  diseases     Disease[]     @relation("DiseaseCreatedBy")
+  vaccinations Vaccination[] @relation("VaccinationCreatedBy")
+  vitamins     Vitamin[]     @relation("VitaminCreatedBy")
+  feterlizers  Feterlizer[]  @relation("FeterlizerCreatedBy")
+  crops        Crop[]        @relation("CropCreatedBy")
+  animals      Animal[]      @relation("AnimalCreatedBy")
 
   @@map("user")
 }
@@ -58,32 +70,9 @@ model Role {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   name      String   @unique
-  users     User[]   @relation("user_roles")
+  users     User[]
 
   @@map("role")
-}
-
-model Organisation {
-  id                      String                   @id @default(uuid())
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  name                    String
-  type                    String
-  allowBulkMessages       Boolean                  @default(true)
-  website                 String
-  messagesLeft            Int?                     @default(200)
-  senderId                String
-  contact                 String
-  location                Location                 @relation(fields: [locationId], references: [id]  , onDelete: Cascade)
-  locationId              Int
-  teams                   Team[]
-  organisationAdmins      OrganisationAdmins[]
-  messages                Messages[]
-  surveys                 Survey[]
-  organisationSurveyers   OrganisationSurveyers[]
-  purchasedMessageHistory MessagePurchaseHistory[]
-
-  @@map("organisation")
 }
 
 model locationLevel {
@@ -99,376 +88,364 @@ model locationLevel {
 }
 
 model Location {
-  id                Int            @id @default(autoincrement())
-  createdAt         DateTime?      @default(now())
-  updatedAt         DateTime?      @updatedAt
+  id                Int           @id @default(autoincrement())
+  createdAt         DateTime?     @default(now())
+  updatedAt         DateTime?     @updatedAt
   locationId        Int?
-  parentLocation    Location?      @relation("LocationToLocation", fields: [locationId], references: [id]  , onDelete: Cascade)
-  childrenLocations Location[]     @relation("LocationToLocation")
+  parentLocation    Location?     @relation("LocationToLocation", fields: [locationId], references: [id], onDelete: Cascade)
+  childrenLocations Location[]    @relation("LocationToLocation")
   name              String
-  locationLevel     locationLevel  @relation(fields: [locationLevelId], references: [id]  , onDelete: Cascade)
+  locationLevel     locationLevel @relation(fields: [locationLevelId], references: [id], onDelete: Cascade)
   locationLevelId   Int
-  demoRequests      DemoRequest[]
-  surveys           Survey[]       @relation("location_survey")
-  organisation      Organisation[]
+  users             User[]
 
   @@map("location")
 }
 
-model Survey {
-  id             String          @id @default(uuid())
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  name           String
-  description    String?
-  purpose        String?
-  startDate      DateTime?
-  EndDate        DateTime?
-  status         SurveyStatus    @default(NOT_STARTED)
-  organisation   Organisation    @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
-  organisationId String
-  location       Location[]      @relation("location_survey")
-  questionnaire  Questionnaire[]
-  comments       Comment[]
-
-  @@map("survey")
+model Disease {
+  id                String             @id @default(uuid())
+  name              String
+  createdBy         String
+  creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id])
+  liveStockDiseases LiveStockDisease[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
-model Messages {
-  id              String            @id @default(uuid())
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  senderId        String
-  content         String
-  approvals       Approval[]
-  organisation    Organisation      @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
-  organisationId  String
-  groupedMessages GroupedMessages[]
-
-  @@map("messages")
+model Vaccination {
+  id                    String                 @id @default(uuid())
+  name                  String
+  createdBy             String
+  creator               User                   @relation("VaccinationCreatedBy", fields: [createdBy], references: [id])
+  liveStockVaccinations LiveStockVaccination[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 }
 
-model MessagePurchaseHistory {
-  id               String         @id @default(uuid())
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt()
-  numberOfMessages Int
-  organisation     Organisation   @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
-  organisationId   String
-  requestId        String?        @unique
-  amountSpent      Int
-  purchaseStatus   PurchaseStatus @default(PENDING)
-
-  @@map("message_purchase_history")
+model Vitamin {
+  id                String              @id @default(uuid())
+  name              String
+  createdBy         String
+  creator           User                @relation("VitaminCreatedBy", fields: [createdBy], references: [id])
+  liveStockVitamins LiveStockVitamins[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
-model GroupedMessages {
+model Feterlizer {
+  id                                     String                                  @id @default(uuid())
+  name                                   String
+  createdBy                              String
+  creator                                User                                    @relation("FeterlizerCreatedBy", fields: [createdBy], references: [id])
+  cropFertilizerFarmerRegistrations      CropFertilizerFarmerRegistration[]
+  cropFertilizerCooperativeRegistrations CropFertilizerCooperativeRegistration[]
+  createdAt                              DateTime                                @default(now())
+  updatedAt                              DateTime                                @updatedAt
+}
+
+model Crop {
+  id                           String                        @id @default(uuid())
+  name                         String
+  createdBy                    String
+  creator                      User                          @relation("CropCreatedBy", fields: [createdBy], references: [id])
+  cropFarmerRegistrations      CropFarmerRegistration[]
+  cooperativeCropRegistrations CooperativeCropRegistration[]
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+}
+
+model Animal {
+  id                             String                          @id @default(uuid())
+  name                           String
+  purpose                        Purpose
+  createdBy                      String
+  creator                        User                            @relation("AnimalCreatedBy", fields: [createdBy], references: [id])
+  animalProducts                 AnimalProduct[]
+  animalFarmerRegistrations      AnimalFarmerRegistration[]
+  cooperativeAnimalRegistrations CooperativeAnimalRegistration[]
+  slaughterAnimalRegistrations   SlaughterAnimalRegistration[]
+  breeds                         Breed[]
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+}
+
+model AnimalProduct {
+  id                                    String                                 @id @default(uuid())
+  name                                  String
+  animalId                              String
+  animal                                Animal                                 @relation(fields: [animalId], references: [id])
+  cooperativeAnimalRegistrationProduces CooperativeAnimalRegistrationProduce[]
+  farmerAnimalRegistrationProduces      FarmerAnimalRegistrationProduce[]
+  createdAt                             DateTime                               @default(now())
+  updatedAt                             DateTime                               @updatedAt
+}
+
+model Farmer {
+  id                        String                     @id @default(uuid())
+  userId                    String                     @unique
+  user                      User                       @relation(fields: [userId], references: [id])
+  cropFarmerRegistrations   CropFarmerRegistration[]
+  animalFarmerRegistrations AnimalFarmerRegistration[]
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+}
+
+model Cooperative {
+  id                             String                          @id @default(uuid())
+  name                           String
+  telephone                      String
+  registationNumber              String
+  membersNumber                  Int
+  cooperativeCropRegistrations   CooperativeCropRegistration[]
+  cooperativeAnimalRegistrations CooperativeAnimalRegistration[]
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+}
+
+model SlaughterHouse {
+  id                           String                        @id @default(uuid())
+  name                         String
+  telephone                    String
+  slaughterAnimalRegistrations SlaughterAnimalRegistration[]
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+}
+
+model CropFarmerRegistration {
+  id                                String                             @id @default(uuid())
+  farmerId                          String
+  cropId                            String
+  plantationArea                    String
+  seeds                             String
+  produceHarvested                  String
+  farmer                            Farmer                             @relation(fields: [farmerId], references: [id])
+  crop                              Crop                               @relation(fields: [cropId], references: [id])
+  cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
+  createdAt                         DateTime                           @default(now())
+  updatedAt                         DateTime                           @updatedAt
+}
+
+model CropFertilizerFarmerRegistration {
+  id                       String                 @id @default(uuid())
+  fertilizerId             String
+  cropFarmerRegistrationId String
+  amount                   Int
+  measurement              String
+  feterlizer               Feterlizer             @relation(fields: [fertilizerId], references: [id])
+  cropFarmerRegistration   CropFarmerRegistration @relation(fields: [cropFarmerRegistrationId], references: [id])
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+}
+
+model CooperativeCropRegistration {
+  id                                     String                                  @id @default(uuid())
+  cooperativeId                          String
+  cropId                                 String
+  plantationArea                         String
+  seeds                                  String
+  produceHarvested                       String
+  cooperative                            Cooperative                             @relation(fields: [cooperativeId], references: [id])
+  crop                                   Crop                                    @relation(fields: [cropId], references: [id])
+  cropFertilizerCooperativeRegistrations CropFertilizerCooperativeRegistration[]
+  createdAt                              DateTime                                @default(now())
+  updatedAt                              DateTime                                @updatedAt
+}
+
+model CropFertilizerCooperativeRegistration {
+  id                            String                      @id @default(uuid())
+  fertilizerId                  String
+  cooperativeCropRegistrationId String
+  amount                        Int
+  measurement                   String
+  feterlizer                    Feterlizer                  @relation(fields: [fertilizerId], references: [id])
+  cooperativeCropRegistration   CooperativeCropRegistration @relation(fields: [cooperativeCropRegistrationId], references: [id])
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+}
+
+model AnimalFarmerRegistration {
+  id                              String                            @id @default(uuid())
+  farmerId                        String
+  animalId                        String
+  totalNumber                     Int
+  maleNumber                      Int
+  femaleNumber                    Int
+  farmer                          Farmer                            @relation(fields: [farmerId], references: [id])
+  animal                          Animal                            @relation(fields: [animalId], references: [id])
+  liveStockRegistrations          LiveStockRegistration[]
+  farmerAnimalRegistrationProduce FarmerAnimalRegistrationProduce[]
+  createdAt                       DateTime                          @default(now())
+  updatedAt                       DateTime                          @updatedAt
+}
+
+model LiveStockRegistration {
+  id                          String                       @id @default(uuid())
+  animalFarmerRegistrationId  String
+  breedId                     String
+  weight                      Int
+  weightMeasurement           String
+  produce                     Float
+  produceMeasurement          String
+  dob                         DateTime
+  animalFarmerRegistration    AnimalFarmerRegistration     @relation(fields: [animalFarmerRegistrationId], references: [id])
+  breed                       Breed                        @relation(fields: [breedId], references: [id])
+  liveStockDiseases           LiveStockDisease[]
+  liveStockVaccinations       LiveStockVaccination[]
+  liveStockVitamins           LiveStockVitamins[]
+  slaughterAnimalRegistration SlaughterAnimalRegistration?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+}
+
+model LiveStockDisease {
+  id                      String                @id @default(uuid())
+  liveStockRegistrationId String
+  diseaseId               String
+  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
+  disease                 Disease               @relation(fields: [diseaseId], references: [id])
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+}
+
+model LiveStockVaccination {
+  id                      String                @id @default(uuid())
+  liveStockRegistrationId String
+  vaccinationId           String
+  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
+  vaccination             Vaccination           @relation(fields: [vaccinationId], references: [id])
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+}
+
+model LiveStockVitamins {
+  id                      String                @id @default(uuid())
+  liveStockRegistrationId String
+  vitaminsId              String
+  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
+  vitamins                Vitamin               @relation(fields: [vitaminsId], references: [id])
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+}
+
+model CooperativeAnimalRegistration {
+  id                                    String                                 @id @default(uuid())
+  cooperativeId                         String
+  animalId                              String
+  totalNumber                           Int
+  maleNumber                            Int
+  femaleNumber                          Int
+  cooperative                           Cooperative                            @relation(fields: [cooperativeId], references: [id])
+  animal                                Animal                                 @relation(fields: [animalId], references: [id])
+  cooperativeAnimalRegistrationProduces CooperativeAnimalRegistrationProduce[]
+  createdAt                             DateTime                               @default(now())
+  updatedAt                             DateTime                               @updatedAt
+}
+
+model CooperativeAnimalRegistrationProduce {
+  id                              String                        @id @default(uuid())
+  cooperativeAnimalRegistrationId String
+  animalProductId                 String
+  amount                          Int
+  measurements                    String
+  cooperativeAnimalRegistration   CooperativeAnimalRegistration @relation(fields: [cooperativeAnimalRegistrationId], references: [id])
+  animalProduct                   AnimalProduct                 @relation(fields: [animalProductId], references: [id])
+  createdAt                       DateTime                      @default(now())
+  updatedAt                       DateTime                      @updatedAt
+}
+
+model FarmerAnimalRegistrationProduce {
+  id                         String                   @id @default(uuid())
+  animalFarmerRegistrationId String
+  animalProductId            String
+  amount                     Int
+  measurements               String
+  animalFarmerRegistration   AnimalFarmerRegistration @relation(fields: [animalFarmerRegistrationId], references: [id])
+  animalProduct              AnimalProduct            @relation(fields: [animalProductId], references: [id])
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+}
+
+model Breed {
+  id                           String                        @id @default(uuid())
+  animalId                     String
+  breedName                    String
+  animal                       Animal                        @relation(fields: [animalId], references: [id])
+  liveStockRegistrations       LiveStockRegistration[]
+  slaughterAnimalRegistrations SlaughterAnimalRegistration[]
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+}
+
+model SlaughterAnimalRegistration {
+  id                     String                  @id @default(uuid())
+  animalId               String
+  liveStockId            String                  @unique
+  breedId                String
+  slaughterHouse         String
+  age                    Int
+  weight                 Int
+  healthStatus           HealthStatus
+  animal                 Animal                  @relation(fields: [animalId], references: [id])
+  liveStock              LiveStockRegistration   @relation(fields: [liveStockId], references: [id])
+  breed                  Breed                   @relation(fields: [breedId], references: [id])
+  slaughterHouseRelation SlaughterHouse          @relation(fields: [slaughterHouse], references: [id])
+  slaughterRegistrations SlaughterRegistration[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+}
+
+model SlaughterRegistration {
+  id                            String                      @id @default(uuid())
+  slaughterAnimalRegistrationId String
+  slaughterDate                 DateTime
+  preSlaughterWeight            Int
+  postSlaughterWeight           Int
+  slaughterAnimalRegistration   SlaughterAnimalRegistration @relation(fields: [slaughterAnimalRegistrationId], references: [id])
+  animalSlaughterProducts       AnimalSlaughterProduct[]
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+}
+
+model SlaughterProducts {
+  id                      String                   @id @default(uuid())
+  productName             String
+  animalSlaughterProducts AnimalSlaughterProduct[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+}
+
+model AnimalSlaughterProduct {
+  id                      String                @id @default(uuid())
+  slaughterRegistrationId String
+  productId               String
+  slaughterRegistration   SlaughterRegistration @relation(fields: [slaughterRegistrationId], references: [id])
+  product                 SlaughterProducts     @relation(fields: [productId], references: [id])
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+}
+
+model Agronomy {
+  id            String   @id @default(uuid())
+  userId        String
+  locationName  String
+  locationLevel Int
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Veterinary {
   id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  message   Messages @relation(fields: [messageId], references: [id]  , onDelete: Cascade)
-  messageId String
-  receiver  String
-
-  @@map("grouped_messages")
 }
 
-model Approval {
-  id             String         @id @default(uuid())
-  createdAt      DateTime       @default(now())
-  updateAt       DateTime       @updatedAt
-  message        Messages       @relation(fields: [messageId], references: [id]  , onDelete: Cascade)
-  messageId      String
-  approver       User           @relation(fields: [approverId], references: [id]  , onDelete: Cascade)
-  approverId     String
-  approvalStatus ApprovalStatus @default(PENDING)
-
-  @@map("approval")
-}
-
-model OrganisationAdmins {
-  id             String       @id @default(uuid())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  user           User         @relation(fields: [userId], references: [id]  , onDelete: Cascade)
-  userId         String
-  organisation   Organisation @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
-  organisationId String
-
-  @@map("organisation_admin")
-}
-
-model OrganisationSurveyers {
-  id             String          @id @default(uuid())
-  user           User            @relation(fields: [userId], references: [id]  , onDelete: Cascade)
-  userId         String
-  organisation   Organisation    @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
-  organisationId String
-  team           Team[]          @relation("organisation_surveyer_team")
-  questionnire   Questionnaire[] @relation("organisation_surveyer_questionnaire")
-
-  @@map("organisation_surveyers")
-}
-
-model Team {
-  id                    String                  @id @default(uuid())
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  name                  String
-  organisation          Organisation            @relation(fields: [organisationId], references: [id]  , onDelete: Cascade)
-  organisationId        String
-  questionnaire         Questionnaire[]
-  organisationSurveyors OrganisationSurveyers[] @relation("organisation_surveyer_team")
-
-  @@map("team")
-}
-
-model Questionnaire {
-  id                    String                  @id @default(uuid())
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  title                 String
-  type                  QuestionnaireType
-  description           String?
-  introduction          String?
-  team                  Team?                   @relation(fields: [teamId], references: [id]  , onDelete: Cascade)
-  teamId                String?
-  organisationSurveyers OrganisationSurveyers[] @relation("organisation_surveyer_questionnaire")
-  survey                Survey                  @relation(fields: [surveyId], references: [id]  , onDelete: Cascade)
-  surveyId              String
-  createdBy             User                    @relation(fields: [createdById], references: [id]  , onDelete: Cascade)
-  createdById           String
-  questions             Question[]
-  responses             Response[]
-  skip                  Skip[]
-  comments              Comment[]
-
-  @@map("questionaire")
-}
-
-model Question {
-  id                String              @id @default(uuid())
-  questionText      String
-  questionType      QuestionType // e.g., 'Multiple Choice', 'Text'
-  questionnaire     Questionnaire       @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
-  questionnaireId   String
-  questionGroup     QuestionGroup
-  questionNumber    Int                 @default(1)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  options           Option[]
-  answer            Answer[]
-  questionCondition QuestionCondition[]
-  skippingTo        Skip[]              @relation(name: "skippingTo")
-  skippingFrom      Skip[]              @relation(name: "skippingFrom")
-
-  @@map("question")
-}
-
-model Skip {
-  id                     String        @id @default(uuid())
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-  questionnaire          Questionnaire @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
-  questionnaireId        String
-  skippingFrom           Question      @relation(name: "skippingFrom", fields: [skippingFromQuestionId], references: [id]  , onDelete: Cascade)
-  skippingFromQuestionId String
-  skippingTo             Question      @relation(name: "skippingTo", fields: [skippingToQuestionId], references: [id]  , onDelete: Cascade)
-  skippingToQuestionId   String
-
-  @@map("skip")
-}
-
-model Option {
-  id         String   @id @default(uuid())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  optionText String
-  question   Question @relation(fields: [questionId], references: [id]  , onDelete: Cascade)
-  questionId String
-  answer     Answer[] @relation("answer_option")
-
-  @@map("option")
-}
-
-model Comment {
-  id              String          @id @default(uuid())
-  fullNames       String          @default("Anonymous")
-  role            String
-  telephone       String
-  comment         String
-  fileName        String?
-  status          CommentStatus   @default(PENDING)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  survey          Survey          @relation(fields: [surveyId], references: [id]  , onDelete: Cascade)
-  surveyId        String
-  questionnaire   Questionnaire   @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
-  questionnaireId String
-  commentThread   CommentThread[]
-
-  @@map("comment")
-}
-
-model CommentThread {
+model Umufashamyumvire {
   id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt()
-  comment   Comment  @relation(fields: [commentId], references: [id]  , onDelete: Cascade)
-  commentId String
-  message   String
-  creator   User     @relation(fields: [creatorId], references: [id]  , onDelete: Cascade )
-  creatorId String
-
-  @@map("comment_thread")
-}
-
-model Response {
-  id              String        @id @default(uuid())
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  comment         String?
-  user            User?         @relation(fields: [userId], references: [id]  , onDelete: Cascade)
-  userId          String?
-  questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id]  , onDelete: Cascade)
-  questionnaireId String
-  submittedAt     DateTime      @default(now())
-  answers         Answer[]
-
-  @@map("response")
-}
-
-model Answer {
-  id         String   @id @default(uuid())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  response   Response @relation(fields: [responseId], references: [id]  , onDelete: Cascade)
-  responseId String
-  question   Question @relation(fields: [questionId], references: [id]  , onDelete: Cascade)
-  questionId String
-  answerText String? // For text responses
-  option     Option[] @relation("answer_option")
-
-  @@map("answer")
-}
-
-model Condition {
-  id                String              @id @default(uuid())
-  conditionName     String              @unique
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  questionCondition QuestionCondition[]
-
-  @@map("condition")
-}
-
-model QuestionCondition {
-  id          String    @id @default(uuid())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  question    Question  @relation(fields: [questionId], references: [id]  , onDelete: Cascade)
-  questionId  String
-  condition   Condition @relation(fields: [conditionId], references: [id]  , onDelete: Cascade)
-  conditionId String
-
-  @@map("question_condition")
-}
-
-model InternalSupport {
-  id                      String                    @id @default(uuid())
-  createdAt               DateTime                  @default(now())
-  updateAt                DateTime                  @updatedAt
-  user                    User                      @relation(fields: [userId], references: [id]  , onDelete: Cascade)
-  userId                  String
-  title                   String                    @default("The New Title ")
-  status                  InternalSupportStatus     @default(IN_PROGRESS)
-  internalSupportMessages InternalSupportMessages[]
-
-  @@map("internal_suppport")
-}
-
-model InternalSupportMessages {
-  id                String          @id @default(uuid())
-  createdAt         DateTime        @default(now())
-  updateAt          DateTime        @updatedAt
-  internalSupport   InternalSupport @relation(fields: [internalSupportId], references: [id]  , onDelete: Cascade)
-  internalSupportId String
-  user              User            @relation(fields: [userId], references: [id]  , onDelete: Cascade)
-  userId            String
-  message           String
-  photoLink         String?
-
-  @@map("internal_support_message")
-}
-
-model ExternalSupport {
-  id               String   @id @default(uuid())
-  createdAt        DateTime @default(now())
-  updateAt         DateTime @updatedAt
-  organisationName String
-  fullName         String
-  email            String
-  role             String
-  query            String
-
-  @@map("external_support")
-}
-
-enum PurchaseStatus {
-  PENDING
-  PAID
-  FAILED
-}
-
-enum InternalSupportStatus {
-  PAUSED
-  IN_PROGRESS
-  ANSWERED
-}
-
-enum Status {
-  ACTIVE
-  INACTIVE
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  MULTIPLE_CHOICE_WITH_TEXT
-  RADIO
-  OPEN
-}
-
-enum CommentStatus {
-  PENDING
-  IN_PROGRESS
-  RESOLVED
-}
-
-enum ApprovalStatus {
-  APPROVED
-  PENDING
-  REJECTED
-}
-
-enum SurveyStatus {
-  COMPLETED
-  NOT_STARTED
-  PAUSED
-  STARTED
-}
-
-enum QuestionnaireType {
-  OPEN
-  SELF_CONDUCTED
-}
-
-enum QuestionGroup {
-  INTRODUCTORY
-  SURVEY
-}
-
-enum DemoRequestStatus {
-  APPROVED
-  REJECTED
-  PENDING
+  updatedAt DateTime @updatedAt
 }

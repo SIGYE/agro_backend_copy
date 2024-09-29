@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prisma": "npx prisma format && npx prisma migrate dev && npx prisma generate",
+    "start:prisma": "npx prisma format && npx prisma migrate dev --name init && npx prisma generate",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:seed": "cd ./src/seeders/ && ts-node index.ts",

@@ -13,24 +13,12 @@ import { UsersModule } from './users/users.module';
 import { RolesService } from './roles/roles.service';
 import { LocationModule } from './location/location.module';
 import { MailModule } from './mail/mail.module';
-import { OrganisationModule } from './organisation/organisation.module';
 import { LocationService } from './location/location.service';
-import { SurveyModule } from './survey/survey.module';
-import { OrganisationSurveyorModule } from './organisation-surveyor/organisation-surveyor.module';
-import { TeamModule } from './team/team.module';
-import { MessagesModule } from './messages/messages.module';
-import { CommentModule } from './comment/comment.module';
-import { QuestionnaireModule } from './questionnaire/questionnaire.module';
-import { ResponseModule } from './response/response.module';
-import { DemoRequestModule } from './demo-request/demo-request.module';
 import { UploadModule } from './upload/upload.module';
-import { ExternalSupportModule } from './external-support/external-support.module';
-import { InternalSupportModule } from './internal-support/internal-support.module';
-import { AnalyticsModule } from './analytics/analytics.module';
 import { SettingsModule } from './settings/settings.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule ,   AuthModule, RolesModule , UsersModule, LocationModule, MailModule, OrganisationModule, SurveyModule, OrganisationSurveyorModule, TeamModule, MessagesModule, CommentModule, QuestionnaireModule, ResponseModule, DemoRequestModule, UploadModule, ExternalSupportModule, InternalSupportModule, AnalyticsModule, SettingsModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule ,   AuthModule, RolesModule , UsersModule, LocationModule, MailModule, UploadModule,  SettingsModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,
@@ -50,6 +38,7 @@ export class AppModule implements OnModuleInit{
   ){}
 
   seedData = false
+
 
 
   async onModuleInit() {
