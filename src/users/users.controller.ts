@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, Req, UnauthorizedException, Query } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { UsersService, UserWithRoles } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/guards/auth.guard';
@@ -9,7 +9,7 @@ import { Role_Enum } from 'src/enums/role.enum';
 import { ApiResponse } from 'src/responses/api.response';
 import { ChangePasswordDTO } from './dto/change-password.dto';
 import { AuthRequest } from 'src/types/auth-request.type';
-import { Status } from '@prisma/client';
+import { Status, User } from '@prisma/client';
 
 @Controller('users')
 @UseGuards(AuthGuard)
@@ -26,37 +26,37 @@ export class UsersController {
   // }
 
   @Get('/all')
-  async findAll() {
-    return new ApiResponse(true, "All Users", await this.usersService.findAll() , null);
+  async findAll() : Promise<ApiResponse<User[]>> {
+    return new ApiResponse<User[]>(true, "All Users", await this.usersService.findAll() , null);
   }
 
   @Get('/id/:id')
   @ApiParam({ name: "id", type: String })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return new ApiResponse(true, "User Retrieved", await this.usersService.findOne(id) , null);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) : Promise<ApiResponse<UserWithRoles>> {
+    return new ApiResponse<UserWithRoles>(true, "User Retrieved", await this.usersService.findOne(id) , null);
   }
 
   @Patch('/update/:id')
   @ApiParam({ name: "id", type: String })
   @ApiBody({type : UpdateUserDto})
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) {
-    return new ApiResponse(true, "Updated User", this.usersService.update(id, updateUserDto) , null);
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) : Promise<ApiResponse<User>> {
+    return new ApiResponse<User>(true, "Updated User", await this.usersService.update(id, updateUserDto) , null);
   }
 
   @Delete('/delete/:id')
   @ApiParam({ name: "id", type: String })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return new ApiResponse(true, "Deleted User", this.usersService.remove(id) , null);
+  async remove(@Param('id', ParseUUIDPipe) id: string) : Promise<ApiResponse<User>> {
+    return new ApiResponse<User>(true, "Deleted User", await this.usersService.remove(id) , null);
   }
 
 
   @Post('change-password')
   @UseGuards(AuthGuard)
-  async changePassword(@Req() request: AuthRequest , @Body() changePasswordDTO : ChangePasswordDTO) {
+  async changePassword(@Req() request: AuthRequest , @Body() changePasswordDTO : ChangePasswordDTO) : Promise<ApiResponse<User>> {
     if(!request.user){
       throw new UnauthorizedException("Please Login")
     }else{
-      return this.usersService.changeLoggedInPassword(request , changePasswordDTO);
+      return new ApiResponse<User>(true, "Password Changed Successfully", await this.usersService.changeLoggedInPassword(request , changePasswordDTO) , null);
     }
   }
 
@@ -65,11 +65,11 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @ApiQuery({ name: "status", enum: Status })
   @ApiParam({ name: "userId", type: String })
-  async changeAccountStatus(@Req() request: AuthRequest , @Param('userId') userId : string , @Query('status') status : Status) {
+  async changeAccountStatus(@Req() request: AuthRequest , @Param('userId') userId : string , @Query('status') status : Status) :  Promise<ApiResponse<User>> {
     if(!request.user){
       throw new UnauthorizedException("Please Login")
     }else{
-      return this.usersService.changeUserAccountStatus(userId , status);
+      return new ApiResponse<User>(true , "Account Status Changed Successfully" , await this.usersService.changeUserAccountStatus(userId , status) , 200);
     }
   }
 

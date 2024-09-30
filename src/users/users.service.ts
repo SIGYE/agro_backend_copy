@@ -7,7 +7,7 @@ import { ChangePasswordDTO } from './dto/change-password.dto';
 import { AuthRequest } from 'src/types/auth-request.type';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-type UserWithRoles = Prisma.UserGetPayload<{
+export type UserWithRoles = Prisma.UserGetPayload<{
   include: { 
     role: true
   }
@@ -18,7 +18,7 @@ export class UsersService {
   constructor(private readonly databaseService: DatabaseService) {
 
   }
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto) :  Promise<User> {
     createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
     let usersnumber = await this.databaseService.user.count();
     const username = createUserDto.firstName.toLowerCase()  + usersnumber; 
@@ -80,7 +80,7 @@ export class UsersService {
     });
   }
 
-  async findAll() {
+  async findAll() : Promise<User[]>{
     return this.databaseService.user.findMany({
       include: { 
         role: true ,
@@ -89,7 +89,7 @@ export class UsersService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string) : Promise<UserWithRoles> {
     return await this.databaseService.user.findUnique({
       where: {
         id,
@@ -153,7 +153,7 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto) : Promise<User>  {
     if(updateUserDto.email){
       // Check if the email already exists
       const user = await this.databaseService.user.findUnique({
@@ -176,7 +176,7 @@ export class UsersService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string) :Promise<User> {
     return this.databaseService.user.delete({
       where: { id }
     });
