@@ -13,7 +13,7 @@ export class UploadController {
 
   @Allow()
   @Get(':filename')
-  async serveFile(@Param('filename') filename: string, @Res() res: Response) {
+  async serveFile(@Param('filename') filename: string, @Res() res: Response) : Promise<Response> {
     const filePath = join(this.uploadPath, filename);
     
     // Check if the file exists

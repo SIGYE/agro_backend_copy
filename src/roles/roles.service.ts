@@ -44,7 +44,7 @@ export class RolesService {
 }
 
 
-  async create(createRoleDto: CreateRoleDto) {
+  async create(createRoleDto: CreateRoleDto) : Promise<Role>{
     return this.dataBaseService.role.create({
       data: {
         name: createRoleDto.name
@@ -52,7 +52,7 @@ export class RolesService {
     })
   }
 
-  async findByName(name : string){
+  async findByName(name : string) : Promise<Role | null> {
     return this.dataBaseService.role.findUnique({
       where : {
         name : name
@@ -60,11 +60,11 @@ export class RolesService {
     })
   }
 
-  async findAll() {
+  async findAll() :  Promise<Role[]> {
     return this.dataBaseService.role.findMany({})
   }
 
-  async findOne(id: string) {
+  async findOne(id: string) : Promise<Role> {
     return this.dataBaseService.role.findUnique({
       where: {
         id
@@ -72,7 +72,7 @@ export class RolesService {
     })
   }
 
-  async update(id: string, updateRoleDto: UpdateRoleDto) {
+  async update(id: string, updateRoleDto: UpdateRoleDto) : Promise<Role> {
     return this.dataBaseService.role.update({
       where: { id },
       data: {
@@ -81,7 +81,7 @@ export class RolesService {
     })
   }
 
-  async remove(id: string) {
+  async remove(id: string) : Promise<Role> {
     return this.dataBaseService.role.delete({
       where: { id }
     })
