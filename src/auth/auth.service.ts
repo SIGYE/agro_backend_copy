@@ -7,9 +7,11 @@ import * as bcrypt from 'bcrypt';
 import { LoginPayload } from 'src/categories/dto/login-payload.dto';
 import { CreateDevAdminDto } from './dto/createDevAdminDto.dto';
 import { DatabaseService } from 'src/database/database.service';
-import { codeGenerator, excludeFields } from 'src/utils/data.util';
+import { codeGenerator } from 'src/utils/data.util';
 import { log } from 'console';
 import { MailService } from 'src/mail/mail.service';
+import { OtpLoginDto } from './dto/otp-login.dto';
+import { Message, sendSms } from 'src/utils/sms.util';
 
 
 
@@ -98,6 +100,95 @@ export class AuthService {
     //     }
     // }
 
+    async sendOtp(telephone : string) : Promise<string> {
+      let user = await this.databaseService.user.findUnique({
+        where : {
+          telephone : telephone
+        }
+      })
+
+      if(!user){
+        throw new UnauthorizedException("The user with the given phone number was not found")
+      }
+
+      // send the otp 
+      let otp = codeGenerator()
+      await this.databaseService.user.update({
+        where : {
+          id : user.id
+        },
+        data : {
+          otp
+        }
+      })
+
+      const message : Message = {
+        id : user.id,
+        content : otp
+      }
+      // send the otp 
+      return await sendSms(telephone , message)
+    }
+
+
+    async loginWithOtp(otpLogin : OtpLoginDto) : Promise<LoginPayload> {
+      let user  : UserWithRoles = await this.databaseService.user.findUnique({
+        where : {
+          telephone : otpLogin.telephone
+        },
+        include : {
+          role : true
+        }
+      })
+
+      if(!user){
+        throw new UnauthorizedException("The user with the given id was not found")
+      }
+
+      // validate the otp 
+      if(user.otp == null){
+        throw new UnauthorizedException("No Session was found for this user")
+      }
+
+      if(user.otp != otpLogin.otp){
+        throw new UnauthorizedException("Invalid OTP")
+      }
+
+      // allown login and delete the otp 
+      await this.databaseService.user.update({
+        where : {
+          id : user.id
+        },
+        data : {
+          otp : null
+        }
+      })
+
+      if(user.status == Status.INACTIVE){
+        throw new UnauthorizedException('User Account not active contact support for help');
+    }
+
+    const tokenProps: TokenProps = {
+        id: user.id,
+        email: user.email,
+        userName: user.firstName,
+        status: user.status,
+        role: user.role
+    }   
+
+    const loginPayload: LoginPayload = {
+        id: user.id,
+        email: user.email,
+        userName: user.firstName,
+        status: user.status,
+        role: user.role,
+        isDefaultPassword : user.isDefaultPassword,
+        token: this.jwtService.sign(tokenProps)
+    };
+
+    return loginPayload;
+    }
+
     async login(loginDto: loginDto): Promise<LoginPayload> {
             let user : UserWithRoles = null;
             const credentialType = await this.validateAll(loginDto.credential);
@@ -125,7 +216,6 @@ export class AuthService {
                 throw new UnauthorizedException('User Account not active contact support for help');
             }
     
-            
             const tokenProps: TokenProps = {
                 id: user.id,
                 email: user.email,
@@ -134,7 +224,6 @@ export class AuthService {
                 role: user.role
             }   
   
-    
             const loginPayload: LoginPayload = {
                 id: user.id,
                 email: user.email,
@@ -207,7 +296,7 @@ export class AuthService {
   }
 
 
-    async validateUsername(username: string, password: string) {
+    async validateUsername(username: string, password: string) : Promise<UserWithRoles> {
         let user: UserWithRoles = await this.userService.findUserByUsername(username)
         if (!user) {
             throw new UnauthorizedException("User Not Found")
@@ -219,7 +308,7 @@ export class AuthService {
             throw new UnauthorizedException("Wrong username or password")
         }
 
-        async validateEmailUser(email: string, password: string) {
+        async validateEmailUser(email: string, password: string) : Promise<UserWithRoles> {
             let user: UserWithRoles = await this.userService.findUserByEmail(email)
             if (!user) {
                 throw new UnauthorizedException("User Not Found")
@@ -231,7 +320,7 @@ export class AuthService {
                 throw new UnauthorizedException("Wrong email or password")
             }
 
-            async validatePhoneUser(telephone: string, password: string) {
+            async validatePhoneUser(telephone: string, password: string) : Promise<UserWithRoles> {
                 let user: UserWithRoles = await this.userService.findUserByTelephone(telephone)
                 if (!user) {
                     throw new UnauthorizedException("User Not Found")

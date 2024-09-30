@@ -12,7 +12,7 @@ export class AppExceptionFilter implements ExceptionFilter {
         const status: number = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
         const message: string = this.getErrorMessage(exception);
 
-        response.status(status).json(new ApiResponse(false, message, [] , status));
+        response.status(status).json(new ApiResponse<[]>(false, message, [] , status));
     }
 
     private getErrorMessage(exception: any): string {
