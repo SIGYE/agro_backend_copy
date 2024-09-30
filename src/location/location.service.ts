@@ -4,8 +4,21 @@ import { locationLevels } from 'src/seeders/data/location_level';
 import {locationProvince} from 'src/seeders/data/location_province'
 import { locationDistrict } from 'src/seeders/data/location_district';
 import { locationSector } from 'src/seeders/data/location_sector';
-import { PrismaClient } from '@prisma/client';
+import { locationLevel, Prisma, PrismaClient } from '@prisma/client';
 import { LocationSeed } from 'src/seeders/types/location-seed.type';
+import { Location } from '@prisma/client';
+
+export type LocationWithParent = Prisma.LocationGetPayload<{
+    include : {
+        parentLocation : true
+    }
+}>
+
+export type LocationWithChildren = Prisma.LocationGetPayload<{
+    include : {
+        childrenLocations : true
+    }
+}>
 
 @Injectable()
 export class LocationService {
@@ -15,7 +28,7 @@ export class LocationService {
         private readonly databaseService : DatabaseService
     ){}
 
-    async generateInsertQueries(locations: LocationSeed[]) {
+    async generateInsertQueries(locations: LocationSeed[]) : Promise<string[]> {
         return locations.map(location => {
             const {
                 id,
@@ -151,7 +164,7 @@ export class LocationService {
  
     // get methods for the location entity 
     
-    async getAll(){
+    async getAll() : Promise<LocationWithParent[]> {
         return this.databaseService.location.findMany({
             include : {
                 parentLocation : true
@@ -159,25 +172,28 @@ export class LocationService {
         });
     }
 
-    async getLocationById(id : number){
-        return this.databaseService.location.findUniqueOrThrow({
+    async getLocationById(id : number) : Promise<Location> {
+        return await this.databaseService.location.findUnique({
             where : {
                 id : id
             }
         })
     }
 
-    async getChildrenLocations(id : number){
-        console.log("The id is" + id);
+    async getChildrenLocations(id : number) : Promise<LocationWithChildren[]> {
         
         return this.databaseService.location.findMany({
             where : {
                 locationId : id
+            },
+            include : {
+                childrenLocations : true
             }
         })
     }
 
-    async getLocationByLevel(id : number){
+
+    async getLocationByLevel(id : number) : Promise<Location[]> {
         return this.databaseService.location.findMany({
             where  : {
                 locationLevelId : id
@@ -188,12 +204,12 @@ export class LocationService {
         })
     }
 
-    async getAllLocationLevels(){
+    async getAllLocationLevels() : Promise<locationLevel[]>{
         return this.databaseService.locationLevel.findMany()
     }
 
-    async getLOcationLevelById(id : number){
-        return this.databaseService.locationLevel.findUniqueOrThrow({
+    async getLOcationLevelById(id : number) : Promise<locationLevel>{
+        return this.databaseService.locationLevel.findUnique({
             where : {
                 id : id
             }

@@ -1,8 +1,9 @@
 import { Controller, Get , Param } from '@nestjs/common';
-import { LocationService } from './location.service';
+import { LocationService, LocationWithChildren, LocationWithParent } from './location.service';
 import { ApiParam, ApiTags } from '@nestjs/swagger';
 import { Allow } from 'src/decorators/allow.decorator';
-import { log } from 'console';
+import { Location, locationLevel } from '@prisma/client';
+import { ApiResponse } from 'src/responses/api.response';
 
 @Controller('location')
 @ApiTags('Location')
@@ -15,8 +16,8 @@ export class LocationController {
     // / get methods for the location entity 
     
     @Get('/all')
-    async getAll(){
-        return this.locationService.getAll()
+    async getAll() : Promise<ApiResponse<LocationWithParent[]>> {
+        return new ApiResponse<LocationWithParent[]>(true , "Success" , await this.locationService.getAll() , 200)
     }
 
     @Get('/:id')
@@ -24,8 +25,8 @@ export class LocationController {
         name : "id",
         type : Number
     })
-    async getLocationById( @Param('id') id: number ){
-        return this.locationService.getLocationById(id);
+    async getLocationById( @Param('id') id: number ) : Promise<ApiResponse<Location>> {
+        return new ApiResponse<Location>(true , "Success" , await this.locationService.getLocationById(id) , 200);
     }
 
     @Get('/children/:id')
@@ -33,8 +34,8 @@ export class LocationController {
         name : "id",
         type : Number
     })
-    async getChildrenLocations(@Param('id') id : number){
-        return this.locationService.getChildrenLocations(id)
+    async getChildrenLocations(@Param('id') id : number) : Promise<ApiResponse<LocationWithChildren[]>> {
+        return new ApiResponse<LocationWithChildren[]>(true , "Success" , await this.locationService.getChildrenLocations(id) , 200)
     }
 
     @Get('/level/:id')
@@ -42,13 +43,13 @@ export class LocationController {
         name : "id",
         type : Number
     })
-    async getLocationByLevel(@Param('id') id : number){
-        return this.locationService.getLocationByLevel(id)
+    async getLocationByLevel(@Param('id') id : number) : Promise<ApiResponse<Location[]>> {
+        return new ApiResponse<Location[]>(true , "Success" , await this.locationService.getLocationByLevel(id) , 200)
     }
 
     @Get('/location-levels/all')
-    async getAllLocationLevels(){
-        return this.locationService.getAllLocationLevels()
+    async getAllLocationLevels() : Promise<ApiResponse<locationLevel[]>> {
+        return new ApiResponse<locationLevel[]>(true , "Success" , await this.locationService.getAllLocationLevels() , 200)
     }
 
     @Get('/location-levels/:id')
@@ -56,7 +57,7 @@ export class LocationController {
         name : "id",
         type : Number
     })
-    async getLOcationLevelById(@Param("id") id : number){
-        return this.locationService.getLOcationLevelById(id)
+    async getLOcationLevelById(@Param("id") id : number) : Promise<ApiResponse<locationLevel>> {
+        return new ApiResponse<locationLevel>(true , "Success" , await this.locationService.getLOcationLevelById(id) , 200)
     }
 }
