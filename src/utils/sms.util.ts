@@ -15,7 +15,7 @@ export const sendSms = async (recepientPhoneNumber: string, message: Message) =>
 
   // Define the message details
   const bulkSms = {
-    reference_id: message.id, // Use the messageId as reference_id
+    reference_id: senderId, // Use the messageId as reference_id
     sms: message.content, // Replace with actual SMS content
     receiver_phone: recepientPhoneNumber, // Replace with actual recipient's phone number
   };
@@ -23,7 +23,7 @@ export const sendSms = async (recepientPhoneNumber: string, message: Message) =>
   // Prepare parameters for the POST request
   const params = {
     request_id: message.id + Date.now(),
-    sender_id: message.id,
+    sender_id: senderId,
     sms_body: bulkSms.sms,
     username: smsUsername,
     password: smsPassword,

@@ -10,8 +10,8 @@ import { winstonLoggerConfig } from './logs/winston-logger.config'
 
 async function bootstrap() {
 
-   // Handle uncaught exceptions
-   process.on('uncaughtException', (err) => {
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     // Handle or log the error as necessary
     // Optionally, you can add custom logic here, like shutting down the app gracefully
@@ -25,33 +25,33 @@ async function bootstrap() {
   });
 
 
-  const app = await NestFactory.create(AppModule , {
-    logger : WinstonModule.createLogger(winstonLoggerConfig)
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(winstonLoggerConfig)
   })
 
   // enable cors 
   app.enableCors()
 
   app.useGlobalFilters(new AppExceptionFilter());
-  
-  app.useGlobalPipes(new ValidationPipe(
- {
-  transform : true,
-  exceptionFactory : (errors : ValidationError[]) => {
-    // Extracting and formatting error messages
-    const messages = errors.map((error) => {
-      // Check if there are constraints in the error
-      if (error.constraints) {
-        // Join all the constraints messages into a single string
-        return Object.values(error.constraints).join(', ');
-      }
-      // If no constraints, return a generic message
-      return `${error.property} has an invalid value`;
-    });
 
-    return new BadRequestException(messages)
-  }
- }
+  app.useGlobalPipes(new ValidationPipe(
+    {
+      transform: true,
+      exceptionFactory: (errors: ValidationError[]) => {
+        // Extracting and formatting error messages
+        const messages = errors.map((error) => {
+          // Check if there are constraints in the error
+          if (error.constraints) {
+            // Join all the constraints messages into a single string
+            return Object.values(error.constraints).join(', ');
+          }
+          // If no constraints, return a generic message
+          return `${error.property} has an invalid value`;
+        });
+
+        return new BadRequestException(messages)
+      }
+    }
   ))
 
 
@@ -64,6 +64,13 @@ async function bootstrap() {
     .addTag('Settings')
     .addTag('Location')
     .addTag('Auth')
+    .addTag('Animal')
+    .addTag('Crop')
+    .addTag('Farmer')
+    .addTag('Breed')
+    .addTag('Cooperative')
+    .addTag('LivestockRegistration')
+    .addTag('SlaughterHouse')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);

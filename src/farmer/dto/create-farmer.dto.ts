@@ -3,7 +3,7 @@ import { Status } from "@prisma/client";
 
 import { IsEmail, IsOptional, IsNotEmpty, IsString, MinLength, MaxLength, Matches, Min, Max, Length } from "class-validator";
 
-export class CreateUserDto {
+export class CreateFarmerDto {
     @IsNotEmpty()
     @ApiProperty()
     firstName: string
@@ -28,11 +28,6 @@ export class CreateUserDto {
     @IsEmail()
     email: string
 
-
-
-    @ApiProperty()
-    password?: string
-
     @ApiProperty()
     @IsOptional()
     @IsString()
@@ -41,4 +36,20 @@ export class CreateUserDto {
     @ApiProperty()
     @IsNotEmpty()
     locationId: number
+    @ApiProperty()
+    @IsOptional()
+    cropsId: string[]
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    plantationArea: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    seeds: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    produceHarvested: string
+
 }

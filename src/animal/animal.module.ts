@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { BreedService } from './breed.service';
-import { BreedController } from './breed.controller';
+import { AnimalService } from './animal.service';
+import { AnimalController } from './animal.controller';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { UsersService } from 'src/users/users.service';
 import { LocationService } from 'src/location/location.service';
 
 @Module({
-  controllers: [BreedController],
-  providers: [BreedService, JwtService, Reflector, UsersService, LocationService],
+  controllers: [AnimalController],
+  providers: [AnimalService, JwtService, Reflector, UsersService, LocationService],
 })
-export class BreedModule { }
+export class AnimalModule { }

@@ -9,7 +9,7 @@ import { Role_Enum } from 'src/enums/role.enum';
 import { ApiResponse } from 'src/responses/api.response';
 import { ChangePasswordDTO } from './dto/change-password.dto';
 import { AuthRequest } from 'src/types/auth-request.type';
-import { Agronomy, Farmer, Status, User, Veterinary } from '@prisma/client';
+import { Agronomy, Farmer, Status, Umufashamyumvire, User, Veterinary } from '@prisma/client';
 import { Allow } from 'src/decorators/allow.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 
@@ -110,6 +110,23 @@ export class UsersController {
 
     return this.usersService.registerMultipleAgronomists(file);
   }
+  @Post('register-umufasha-myumvire')
+  @Roles(Role_Enum.ADMIN)
+  @ApiBody({ type: CreateUserDto })
+  async registerUmufashaMyumvire(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Umufashamyumvire>> {
+    return new ApiResponse<Umufashamyumvire>(true, "Umufasha Myumvire Registered Successfully", await this.usersService.registerUmufashaMyumvire(createUserDto), null);
+  }
+  @Post('import-abafasha-myumvire')
+  @Roles(Role_Enum.ADMIN)
+  @UseInterceptors(FileInterceptor('file'))
+  async registerMultipleUmufashaMyumvire(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    return this.usersService.registerMultipleBafashaMyumvire(file);
+  }
+
 
 
   // changing the user account status

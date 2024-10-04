@@ -27,7 +27,9 @@ export class UsersService {
     if (createUserDto.password) {
       createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
     } else {
-      createUserDto.password = generatePassword()
+      let password = generatePassword()
+      console.log("password: ", password)
+      createUserDto.password = await bcrypt.hash(password, 10)
     }
     let usersnumber = await this.databaseService.user.count();
     const username = createUserDto.firstName.toLowerCase() + usersnumber;
@@ -73,7 +75,6 @@ export class UsersService {
         email: createUserDto.email,
         password: createUserDto.password,
         nationalId: createUserDto.nationalId,
-        status: createUserDto.status,
         username: username,
         role: {
           connect: {
@@ -89,6 +90,7 @@ export class UsersService {
     });
     if (user) {
       sendSms(user.telephone, { id: randomUUID(), content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is ${createUserDto.password}. Please change your password after logging in.` })
+      console.log(createUserDto.password)
       return user
     } else {
       return null
@@ -333,6 +335,31 @@ export class UsersService {
       throw new BadRequestException(e.message)
     }
   }
+  async registerUmufashaMyumvire(createUserDto: CreateUserDto): Promise<Veterinary> {
+    try {
+      let role = await this.databaseService.role.findFirst({
+        where: {
+          name: "UMUFASHAMYUMVIRE"
+        }
+      })
+      let user = await this.create({ roleId: role.id, ...createUserDto });
+
+      return await this.databaseService.veterinary.create({
+        data: {
+          user: {
+            connect: {
+              id: user.id
+            }
+          }
+
+        }
+
+      })
+    }
+    catch (e) {
+      throw new BadRequestException(e.message)
+    }
+  }
 
   async registerMultipleVets(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
@@ -385,7 +412,57 @@ export class UsersService {
 
     return { success, failed, errors };
   }
+  async registerMultipleBafashaMyumvire(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
 
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    // Skip the first row (assuming it's the header row)
+    const rowsToProcess = data.slice(1);
+
+    let success = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const row of rowsToProcess) {
+      try {
+        // Map the row to a userDto-like object based on the cell index
+        let userDto = {
+          firstName: row[0],
+          lastName: row[1],
+          nationalId: row[2],
+          telephone: row[3],
+          email: row[4],
+          locationId: 0,
+
+
+        };
+        let location = await this.locationService.getLocationByName(row[9]);
+        userDto.locationId = location.id;
+        let role = await this.databaseService.role.findFirst({
+          where: {
+            name: "UMUFASHAMYUMVIRE"
+          }
+        })
+
+        await this.registerVet({ roleId: role.id, ...userDto }); // Register vet with the custom object
+        success++;
+      } catch (error) {
+        failed++;
+        errors.push({
+          row: row,
+          error: error.message || 'Unknown error occurred',
+        });
+      }
+    }
+
+    return { success, failed, errors };
+  }
 
   async registerMultipleFarmers(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
