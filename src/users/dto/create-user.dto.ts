@@ -1,27 +1,28 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Status } from "@prisma/client";
-import { IsEmail, IsOptional ,  IsNotEmpty, IsString, MinLength, MaxLength, Matches, Min, Max, Length } from "class-validator";
+
+import { IsEmail, IsOptional, IsNotEmpty, IsString, MinLength, MaxLength, Matches, Min, Max, Length } from "class-validator";
 
 export class CreateUserDto {
     @IsNotEmpty()
     @ApiProperty()
     firstName: string
-    
+
     @IsNotEmpty()
     @ApiProperty()
     lastName: string
 
-    @Length(16 , 16)
+    @Length(16, 16)
     @IsNotEmpty()
     @ApiProperty()
-    nationalId : string
+    nationalId: string
 
     @IsOptional()
     @ApiProperty()
     @IsString()
     @Length(12)
     @Matches(/^250\d{9}$/)
-    telephone : string 
+    telephone: string
 
     @ApiProperty()
     @IsEmail()
@@ -34,7 +35,7 @@ export class CreateUserDto {
     @Matches(/^(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{6,}$/, {
         message: 'Password must have at least 6 characters, one symbol, one number, and one uppercase letter.',
     })
-    password: string
+    password?: string
     @ApiProperty()
     status?: Status
 
@@ -42,9 +43,9 @@ export class CreateUserDto {
     @ApiProperty()
     @IsNotEmpty()
     @IsString()
-    roleId : string 
+    roleId: string
 
     @ApiProperty()
     @IsNotEmpty()
-    locationId : number
+    locationId: number
 }

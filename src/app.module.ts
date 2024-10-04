@@ -16,9 +16,14 @@ import { MailModule } from './mail/mail.module';
 import { LocationService } from './location/location.service';
 import { UploadModule } from './upload/upload.module';
 import { SettingsModule } from './settings/settings.module';
+import { BreedModule } from './breed/breed.module';
+import { LiveStockRegistrationModule } from './live-stock-registration/live-stock-registration.module';
+import { CooperativeModule } from './cooperative/cooperative.module';
+import { SlaughterHouseModule } from './slaughter-house/slaughter-house.module';
+
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule ,   AuthModule, RolesModule , UsersModule, LocationModule, MailModule, UploadModule,  SettingsModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,
@@ -31,24 +36,24 @@ import { SettingsModule } from './settings/settings.module';
       useClass: AppExceptionFilter
     }],
 })
-export class AppModule implements OnModuleInit{
+export class AppModule implements OnModuleInit {
   constructor(
-    private readonly roleService : RolesService,
-    private readonly locationService : LocationService
-  ){}
+    private readonly roleService: RolesService,
+    private readonly locationService: LocationService
+  ) { }
 
-  seedData = false
+  seedData = true
 
 
 
   async onModuleInit() {
-      if(this.seedData){
-     // data seeding before the application begins 
-     this.roleService.initiateRoles()
-     this.locationService.seedLocationLevel()
-     this.locationService.seedLocationsProvinces()
-     this.locationService.seedLocationDistricts()
-     this.locationService.seedLocationSectors()
-      }
+    if (this.seedData) {
+      // data seeding before the application begins 
+      this.roleService.initiateRoles()
+      this.locationService.seedLocationLevel()
+      this.locationService.seedLocationsProvinces()
+      this.locationService.seedLocationDistricts()
+      this.locationService.seedLocationSectors()
+    }
   }
- }
+}

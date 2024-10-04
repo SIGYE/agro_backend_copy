@@ -7,14 +7,17 @@ import * as nodemailer from 'nodemailer';
 export class MailService {
   private transporter;
 
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
+
+
+    // Create the transporter with SMTP settings
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: this.configService.get('SMTP_HOST'), // Generic SMTP server (replace Gmail with your server)
+      port: this.configService.get('SMTP_PORT') || 587, // Use the correct port (587 for TLS/STARTTLS)
+      secure: this.configService.get('SMTP_SECURE') === 'true', // true for 465 (SSL), false for 587 (TLS)
       auth: {
-        user: this.configService.get('EMAIL_USER'),
-        pass: this.configService.get('EMAIL_PASSWORD'),
+        user: this.configService.get('EMAIL_USER'), // Your email address
+        pass: this.configService.get('EMAIL_PASSWORD'), // Your email password
       },
     });
   }
@@ -132,12 +135,21 @@ async sendDemoRequestAcceptedEmail(to: string, organizationName: string, zoomLin
    * @param options Object containing the email options (to, subject, html).
    */
   private async sendMail(options: { to: string; subject: string; html: string }) {
-    await this.transporter.sendMail({
-      from: `"No Reply" <${this.configService.get('EMAIL_USER')}>`, // sender address
-      to: options.to, // list of receivers
-      subject: options.subject, // Subject line
-      html: options.html, // html body
-    });
+      try{
+        console.log(
+          this.configService.get('EMAIL_USER'),
+          this.configService.get('EMAIL_PASSWORD')
+        )
+        
+        await this.transporter.sendMail({
+          from: `"No Reply" <${this.configService.get('EMAIL_USER')}>`, // sender address
+          to: options.to, // list of receivers
+          subject: options.subject, // Subject line
+          html: options.html, // html body
+        });
+      }catch(error){
+        console.log(error)
+      }
   }
 
 }
