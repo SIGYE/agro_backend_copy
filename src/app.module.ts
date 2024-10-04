@@ -20,10 +20,13 @@ import { BreedModule } from './breed/breed.module';
 import { LiveStockRegistrationModule } from './live-stock-registration/live-stock-registration.module';
 import { CooperativeModule } from './cooperative/cooperative.module';
 import { SlaughterHouseModule } from './slaughter-house/slaughter-house.module';
+import { CropModule } from './crop/crop.module';
+import { AnimalModule } from './animal/animal.module';
+import { FarmerModule } from './farmer/farmer.module';
 
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,
@@ -42,7 +45,7 @@ export class AppModule implements OnModuleInit {
     private readonly locationService: LocationService
   ) { }
 
-  seedData = true
+  seedData = false
 
 
 

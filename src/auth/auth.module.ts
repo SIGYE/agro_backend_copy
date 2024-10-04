@@ -7,10 +7,10 @@ import { DatabaseModule } from 'src/database/database.module';
 import { MailModule } from 'src/mail/mail.module';
 
 @Module({
-  imports: [MailModule ,  JwtModule.register({
+  imports: [MailModule, JwtModule.register({
     secret: process.env.SECRET_KEY,
     signOptions: { expiresIn: '2d' }
-  }), UsersModule , DatabaseModule],
+  }), UsersModule, DatabaseModule],
   controllers: [AuthController],
   providers: [AuthService],
   exports: [JwtModule, AuthService]

@@ -1,11 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { SlaughterHouseService } from './slaughter-house.service';
 import { CreateSlaughterHouseDto } from './dto/create-slaughter-house.dto';
 import { UpdateSlaughterHouseDto } from './dto/update-slaughter-house.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('slaughter-house')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
+@ApiTags('SlaughterHouse')
 export class SlaughterHouseController {
-  constructor(private readonly slaughterHouseService: SlaughterHouseService) {}
+  constructor(private readonly slaughterHouseService: SlaughterHouseService) { }
 
   @Post()
   create(@Body() createSlaughterHouseDto: CreateSlaughterHouseDto) {

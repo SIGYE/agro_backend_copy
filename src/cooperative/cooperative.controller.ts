@@ -1,11 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { CooperativeService } from './cooperative.service';
 import { CreateCooperativeDto } from './dto/create-cooperative.dto';
 import { UpdateCooperativeDto } from './dto/update-cooperative.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('cooperative')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
+@ApiTags('Cooperative')
 export class CooperativeController {
-  constructor(private readonly cooperativeService: CooperativeService) {}
+  constructor(private readonly cooperativeService: CooperativeService) { }
 
   @Post()
   create(@Body() createCooperativeDto: CreateCooperativeDto) {

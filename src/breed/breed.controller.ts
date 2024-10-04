@@ -1,11 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { BreedService } from './breed.service';
 import { CreateBreedDto } from './dto/create-breed.dto';
 import { UpdateBreedDto } from './dto/update-breed.dto';
-
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from 'src/guards/auth.guard';
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
+@ApiTags('Breed')
 @Controller('breed')
 export class BreedController {
-  constructor(private readonly breedService: BreedService) {}
+  constructor(private readonly breedService: BreedService) { }
 
   @Post()
   create(@Body() createBreedDto: CreateBreedDto) {

@@ -1,11 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { LiveStockRegistrationService } from './live-stock-registration.service';
 import { CreateLiveStockRegistrationDto } from './dto/create-live-stock-registration.dto';
 import { UpdateLiveStockRegistrationDto } from './dto/update-live-stock-registration.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('live-stock-registration')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
+@ApiTags('LiveStockRegistration')
 export class LiveStockRegistrationController {
-  constructor(private readonly liveStockRegistrationService: LiveStockRegistrationService) {}
+  constructor(private readonly liveStockRegistrationService: LiveStockRegistrationService) { }
 
   @Post()
   create(@Body() createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
