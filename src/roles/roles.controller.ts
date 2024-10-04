@@ -6,39 +6,40 @@ import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { Role } from '@prisma/client';
+import { Allow } from 'class-validator';
 
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 @ApiTags('Roles')
-@ApiBearerAuth()
+// @ApiBearerAuth()
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) { }
-
+  @Allow()
   @Post('/create')
-  async create(@Body() createRoleDto: CreateRoleDto) : Promise<ApiResponse<Role>> {
-    return new ApiResponse<Role>(true, "Role Created", await this.rolesService.create(createRoleDto) , null);
+  async create(@Body() createRoleDto: CreateRoleDto): Promise<ApiResponse<Role>> {
+    return new ApiResponse<Role>(true, "Role Created", await this.rolesService.create(createRoleDto), null);
   }
 
   @Get()
-  async findAll() : Promise<ApiResponse<Role[]>> {
-    return new ApiResponse<Role[]>(true, "All Roles", await this.rolesService.findAll() , null);
+  async findAll(): Promise<ApiResponse<Role[]>> {
+    return new ApiResponse<Role[]>(true, "All Roles", await this.rolesService.findAll(), null);
   }
 
   @Get(':id')
   @ApiParam({ name: "id", type: String })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) : Promise<ApiResponse<Role>> {
-    return new ApiResponse<Role>(true, "Role Retrieved", await this.rolesService.findOne(id) , null);
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ApiResponse<Role>> {
+    return new ApiResponse<Role>(true, "Role Retrieved", await this.rolesService.findOne(id), null);
   }
 
   @Patch(':id')
   @ApiParam({ name: "id", type: String })
-  async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRoleDto: UpdateRoleDto) : Promise<ApiResponse<Role>> {
-    return new ApiResponse<Role>(true, "Updated Role", await this.rolesService.update(id, updateRoleDto) , null);
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRoleDto: UpdateRoleDto): Promise<ApiResponse<Role>> {
+    return new ApiResponse<Role>(true, "Updated Role", await this.rolesService.update(id, updateRoleDto), null);
   }
 
   @Delete(':id')
   @ApiParam({ name: "id", type: String })
-  async remove(@Param('id', ParseUUIDPipe) id: string) : Promise<ApiResponse<Role>> {
-    return new ApiResponse<Role>(true, "Role Deleted", await this.rolesService.remove(id) , null);
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<ApiResponse<Role>> {
+    return new ApiResponse<Role>(true, "Role Deleted", await this.rolesService.remove(id), null);
   }
 }
