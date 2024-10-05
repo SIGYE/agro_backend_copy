@@ -89,18 +89,22 @@ export class FarmerService {
     }
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.databaseService.farmer.findMany();
+      return await this.databaseService.farmer.findMany({
+        include:{
+          cropFarmerRegistrations:true
+        }
+      });
     } catch (e) {
       throw new BadRequestException(e.message)
     }
 
   }
 
-  findOne(id: string) {
+  async findOne(id: string) {
     try {
-      return this.databaseService.farmer.findUnique({
+       return await this.databaseService.farmer.findUnique({
         where: {
           id: id
         }
@@ -121,9 +125,9 @@ export class FarmerService {
   //   }
   // }
 
-  remove(id: string) {
+  async remove(id: string) {
     try {
-      return this.databaseService.farmer.delete({
+      return await this.databaseService.farmer.delete({
         where: {
           id: id
         }

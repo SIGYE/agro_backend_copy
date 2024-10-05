@@ -10,9 +10,9 @@ export class AnimalService {
   constructor(private readonly dataBaseService: DatabaseService) {
 
   }
-  create(createAnimalDto: CreateAnimalDto, userId: string) {
+  async create(createAnimalDto: CreateAnimalDto, userId: string) {
     try {
-      return this.dataBaseService.animal.create({
+      return await this.dataBaseService.animal.create({
         data: {
           name: createAnimalDto.name,
           createdBy: userId,
@@ -25,17 +25,17 @@ export class AnimalService {
     }
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.dataBaseService.animal.findMany();
+      return await this.dataBaseService.animal.findMany();
     } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
-  findOne(id: string) {
+  async findOne(id: string) {
     try {
-      return this.dataBaseService.animal.findUnique({
+      return await this.dataBaseService.animal.findUnique({
         where: {
           id: id
         }
@@ -45,9 +45,9 @@ export class AnimalService {
     }
   }
 
-  update(id: string, updateAnimalDto: UpdateAnimalDto) {
+  async update(id: string, updateAnimalDto: UpdateAnimalDto) {
     try {
-      return this.dataBaseService.animal.update({
+      return await this.dataBaseService.animal.update({
         where: {
           id: id
         },
@@ -62,9 +62,9 @@ export class AnimalService {
     }
   }
 
-  remove(id: string) {
+  async remove(id: string) {
     try {
-      return this.dataBaseService.animal.delete({
+      return await this.dataBaseService.animal.delete({
         where: {
           id: id
         }

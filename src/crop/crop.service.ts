@@ -7,10 +7,10 @@ import * as XLSX from 'xlsx';
 @Injectable()
 export class CropService {
   constructor(private readonly dataBaseService: DatabaseService) { }
-  create(createCropDto: CreateCropDto, userId: string) {
+  async create(createCropDto: CreateCropDto, userId: string) {
 
     try {
-      return this.dataBaseService.crop.create({
+      return await this.dataBaseService.crop.create({
         data: {
           name: createCropDto.name,
           createdBy: userId
@@ -22,18 +22,18 @@ export class CropService {
     }
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.dataBaseService.crop.findMany();
+      return await this.dataBaseService.crop.findMany();
     }
     catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
-  findOne(id: string) {
+  async findOne(id: string) {
     try {
-      return this.dataBaseService.crop.findUnique({
+      return await this.dataBaseService.crop.findUnique({
         where: {
           id: id
         }
@@ -43,9 +43,9 @@ export class CropService {
     }
   }
 
-  update(id: string, updateCropDto: UpdateCropDto) {
+  async update(id: string, updateCropDto: UpdateCropDto) {
     try {
-      return this.dataBaseService.crop.update({
+      return await this.dataBaseService.crop.update({
         where: {
           id: id
         },
@@ -59,9 +59,9 @@ export class CropService {
     }
   }
 
-  remove(id: string) {
+  async remove(id: string) {
     try {
-      return this.dataBaseService.crop.delete({
+      return await this.dataBaseService.crop.delete({
         where: {
           id: id
         }
