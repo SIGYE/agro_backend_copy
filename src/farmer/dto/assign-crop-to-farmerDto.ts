@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString, IsUUID } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { cropFarmerDto } from "./crop-farmer.dto";
 
 export class AssignCropToFarmerDto {
     @ApiProperty()
@@ -7,18 +8,6 @@ export class AssignCropToFarmerDto {
     @IsUUID()
     farmerId: string
     @ApiProperty()
-    @IsNotEmpty()
-    cropsId: string[]
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    plantationArea: string
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    seeds: string
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    produceHarvested: string
+    crops: cropFarmerDto[]
+
 }

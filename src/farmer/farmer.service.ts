@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 import { DatabaseService } from 'src/database/database.service';
@@ -7,6 +7,7 @@ import { Farmer } from '@prisma/client';
 import { UsersService } from 'src/users/users.service';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
 import * as XLSX from 'xlsx';
+import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 
 @Injectable()
 export class FarmerService {
@@ -17,7 +18,7 @@ export class FarmerService {
         where: {
           name: "FARMER"
         }
-      })
+      });
       let user = await this.userServcice.create({ roleId: role.id, ...CreateFarmerDto });
 
       let farmer = await this.databaseService.farmer.create({
@@ -27,33 +28,61 @@ export class FarmerService {
               id: user.id
             }
           }
-
         }
+      });
 
-      })
-      for (let cropId of CreateFarmerDto.cropsId) {
-        await this.databaseService.cropFarmerRegistration.create({
-          data: {
-            plantationArea: CreateFarmerDto.plantationArea,
-            seeds: CreateFarmerDto.seeds,
-            produceHarvested: CreateFarmerDto.produceHarvested,
-            farmer: {
-              connect: {
-                id: farmer.id
-              }
-            },
-            crop: {
-              connect: {
-                id: cropId
+      // Assign crops to farmer if cropsId is present
+      if (CreateFarmerDto.crops) {
+        for (let crop of CreateFarmerDto.crops) {
+          await this.databaseService.cropFarmerRegistration.create({
+            data: {
+              plantationArea: crop.plantationArea,
+              seeds: crop.seeds,
+              produceHarvested: crop.produceHarvested,
+              farmer: {
+                connect: {
+                  id: farmer.id
+                }
+              },
+              crop: {
+                connect: {
+                  id: crop.cropsId
+                }
               }
             }
-          }
-        })
+          });
+        }
       }
+
+      // Assign animals to farmer if animalIds is present
+      if (CreateFarmerDto.animals) {
+        for (let animal of CreateFarmerDto.animals) {
+          await this.databaseService.animalFarmerRegistration.create({
+            data: {
+              farmer: {
+                connect: {
+                  id: farmer.id
+                }
+              },
+              animal: {
+                connect: {
+                  id: animal.animalId
+                }
+              },
+              totalNumber: animal.totalNumber,
+              femaleNumber: animal.femaleNumber,
+              maleNumber: animal.maleNumber
+
+
+            }
+          });
+        }
+      }
+
       return farmer;
 
     } catch (e) {
-      throw new BadRequestException(e.message)
+      throw new BadRequestException(e.message);
     }
   }
   async assignCropsToFarmers(assignCropsToFarmers: AssignCropToFarmerDto) {
@@ -63,12 +92,12 @@ export class FarmerService {
           id: assignCropsToFarmers.farmerId
         }
       })
-      for (let cropId of assignCropsToFarmers.cropsId) {
+      for (let crop of assignCropsToFarmers.crops) {
         await this.databaseService.cropFarmerRegistration.create({
           data: {
-            plantationArea: assignCropsToFarmers.plantationArea,
-            seeds: assignCropsToFarmers.seeds,
-            produceHarvested: assignCropsToFarmers.produceHarvested,
+            plantationArea: crop.plantationArea,
+            seeds: crop.seeds,
+            produceHarvested: crop.produceHarvested,
             farmer: {
               connect: {
                 id: farmer.id
@@ -76,7 +105,7 @@ export class FarmerService {
             },
             crop: {
               connect: {
-                id: cropId
+                id: crop.cropsId
               }
             }
           }
@@ -88,12 +117,44 @@ export class FarmerService {
       throw new BadRequestException(e.message)
     }
   }
+  async assignAnimalsToFarmer(assignAnimalsToFarmer: AssignAnimalToFarmerDto) {
+    try {
+      let farmer = await this.databaseService.farmer.findUnique({
+        where: {
+          id: assignAnimalsToFarmer.farmerId
+        }
+      });
+      for (let animal of assignAnimalsToFarmer.animals) {
+        await this.databaseService.animalFarmerRegistration.create({
+          data: {
+            farmer: {
+              connect: {
+                id: farmer.id
+              }
+            },
+            animal: {
+              connect: {
+                id: animal.animalId
+              }
+            },
+            totalNumber: animal.totalNumber,
+            femaleNumber: animal.femaleNumber,
+            maleNumber: animal.maleNumber
+          }
+        });
+      }
+      return farmer;
+
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
+  }
 
   async findAll() {
     try {
       return await this.databaseService.farmer.findMany({
-        include:{
-          cropFarmerRegistrations:true
+        include: {
+          cropFarmerRegistrations: true
         }
       });
     } catch (e) {
@@ -101,10 +162,131 @@ export class FarmerService {
     }
 
   }
+  async getFarmersByCooperative(cooperativeId: string) {
+    try {
+      // Check if the cooperative exists
+      const cooperative = await this.databaseService.cooperative.findUnique({
+        where: { id: cooperativeId },
+      });
 
+      if (!cooperative) {
+        throw new NotFoundException(`Cooperative with ID ${cooperativeId} not found`);
+      }
+
+      // Retrieve farmers associated with the cooperative
+      const farmers = await this.databaseService.farmer.findMany({
+        where: {
+          cooperativeId: cooperativeId,
+        },
+      });
+
+      return farmers;
+    } catch (error) {
+      throw new BadRequestException('Error fetching farmers by cooperative');
+    }
+  }
+  async getFarmersByLocation(locationId: number) {
+    try {
+      // Check if the cooperative exists
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+      });
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`);
+      }
+
+      // Retrieve farmers associated with the cooperative
+      const farmers = await this.databaseService.farmer.findMany({
+        where: {
+          user: {
+            locationId: locationId
+          }
+        },
+      });
+
+      return farmers;
+    } catch (error) {
+      throw new BadRequestException('Error fetching farmers by location');
+    }
+  }
+  async getCropFarmerRegistrationsByLocation(locationId: number) {
+    try {
+      // Check if the location exists
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+      });
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`);
+      }
+
+      // Retrieve cropFarmerRegistrations associated with the location
+      const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              locationId: locationId
+            }
+          }
+        },
+      });
+
+      return cropFarmerRegistrations;
+    } catch (error) {
+      throw new BadRequestException('Error fetching crop farmer registrations by location');
+    }
+  }
+
+  async getAnimalRegistrationsByLocation(locationId: number) {
+    try {
+      // Check if the location exists
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+      });
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`);
+      }
+
+      // Retrieve animalRegistrations associated with the location
+      const animalRegistrations = await this.databaseService.animalFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              locationId: locationId,
+            },
+          },
+        },
+      });
+
+      return animalRegistrations;
+    } catch (error) {
+      throw new BadRequestException('Error fetching animal registrations by location');
+    }
+  }
+  async getAllCropFarmerRegistrations() {
+    try {
+      // Retrieve all cropFarmerRegistrations
+      const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany();
+      return cropFarmerRegistrations;
+    } catch (error) {
+      throw new BadRequestException('Error fetching all crop farmer registrations');
+    }
+  }
+
+  async getAllAnimalFarmerRegistrations() {
+    try {
+      // Retrieve all animalFarmerRegistrations
+      const animalFarmerRegistrations = await this.databaseService.animalFarmerRegistration.findMany();
+      return animalFarmerRegistrations;
+    } catch (error) {
+      throw new BadRequestException('Error fetching all animal farmer registrations');
+    }
+  }
   async findOne(id: string) {
     try {
-       return await this.databaseService.farmer.findUnique({
+      return await this.databaseService.farmer.findUnique({
         where: {
           id: id
         }
@@ -126,14 +308,25 @@ export class FarmerService {
   // }
 
   async remove(id: string) {
+
     try {
-      return await this.databaseService.farmer.delete({
+      // Delete cropFarmerRegistration entries
+      await this.databaseService.cropFarmerRegistration.deleteMany({
+        where: {
+          farmerId: id
+        }
+      });
+
+      // Delete farmer
+      const result = await this.databaseService.farmer.delete({
         where: {
           id: id
         }
-      })
+      });
+
+      return result;
     } catch (e) {
-      throw new BadRequestException(e.message)
+      throw new BadRequestException(e.message);
     }
   }
 
