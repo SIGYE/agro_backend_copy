@@ -18,17 +18,17 @@ export class FarmerController {
   @Post('register-farmer')
   @ApiBody({ type: CreateFarmerDto })
   async create(@Body() createFarmerDto: CreateFarmerDto) {
-    new ApiResponse(true, "Farmer Created", await this.farmerService.registerFarmer(createFarmerDto), null);
+    return new ApiResponse(true, "Farmer Created", await this.farmerService.registerFarmer(createFarmerDto), null);
   }
 
   @Get()
   async findAll() {
-    new ApiResponse(true, "All Farmers", await this.farmerService.findAll(), null);
+    return new ApiResponse(true, "All Farmers", await this.farmerService.findAll(), null);
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    new ApiResponse(true, "Farmer Retrieved", await this.farmerService.findOne(id), null);
+    return new ApiResponse(true, "Farmer Retrieved", await this.farmerService.findOne(id), null);
   }
 
   // @Patch(':id')
@@ -38,10 +38,10 @@ export class FarmerController {
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    new ApiResponse(true, "Farmer Deleted", await this.farmerService.remove(id), null);
+    return new ApiResponse(true, "Farmer Deleted", await this.farmerService.remove(id), null);
   }
   @Put('assign-crops-to-farmer')
   async assignCropsToFarmer(@Body() data: AssignCropToFarmerDto) {
-    new ApiResponse(true, "Crops Assigned", await this.farmerService.assignCropsToFarmers(data), null);
+    return new ApiResponse(true, "Crops Assigned", await this.farmerService.assignCropsToFarmers(data), null);
   }
 }
