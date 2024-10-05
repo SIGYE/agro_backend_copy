@@ -99,6 +99,7 @@ model Location {
   locationLevel     locationLevel @relation(fields: [locationLevelId], references: [id], onDelete: Cascade)
   locationLevelId   Int
   users             User[]
+  cooperatives      Cooperative[]
 
   @@map("location")
 }
@@ -187,6 +188,8 @@ model Farmer {
   user                      User                       @relation(fields: [userId], references: [id])
   cropFarmerRegistrations   CropFarmerRegistration[]
   animalFarmerRegistrations AnimalFarmerRegistration[]
+  cooperative              Cooperative? @relation(fields: [cooperativeId], references: [id])
+  cooperativeId            String?
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
 }
@@ -195,8 +198,11 @@ model Cooperative {
   id                             String                          @id @default(uuid())
   name                           String
   telephone                      String
-  registationNumber              String
+  registrationNumber              String
   membersNumber                  Int
+  Location                       Location                       @relation(fields: [locationId], references: [id])
+  locationId                       Int
+  farmers                        Farmer[]
   cooperativeCropRegistrations   CooperativeCropRegistration[]
   cooperativeAnimalRegistrations CooperativeAnimalRegistration[]
   createdAt                      DateTime                        @default(now())

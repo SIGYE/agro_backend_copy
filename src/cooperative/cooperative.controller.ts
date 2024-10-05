@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put } from '@nestjs/common';
 import { CooperativeService } from './cooperative.service';
 import { CreateCooperativeDto } from './dto/create-cooperative.dto';
 import { UpdateCooperativeDto } from './dto/update-cooperative.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { ApiResponse } from 'src/responses/api.response';
+import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -13,27 +15,32 @@ export class CooperativeController {
   constructor(private readonly cooperativeService: CooperativeService) { }
 
   @Post()
-  create(@Body() createCooperativeDto: CreateCooperativeDto) {
-    return this.cooperativeService.create(createCooperativeDto);
+  async create(@Body() createCooperativeDto: CreateCooperativeDto) {
+    return new ApiResponse(true, "Cooperative Created", await this.cooperativeService.create(createCooperativeDto), null);
   }
 
   @Get()
-  findAll() {
-    return this.cooperativeService.findAll();
+  async findAll() {
+    return new ApiResponse(true, "All Cooperatives", await this.cooperativeService.findAll(), null);
+
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.cooperativeService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    return new ApiResponse(true, "Cooperative Retrieved", await this.cooperativeService.findOne(id), null);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCooperativeDto: UpdateCooperativeDto) {
-    return this.cooperativeService.update(+id, updateCooperativeDto);
+  async update(@Param('id') id: string, @Body() updateCooperativeDto: UpdateCooperativeDto) {
+    return new ApiResponse(true, "Cooperative Updated", await this.cooperativeService.update(id, updateCooperativeDto), null);
+  }
+  @Put('assign-farmers-to-cooperative')
+  async assignFarmersToCooperative(@Body() data: AssignFarmersTOCooperative) {
+    return new ApiResponse(true, "Farmers Assigned", await this.cooperativeService.assignFarmersToCooperative(data), null);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.cooperativeService.remove(+id);
+  async remove(@Param('id') id: string) {
+    return new ApiResponse(true, "Cooperative Deleted", await this.cooperativeService.remove(id), null);
   }
 }

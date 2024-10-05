@@ -195,6 +195,7 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<User> {
+
     return this.databaseService.user.delete({
       where: { id }
     });

@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
+import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 
 @Controller('farmer')
 @ApiBearerAuth()
@@ -25,6 +26,30 @@ export class FarmerController {
   async findAll() {
     return new ApiResponse(true, "All Farmers", await this.farmerService.findAll(), null);
   }
+  @Get('farmer-crops')
+  async findAllFarmerCrops() {
+    return new ApiResponse(true, "All Farmers Crops", await this.farmerService.getAllAnimalFarmerRegistrations(), null);
+  }
+  @Get('farmer-animals')
+  async findAllFarmerAnimals() {
+    return new ApiResponse(true, "All Farmers Animals", await this.farmerService.getAllCropFarmerRegistrations(), null);
+  }
+  @Get('farmers-by-cooperative/:id')
+  async findAllFarmersByCooperative(@Param('id') id: string) {
+    return new ApiResponse(true, "All Farmers By Cooperative", await this.farmerService.getFarmersByCooperative(id), null);
+  }
+  @Get('farmers-by-location/:id')
+  async findAllFarmersByLocation(@Param('id') id: number) {
+    return new ApiResponse(true, "All Farmers By Location", await this.farmerService.getFarmersByLocation(id), null)
+  }
+  @Get('farmer-crops-by-location/:id')
+  async findAllFarmerCropsByLocation(@Param('id') id: number) {
+    return new ApiResponse(true, "All Farmers Crops By Location", await this.farmerService.getCropFarmerRegistrationsByLocation(id), null)
+  }
+  @Get('farmer-animals-by-location/:id')
+  async findAllFarmerAnimalsByLocation(@Param('id') id: number) {
+    return new ApiResponse(true, "All Farmers Animals By Location", await this.farmerService.getAnimalRegistrationsByLocation(id), null)
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -43,5 +68,9 @@ export class FarmerController {
   @Put('assign-crops-to-farmer')
   async assignCropsToFarmer(@Body() data: AssignCropToFarmerDto) {
     return new ApiResponse(true, "Crops Assigned", await this.farmerService.assignCropsToFarmers(data), null);
+  }
+  @Put('assign-animals-to-farmer')
+  async assignAnimalsToFarmer(@Body() data: AssignAnimalToFarmerDto) {
+    return new ApiResponse(true, "Animals Assigned", await this.farmerService.assignAnimalsToFarmer(data), null);
   }
 }
