@@ -15,7 +15,7 @@ export class CooperativeService {
       return await this.databaseService.cooperative.create({
         data: {
           name: createCooperativeDto.name,
-          registationNumber: createCooperativeDto.registrationNumber,
+          registrationNumber: createCooperativeDto.registrationNumber,
           telephone: createCooperativeDto.telephone,
           membersNumber: createCooperativeDto.membersNumber,
           Location: {
