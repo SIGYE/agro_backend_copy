@@ -190,17 +190,23 @@ export class FarmerService {
       // Check if the cooperative exists
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId },
+        include: {
+          childrenLocations: true
+        }
       });
 
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
 
+
       // Retrieve farmers associated with the cooperative
       const farmers = await this.databaseService.farmer.findMany({
         where: {
           user: {
-            locationId: locationId
+            locationId: {
+              in: location.childrenLocations.map(location => location.id)
+            }
           }
         },
       });
@@ -215,6 +221,9 @@ export class FarmerService {
       // Check if the location exists
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId },
+        include: {
+          childrenLocations: true
+        }
       });
 
       if (!location) {
@@ -226,7 +235,9 @@ export class FarmerService {
         where: {
           farmer: {
             user: {
-              locationId: locationId
+              locationId: {
+                in: location.childrenLocations.map(location => location.id)
+              }
             }
           }
         },
@@ -243,6 +254,9 @@ export class FarmerService {
       // Check if the location exists
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId },
+        include: {
+          childrenLocations: true
+        }
       });
 
       if (!location) {
@@ -254,7 +268,9 @@ export class FarmerService {
         where: {
           farmer: {
             user: {
-              locationId: locationId,
+              locationId: {
+                in: location.childrenLocations.map(location => location.id)
+              }
             },
           },
         },
