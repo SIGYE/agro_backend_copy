@@ -178,6 +178,9 @@ export class FarmerService {
         where: {
           cooperativeId: cooperativeId,
         },
+        include: {
+          user: true
+        }
       });
 
       return farmers;
@@ -207,8 +210,11 @@ export class FarmerService {
             locationId: {
               in: location.childrenLocations.map(location => location.id)
             }
-          }
+          },
         },
+        include: {
+          user: true
+        }
       });
 
       return farmers;
@@ -241,6 +247,13 @@ export class FarmerService {
             }
           }
         },
+        include: {
+          farmer: {
+            include: {
+              user: true
+            }
+          }
+        }
       });
 
       return cropFarmerRegistrations;
@@ -274,6 +287,13 @@ export class FarmerService {
             },
           },
         },
+        include: {
+          farmer: {
+            include: {
+              user: true
+            }
+          }
+        }
       });
 
       return animalRegistrations;
@@ -284,7 +304,15 @@ export class FarmerService {
   async getAllCropFarmerRegistrations() {
     try {
       // Retrieve all cropFarmerRegistrations
-      const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany();
+      const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany({
+        include: {
+          farmer: {
+            include: {
+              user: true
+            }
+          }
+        }
+      });
       return cropFarmerRegistrations;
     } catch (error) {
       throw new BadRequestException('Error fetching all crop farmer registrations');
@@ -294,7 +322,15 @@ export class FarmerService {
   async getAllAnimalFarmerRegistrations() {
     try {
       // Retrieve all animalFarmerRegistrations
-      const animalFarmerRegistrations = await this.databaseService.animalFarmerRegistration.findMany();
+      const animalFarmerRegistrations = await this.databaseService.animalFarmerRegistration.findMany({
+        include: {
+          farmer: {
+            include: {
+              user: true
+            }
+          }
+        }
+      });
       return animalFarmerRegistrations;
     } catch (error) {
       throw new BadRequestException('Error fetching all animal farmer registrations');
@@ -305,6 +341,9 @@ export class FarmerService {
       return await this.databaseService.farmer.findUnique({
         where: {
           id: id
+        },
+        include: {
+          user: true
         }
       })
     } catch (e) {
