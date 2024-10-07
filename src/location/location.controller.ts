@@ -60,7 +60,7 @@ export class LocationController {
     async getLOcationLevelById(@Param("id") id: number): Promise<ApiResponse<locationLevel>> {
         return new ApiResponse<locationLevel>(true, "Success", await this.locationService.getLOcationLevelById(id), 200)
     }
-    @Get('/all/children')
+    @Get('/all/children/:id')
     @ApiParam({
         name: "id",
         type: Number
