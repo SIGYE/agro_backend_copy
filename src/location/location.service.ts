@@ -229,4 +229,22 @@ export class LocationService {
 
 
     }
+    async getAllChildrenLocations(id: number): Promise<number[]> {
+        const childIds: number[] = [];
+
+        async function fetchChildren(parentId: number) {
+            const children = await this.databaseService.location.findMany({
+                where: { parentId: parentId },
+                select: { id: true }
+            });
+
+            for (const child of children) {
+                childIds.push(child.id);
+                await fetchChildren(child.id);
+            }
+        }
+
+        await fetchChildren(id);
+        return childIds;
+    }
 }
