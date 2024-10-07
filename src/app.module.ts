@@ -23,10 +23,11 @@ import { SlaughterHouseModule } from './slaughter-house/slaughter-house.module';
 import { CropModule } from './crop/crop.module';
 import { AnimalModule } from './animal/animal.module';
 import { FarmerModule } from './farmer/farmer.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,
