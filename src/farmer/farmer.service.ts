@@ -201,6 +201,7 @@ export class FarmerService {
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
+      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
 
 
       // Retrieve farmers associated with the cooperative
@@ -208,7 +209,7 @@ export class FarmerService {
         where: {
           user: {
             locationId: {
-              in: location.childrenLocations.map(location => location.id)
+              in: childrenLocations
             }
           },
         },
@@ -226,15 +227,13 @@ export class FarmerService {
     try {
       // Check if the location exists
       const location = await this.databaseService.location.findUnique({
-        where: { id: locationId },
-        include: {
-          childrenLocations: true
-        }
+        where: { id: locationId }
       });
 
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
+      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
 
       // Retrieve cropFarmerRegistrations associated with the location
       const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany({
@@ -242,7 +241,7 @@ export class FarmerService {
           farmer: {
             user: {
               locationId: {
-                in: location.childrenLocations.map(location => location.id)
+                in: childrenLocations
               }
             }
           }
@@ -267,14 +266,12 @@ export class FarmerService {
       // Check if the location exists
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId },
-        include: {
-          childrenLocations: true
-        }
       });
 
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
+      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
 
       // Retrieve animalRegistrations associated with the location
       const animalRegistrations = await this.databaseService.animalFarmerRegistration.findMany({
@@ -282,7 +279,7 @@ export class FarmerService {
           farmer: {
             user: {
               locationId: {
-                in: location.childrenLocations.map(location => location.id)
+                in: childrenLocations
               }
             },
           },
