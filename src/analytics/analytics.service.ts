@@ -12,14 +12,7 @@ export class AnalyticsService {
   ) {}
 
   async getAgroCardAnalytics(locationId?: number) {
-    const cardData = {
-      totalFarmers: 0,
-      totalCooperatives: 0,
-      totalCrops: 0,
-      totalPlantedArea: 0,
-    }
-    try {
-      // Check if the cooperative exists
+    if (locationId) {
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId ?? 1 },
         include: {
@@ -30,18 +23,158 @@ export class AnalyticsService {
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`)
       }
-
-    //   select count farmers
-    const totalFarmers = await this.databaseService.farmer.count({
+    }
+    try {
+      const locationIds = locationId
+        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        : (await this.locationService.getAll()).map((location) => location.id)
+      //   select count farmers
+      const totalFarmers = await this.databaseService.farmer.count({
         where: {
-            user: {
-                locationId: {
-                    in: location.childrenLocations.map(location => location.id)
-                }
-            }
-        }
-    })
+          user: {
+            locationId: {
+              in: locationIds,
+            },
+          },
+        },
+      })
+      const totalCooperatives = await this.databaseService.cooperative.count({
+        where: {
+          locationId: {
+            in: locationIds,
+          },
+        },
+      })
+      const totalCrops =
+        await this.databaseService.cropFarmerRegistration.count({
+          where: {
+            farmer: {
+              user: { locationId: { in: locationIds } },
+            },
+          },
+        })
+      // const totalPlantedArea = await this.databaseService.cropFarmerRegistration.groupBy({
+      //   by: ['cropId'],
+      //   _sum: {
+      //     plantedArea: true,
+      //   }
+      // })
 
-    } catch (error) {}
+      const cardData = {
+        totalFarmers,
+        totalCooperatives,
+        totalCrops,
+        totalPlantedArea: 0,
+      }
+      return cardData
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
+
+  async getVetCardAnalytics(locationId?: number) {
+    if (locationId) {
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId ?? 1 },
+        include: {
+          childrenLocations: true,
+        },
+      })
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+    }
+
+    try {
+      const locationIds = locationId
+        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        : (await this.locationService.getAll()).map((location) => location.id)
+      const totalVets = await this.databaseService.veterinary.count({
+        where: {
+          user: {
+            locationId: {
+              in: locationIds,
+            },
+          },
+        },
+      })
+      const totalCrops =
+        await this.databaseService.animalFarmerRegistration.count({
+          where: {
+            farmer: {
+              user: { locationId: { in: locationIds } },
+            },
+          },
+        })
+
+      const cardData = {
+        totalVets,
+        totalCrops,
+      }
+      return cardData
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
+
+  async getAgroFarmerCrops(locationId?: number) {
+    const location = locationId
+      ? await this.databaseService.location.findUnique({
+          where: { id: locationId ?? 1 },
+          include: {
+            childrenLocations: true,
+          },
+        })
+      : 1
+
+    if (!location) {
+      throw new NotFoundException(`Location with ID ${locationId} not found`)
+    }
+
+    try {
+      const locationIds =
+        await this.locationService.getAllChildrenLocationIds(locationId)
+      const farmerCrops =
+        await this.databaseService.cropFarmerRegistration.groupBy({
+          by: ['cropId'],
+          where: {
+            farmer: {
+              user: { locationId: { in: locationIds } },
+            },
+          },
+          _count: {
+            _all: true,
+          },
+          // _sum: {
+          //   plantedArea: true,
+          // },
+        })
+      const cropsWithDetails = await Promise.all(
+        farmerCrops.map(async (crop) => {
+          const cropDetails =
+            await this.databaseService.cropFarmerRegistration.findFirst({
+              where: { cropId: crop.cropId },
+              include: {
+                crop: true,
+              },
+            })
+          return {...cropDetails, count: crop._count._all}
+          // return {
+          //   cropId: crop.cropId,
+          //   cropName: cropDetails.crop.name,
+          //   count: crop._count._all,
+          //   totalPlantedArea: crop._sum.plantedArea,
+          //   // Add any other fields you want from cropFarmerRegistration
+          //   // For example:
+          //   // plantingDate: cropDetails.plantingDate,
+          //   // harvestDate: cropDetails.harvestDate,
+          // }
+        }),
+      )
+      return cropsWithDetails
+    } catch (error) {
+      throw new Error(error)
+    }
   }
 }

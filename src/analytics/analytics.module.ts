@@ -4,9 +4,10 @@ import { AnalyticsController } from './analytics.controller';
 import { LocationService } from 'src/location/location.service';
 import { FarmerService } from 'src/farmer/farmer.service';
 import { UsersService } from 'src/users/users.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   controllers: [AnalyticsController],
-  providers: [AnalyticsService, LocationService, FarmerService, UsersService],
+  providers: [AnalyticsService, LocationService, FarmerService, UsersService, JwtService],
 })
 export class AnalyticsModule {}
