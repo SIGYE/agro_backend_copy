@@ -27,29 +27,25 @@ export class AnalyticsService {
     try {
       const locationIds = locationId
         ? await this.locationService.getAllChildrenLocationIds(locationId)
-        : (await this.locationService.getAll()).map((location) => location.id)
+        : []
+
+      const locationQuery = locationId
+        ? { locationId: { in: locationIds } }
+        : {}
       //   select count farmers
       const totalFarmers = await this.databaseService.farmer.count({
         where: {
-          user: {
-            locationId: {
-              in: locationIds,
-            },
-          },
+          user: { ...locationQuery },
         },
       })
       const totalCooperatives = await this.databaseService.cooperative.count({
-        where: {
-          locationId: {
-            in: locationIds,
-          },
-        },
+        where: { ...locationQuery },
       })
       const totalCrops =
         await this.databaseService.cropFarmerRegistration.count({
           where: {
             farmer: {
-              user: { locationId: { in: locationIds } },
+              user: { ...locationQuery },
             },
           },
         })
@@ -89,13 +85,14 @@ export class AnalyticsService {
     try {
       const locationIds = locationId
         ? await this.locationService.getAllChildrenLocationIds(locationId)
-        : (await this.locationService.getAll()).map((location) => location.id)
+        : []
+      const locationQuery = locationId
+        ? { locationId: { in: locationIds } }
+        : {}
       const totalVets = await this.databaseService.veterinary.count({
         where: {
           user: {
-            locationId: {
-              in: locationIds,
-            },
+            ...locationQuery,
           },
         },
       })
@@ -103,7 +100,7 @@ export class AnalyticsService {
         await this.databaseService.animalFarmerRegistration.count({
           where: {
             farmer: {
-              user: { locationId: { in: locationIds } },
+              user: { ...locationQuery },
             },
           },
         })
@@ -119,28 +116,33 @@ export class AnalyticsService {
   }
 
   async getAgroFarmerCrops(locationId?: number) {
-    const location = locationId
-      ? await this.databaseService.location.findUnique({
-          where: { id: locationId ?? 1 },
-          include: {
-            childrenLocations: true,
-          },
-        })
-      : 1
+    if (locationId) {
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+        include: {
+          childrenLocations: true,
+        },
+      })
 
-    if (!location) {
-      throw new NotFoundException(`Location with ID ${locationId} not found`)
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
     }
 
     try {
-      const locationIds =
-        await this.locationService.getAllChildrenLocationIds(locationId)
+      const locationIds = locationId
+        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        : []
+
+      const locationQuery = locationId
+        ? { locationId: { in: locationIds } }
+        : {}
       const farmerCrops =
         await this.databaseService.cropFarmerRegistration.groupBy({
           by: ['cropId'],
           where: {
             farmer: {
-              user: { locationId: { in: locationIds } },
+              user: { ...locationQuery },
             },
           },
           _count: {
@@ -150,6 +152,7 @@ export class AnalyticsService {
           //   plantedArea: true,
           // },
         })
+
       const cropsWithDetails = await Promise.all(
         farmerCrops.map(async (crop) => {
           const cropDetails =
@@ -159,7 +162,7 @@ export class AnalyticsService {
                 crop: true,
               },
             })
-          return {...cropDetails, count: crop._count._all}
+          return { ...cropDetails, count: crop._count._all }
           // return {
           //   cropId: crop.cropId,
           //   cropName: cropDetails.crop.name,
@@ -174,6 +177,7 @@ export class AnalyticsService {
       )
       return cropsWithDetails
     } catch (error) {
+      console.log('error : ' + error)
       throw new Error(error)
     }
   }
