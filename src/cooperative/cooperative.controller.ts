@@ -24,6 +24,11 @@ export class CooperativeController {
     return new ApiResponse(true, "All Cooperatives", await this.cooperativeService.findAll(), null);
 
   }
+  @Get('by-location/:locationId')
+  async findAllCooperativesByLocation(@Param('locationId') locationId: string) {
+    return new ApiResponse(true, "All Cooperatives", await this.cooperativeService.findAllCooperativesByLocation(parseInt(locationId)), null);
+
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {

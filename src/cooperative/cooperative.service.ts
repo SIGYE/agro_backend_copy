@@ -4,11 +4,12 @@ import { UpdateCooperativeDto } from './dto/update-cooperative.dto';
 import { DatabaseService } from '../database/database.service';
 import { connect } from 'http2';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
+import { LocationService } from 'src/location/location.service';
 
 
 @Injectable()
 export class CooperativeService {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService) { }
 
   async create(createCooperativeDto: CreateCooperativeDto) {
     try {
@@ -37,6 +38,20 @@ export class CooperativeService {
       throw new BadRequestException('Error fetching cooperatives');
     }
   }
+  async findAllCooperativesByLocation(locationId: number) {
+    try {
+      return await this.databaseService.cooperative.findMany({
+        where: {
+          locationId: {
+            in: await this.locationService.getAllChildrenLocations(locationId)
+          }
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException('Error fetching cooperatives');
+    }
+  }
+
 
   async findOne(id: string) {
     try {
