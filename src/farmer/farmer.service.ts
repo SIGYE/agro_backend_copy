@@ -201,7 +201,7 @@ export class FarmerService {
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
-      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
+      let childrenLocations = await this.locationService.getAllChildrenLocationIds(locationId);
 
 
       // Retrieve farmers associated with the cooperative
@@ -233,7 +233,7 @@ export class FarmerService {
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
-      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
+      let childrenLocations = await this.locationService.getAllChildrenLocationIds(locationId);
 
       // Retrieve cropFarmerRegistrations associated with the location
       const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany({
@@ -271,7 +271,7 @@ export class FarmerService {
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
-      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
+      let childrenLocations = await this.locationService.getAllChildrenLocationIds(locationId);
 
       // Retrieve animalRegistrations associated with the location
       const animalRegistrations = await this.databaseService.animalFarmerRegistration.findMany({

@@ -253,8 +253,8 @@ export class LocationService {
       const childrenIds = await Promise.all(
         ids.map((childId) => this.recursivelyGetAllChildrenLocations(childId)),
       )
-      console.log('childrenIds : ' + childrenIds)
-      console.log('ids : ' + ids)
+    //   console.log('childrenIds : ' + childrenIds)
+    //   console.log('ids : ' + ids)
       return [...ids, ...childrenIds.flat()]
     } else {
       return [id]
