@@ -9,36 +9,36 @@ import { LocationSeed } from 'src/seeders/types/location-seed.type'
 import { Location } from '@prisma/client'
 
 export type LocationWithParent = Prisma.LocationGetPayload<{
-  include: {
-    parentLocation: true
-  }
+    include: {
+        parentLocation: true
+    }
 }>
 
 export type LocationWithChildren = Prisma.LocationGetPayload<{
-  include: {
-    childrenLocations: true
-  }
+    include: {
+        childrenLocations: true
+    }
 }>
 
 @Injectable()
 export class LocationService {
-  prisma: PrismaClient = new PrismaClient()
+    prisma: PrismaClient = new PrismaClient()
 
-  constructor(private readonly databaseService: DatabaseService) {}
+    constructor(private readonly databaseService: DatabaseService) { }
 
-  async generateInsertQueries(locations: LocationSeed[]): Promise<string[]> {
-    return locations.map((location) => {
-      const {
-        id,
-        createdAt,
-        updatedAt,
-        parentLocation,
-        name,
-        locationLevelId,
-      } = location
+    async generateInsertQueries(locations: LocationSeed[]): Promise<string[]> {
+        return locations.map((location) => {
+            const {
+                id,
+                createdAt,
+                updatedAt,
+                parentLocation,
+                name,
+                locationLevelId,
+            } = location
 
-      // Create the SQL INSERT statement
-      return `INSERT INTO "location" ("id", "createdAt", "updatedAt", "locationId", "name", "locationLevelId") VALUES (
+            // Create the SQL INSERT statement
+            return `INSERT INTO "location" ("id", "createdAt", "updatedAt", "locationId", "name", "locationLevelId") VALUES (
                 ${id}, 
                 '${createdAt}', 
                 '${updatedAt}', 
@@ -46,222 +46,222 @@ export class LocationService {
                 '${name}', 
                 ${locationLevelId}
             );`
-    })
-  }
-
-  async executeQueriesWithRetry(
-    queries: string[],
-    retryAttempts: number,
-    retryDelay: number,
-  ) {
-    const retryOperation = async (operation: () => Promise<void>) => {
-      for (let attempt = 1; attempt <= retryAttempts; attempt++) {
-        try {
-          await operation()
-          return // Success, exit the function
-        } catch (error) {
-          if (attempt === retryAttempts) {
-            console.error(
-              `Operation failed after ${retryAttempts} attempts`,
-              error,
-            )
-            throw error // Rethrow the error if the final attempt fails
-          }
-          console.warn(
-            `Operation failed on attempt ${attempt}. Retrying in ${retryDelay}ms...`,
-            error,
-          )
-          await new Promise((resolve) => setTimeout(resolve, retryDelay))
-        }
-      }
-    }
-
-    await retryOperation(async () => {
-      for (const query of queries) {
-        console.log(query)
-        await this.prisma.$executeRawUnsafe(query)
-      }
-    })
-  }
-
-  async seedLocationsProvinces() {
-    const retryAttempts = 5 // Number of retry attempts
-    const retryDelay = 2000 // Delay between retries in milliseconds
-
-    let newLocations: LocationSeed[] = []
-    for (const location of locationProvince) {
-      // Check if the location already exists
-      const existingLocation = await this.databaseService.location.findUnique({
-        where: { id: location.id },
-      })
-      if (!existingLocation) {
-        newLocations.push(location)
-      }
-    }
-
-    // Generate all SQL queries once after collecting new locations
-    const sqlQueries = await this.generateInsertQueries(newLocations)
-
-    // Execute the queries with retry logic
-    await this.executeQueriesWithRetry(sqlQueries, retryAttempts, retryDelay)
-  }
-
-  async seedLocationDistricts() {
-    const retryAttempts = 5 // Number of retry attempts
-    const retryDelay = 2000 // Delay between retries in milliseconds
-
-    let newLocations: LocationSeed[] = []
-    for (const location of locationDistrict) {
-      // Check if the location already exists
-      const existingLocation = await this.databaseService.location.findUnique({
-        where: { id: location.id },
-      })
-      if (!existingLocation) {
-        newLocations.push(location)
-      }
-    }
-
-    // Generate all SQL queries once after collecting new locations
-    const sqlQueries = await this.generateInsertQueries(newLocations)
-
-    // Execute the queries with retry logic
-    await this.executeQueriesWithRetry(sqlQueries, retryAttempts, retryDelay)
-  }
-
-  async seedLocationSectors() {
-    const retryAttempts = 5 // Number of retry attempts
-    const retryDelay = 2000 // Delay between retries in milliseconds
-
-    let newLocations: LocationSeed[] = []
-    for (const location of locationSector) {
-      // Check if the location already exists
-      const existingLocation = await this.databaseService.location.findUnique({
-        where: { id: location.id },
-      })
-      if (!existingLocation) {
-        newLocations.push(location)
-      }
-    }
-
-    // Generate all SQL queries once after collecting new locations
-    const sqlQueries = await this.generateInsertQueries(newLocations)
-
-    // Execute the queries with retry logic
-    await this.executeQueriesWithRetry(sqlQueries, retryAttempts, retryDelay)
-  }
-
-  // create location level for seeding
-  async seedLocationLevel() {
-    for (const level of locationLevels) {
-      const existingLevel = await this.databaseService.locationLevel.findUnique(
-        {
-          where: { id: level.id },
-        },
-      )
-
-      if (!existingLevel) {
-        await this.databaseService.locationLevel.create({
-          data: {
-            id: level.id,
-            order_number: level.order_number,
-            name: level.name,
-            code: level.code,
-          },
         })
-      }
     }
-  }
 
-  // get methods for the location entity
+    async executeQueriesWithRetry(
+        queries: string[],
+        retryAttempts: number,
+        retryDelay: number,
+    ) {
+        const retryOperation = async (operation: () => Promise<void>) => {
+            for (let attempt = 1; attempt <= retryAttempts; attempt++) {
+                try {
+                    await operation()
+                    return // Success, exit the function
+                } catch (error) {
+                    if (attempt === retryAttempts) {
+                        console.error(
+                            `Operation failed after ${retryAttempts} attempts`,
+                            error,
+                        )
+                        throw error // Rethrow the error if the final attempt fails
+                    }
+                    console.warn(
+                        `Operation failed on attempt ${attempt}. Retrying in ${retryDelay}ms...`,
+                        error,
+                    )
+                    await new Promise((resolve) => setTimeout(resolve, retryDelay))
+                }
+            }
+        }
 
-  async getAll(): Promise<LocationWithParent[]> {
-    return this.databaseService.location.findMany({
-      include: {
-        parentLocation: true,
-      },
-    })
-  }
-
-  async getLocationById(id: number): Promise<Location> {
-    return await this.databaseService.location.findUnique({
-      where: {
-        id: id,
-      },
-    })
-  }
-
-  async getChildrenLocations(id: number): Promise<LocationWithChildren[]> {
-    return this.databaseService.location.findMany({
-      where: {
-        locationId: id,
-      },
-      include: {
-        childrenLocations: true,
-      },
-    })
-  }
-
-  async getLocationByLevel(id: number): Promise<Location[]> {
-    return this.databaseService.location.findMany({
-      where: {
-        locationLevelId: id,
-      },
-      include: {
-        childrenLocations: true,
-      },
-    })
-  }
-
-  async getAllLocationLevels(): Promise<locationLevel[]> {
-    return this.databaseService.locationLevel.findMany()
-  }
-
-  async getLOcationLevelById(id: number): Promise<locationLevel> {
-    return this.databaseService.locationLevel.findUnique({
-      where: {
-        id: id,
-      },
-    })
-  }
-  async getLocationByName(name: string): Promise<Location> {
-    let location = await this.databaseService.location.findFirst({
-      where: {
-        name: name,
-      },
-    })
-    if (location) return location
-    else throw new NotFoundException('Location not found')
-  }
-
-  async getAllChildrenLocationIds(id: number): Promise<number[]> {
-    const children = await this.recursivelyGetAllChildrenLocations(id)
-    const childrenSet = new Set(children)
-    const data = Array.from(childrenSet)
-    return data
-  }
-
-  // get all children locations up to lowest level by id (return array of ids of locations)
-  async recursivelyGetAllChildrenLocations(id: number): Promise<number[]> {
-    const children = await this.databaseService.location.findMany({
-      where: {
-        locationId: id,
-      },
-    })
-
-    if (children.length > 0) {
-      const ids = children.map((child) => child.id)
-      const childrenIds = await Promise.all(
-        ids.map((childId) => this.recursivelyGetAllChildrenLocations(childId)),
-      )
-    //   console.log('childrenIds : ' + childrenIds)
-    //   console.log('ids : ' + ids)
-      return [...ids, ...childrenIds.flat()]
-    } else {
-      return [id]
+        await retryOperation(async () => {
+            for (const query of queries) {
+                console.log(query)
+                await this.prisma.$executeRawUnsafe(query)
+            }
+        })
     }
-  }
 
+    async seedLocationsProvinces() {
+        const retryAttempts = 5 // Number of retry attempts
+        const retryDelay = 2000 // Delay between retries in milliseconds
+
+        let newLocations: LocationSeed[] = []
+        for (const location of locationProvince) {
+            // Check if the location already exists
+            const existingLocation = await this.databaseService.location.findUnique({
+                where: { id: location.id },
+            })
+            if (!existingLocation) {
+                newLocations.push(location)
+            }
+        }
+
+        // Generate all SQL queries once after collecting new locations
+        const sqlQueries = await this.generateInsertQueries(newLocations)
+
+        // Execute the queries with retry logic
+        await this.executeQueriesWithRetry(sqlQueries, retryAttempts, retryDelay)
     }
+
+    async seedLocationDistricts() {
+        const retryAttempts = 5 // Number of retry attempts
+        const retryDelay = 2000 // Delay between retries in milliseconds
+
+        let newLocations: LocationSeed[] = []
+        for (const location of locationDistrict) {
+            // Check if the location already exists
+            const existingLocation = await this.databaseService.location.findUnique({
+                where: { id: location.id },
+            })
+            if (!existingLocation) {
+                newLocations.push(location)
+            }
+        }
+
+        // Generate all SQL queries once after collecting new locations
+        const sqlQueries = await this.generateInsertQueries(newLocations)
+
+        // Execute the queries with retry logic
+        await this.executeQueriesWithRetry(sqlQueries, retryAttempts, retryDelay)
+    }
+
+    async seedLocationSectors() {
+        const retryAttempts = 5 // Number of retry attempts
+        const retryDelay = 2000 // Delay between retries in milliseconds
+
+        let newLocations: LocationSeed[] = []
+        for (const location of locationSector) {
+            // Check if the location already exists
+            const existingLocation = await this.databaseService.location.findUnique({
+                where: { id: location.id },
+            })
+            if (!existingLocation) {
+                newLocations.push(location)
+            }
+        }
+
+        // Generate all SQL queries once after collecting new locations
+        const sqlQueries = await this.generateInsertQueries(newLocations)
+
+        // Execute the queries with retry logic
+        await this.executeQueriesWithRetry(sqlQueries, retryAttempts, retryDelay)
+    }
+
+    // create location level for seeding
+    async seedLocationLevel() {
+        for (const level of locationLevels) {
+            const existingLevel = await this.databaseService.locationLevel.findUnique(
+                {
+                    where: { id: level.id },
+                },
+            )
+
+            if (!existingLevel) {
+                await this.databaseService.locationLevel.create({
+                    data: {
+                        id: level.id,
+                        order_number: level.order_number,
+                        name: level.name,
+                        code: level.code,
+                    },
+                })
+            }
+        }
+    }
+
+    // get methods for the location entity
+
+    async getAll(): Promise<LocationWithParent[]> {
+        return this.databaseService.location.findMany({
+            include: {
+                parentLocation: true,
+            },
+        })
+    }
+
+    async getLocationById(id: number): Promise<Location> {
+        return await this.databaseService.location.findUnique({
+            where: {
+                id: id,
+            },
+        })
+    }
+
+    async getChildrenLocations(id: number): Promise<LocationWithChildren[]> {
+        return this.databaseService.location.findMany({
+            where: {
+                locationId: id,
+            },
+            include: {
+                childrenLocations: true,
+            },
+        })
+    }
+
+    async getLocationByLevel(id: number): Promise<Location[]> {
+        return this.databaseService.location.findMany({
+            where: {
+                locationLevelId: id,
+            },
+            include: {
+                childrenLocations: true,
+            },
+        })
+    }
+
+    async getAllLocationLevels(): Promise<locationLevel[]> {
+        return this.databaseService.locationLevel.findMany()
+    }
+
+    async getLOcationLevelById(id: number): Promise<locationLevel> {
+        return this.databaseService.locationLevel.findUnique({
+            where: {
+                id: id,
+            },
+        })
+    }
+    async getLocationByName(name: string): Promise<Location> {
+        let location = await this.databaseService.location.findFirst({
+            where: {
+                name: name,
+            },
+        })
+        if (location) return location
+        else throw new NotFoundException('Location not found')
+    }
+
+    async getAllChildrenLocationIds(id: number): Promise<number[]> {
+        const children = await this.recursivelyGetAllChildrenLocations(id)
+        const childrenSet = new Set(children)
+        const data = Array.from(childrenSet)
+        return data
+    }
+
+    // get all children locations up to lowest level by id (return array of ids of locations)
+    async recursivelyGetAllChildrenLocations(id: number): Promise<number[]> {
+        const children = await this.databaseService.location.findMany({
+            where: {
+                locationId: id,
+            },
+        })
+
+        if (children.length > 0) {
+            const ids = children.map((child) => child.id)
+            const childrenIds = await Promise.all(
+                ids.map((childId) => this.recursivelyGetAllChildrenLocations(childId)),
+            )
+            //   console.log('childrenIds : ' + childrenIds)
+            //   console.log('ids : ' + ids)
+            return [...ids, ...childrenIds.flat()]
+        } else {
+            return [id]
+        }
+    }
+
+
     async getAllChildrenLocations(id: number): Promise<number[]> {
         const locationWithChildren = await this.databaseService.location.findUnique({
             where: { id },
@@ -298,5 +298,6 @@ export class LocationService {
 
         return extractChildIds(locationWithChildren).filter(childId => childId !== id); // Exclude the parent ID if needed
     }
+
 
 }
