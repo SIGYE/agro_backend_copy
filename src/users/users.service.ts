@@ -67,6 +67,7 @@ export class UsersService {
     if (!location) {
       throw new NotFoundException("The location does not exist")
     }
+    let childrenLocationsIds = await this.locationService.getAllChildrenLocations(location.id)
 
     let user = await this.databaseService.user.create({
       data: {
@@ -76,6 +77,7 @@ export class UsersService {
         password: createUserDto.password,
         nationalId: createUserDto.nationalId,
         username: username,
+        locationChildrenIds: JSON.stringify(childrenLocationsIds),
         role: {
           connect: {
             id: role.id

@@ -55,6 +55,7 @@ model User {
   agronomies        Agronomy[]
   veterinaries      Veterinary[]
   umufashamyumvire  Umufashamyumvire[]
+  locationChildrenIds  String?
 
   diseases     Disease[]     @relation("DiseaseCreatedBy")
   vaccinations Vaccination[] @relation("VaccinationCreatedBy")
