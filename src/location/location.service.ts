@@ -230,21 +230,42 @@ export class LocationService {
 
     }
     async getAllChildrenLocations(id: number): Promise<number[]> {
-        const childIds: number[] = [];
-
-        const fetchChildren = async (parentId: number) => {
-            const children = await this.databaseService.location.findMany({
-                where: { locationId: parentId },
-                select: { id: true }
-            });
-
-            for (const child of children) {
-                childIds.push(child.id);
-                await fetchChildren(child.id);
+        const locationWithChildren = await this.databaseService.location.findUnique({
+            where: { id },
+            include: {
+                childrenLocations: {
+                    include: {
+                        childrenLocations: {
+                            include: {
+                                childrenLocations: {
+                                    include: {
+                                        childrenLocations: {
+                                            include: {
+                                                childrenLocations: true // Include the fifth level
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        });
+
+        const extractChildIds = (location: any): number[] => {
+            let ids = [location.id];
+            if (location.childrenLocations) {
+                for (const child of location.childrenLocations) {
+                    ids = ids.concat(extractChildIds(child));
+                }
+            }
+            return ids;
         };
 
-        await fetchChildren(id);
-        return childIds;
+        return extractChildIds(locationWithChildren).filter(childId => childId !== id); // Exclude the parent ID if needed
     }
+
+
+
 }
