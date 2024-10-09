@@ -96,7 +96,7 @@ export class AnalyticsService {
           },
         },
       })
-      const totalCrops =
+      const totalAnimals =
         await this.databaseService.animalFarmerRegistration.count({
           where: {
             farmer: {
@@ -105,9 +105,21 @@ export class AnalyticsService {
           },
         })
 
+      const totalFarmers = await this.databaseService.farmer.count({
+        where: {
+          user: { ...locationQuery },
+        },
+      })
+
+      const totalCooperatives = await this.databaseService.cooperative.count({
+        where: { ...locationQuery },
+      })
+
       const cardData = {
         totalVets,
-        totalCrops,
+        totalAnimals,
+        totalFarmers,
+        totalCooperatives,
       }
       return cardData
     } catch (error) {
@@ -176,6 +188,70 @@ export class AnalyticsService {
         }),
       )
       return cropsWithDetails
+    } catch (error) {
+      console.log('error : ' + error)
+      throw new Error(error)
+    }
+  }
+
+  async getVetFarmerAnimals(locationId?: number) {
+    if (locationId) {
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+        include: {
+          childrenLocations: true,
+        },
+      })
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+    }
+
+    try {
+      const locationIds = locationId
+        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        : []
+      const locationQuery = locationId
+        ? { locationId: { in: locationIds } }
+        : {}
+      const farmerAnimals =
+        await this.databaseService.animalFarmerRegistration.groupBy({
+          by: ['animalId'],
+          where: {
+            farmer: {
+              user: { ...locationQuery },
+            },
+          },
+          _count: {
+            _all: true,
+          },
+        })
+
+      const animalsWithDetails = await Promise.all(
+        farmerAnimals.map(async (animal) => {
+          const animalDetails =
+            await this.databaseService.animalFarmerRegistration.findFirst({
+              where: { animalId: animal.animalId },
+              include: {
+                animal: true,
+              },
+            })
+          return { ...animalDetails, count: animal._count._all }
+          // return {
+          //   animalId: animal.animalId,
+          //   animalName: animalDetails.animal.name,
+          //   count: animal._count._all,
+          //   totalPlantedArea: animal._sum.plantedArea,
+          //   // Add any other fields you want from cropFarmerRegistration
+          //   // For example:
+          //   // plantingDate: cropDetails.plantingDate,
+          //   // harvestDate: cropDetails.harvestDate,
+          // }
+        }),
+      )
+
+      return animalsWithDetails
     } catch (error) {
       console.log('error : ' + error)
       throw new Error(error)

@@ -10,7 +10,7 @@ export class CreateAnimalDto {
     @ApiProperty({
         enum: Purpose,
         isArray: false,
-        example: [Purpose.DAIRY, Purpose.MEAT, Purpose.WORK, Purpose.OTHER]
+        example: Purpose.DAIRY
 
     })
     purpose: Purpose
