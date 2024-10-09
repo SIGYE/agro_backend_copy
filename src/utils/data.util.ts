@@ -1,3 +1,4 @@
+
 export function excludeFields(data: any, excludeFields: string[]) {
     excludeFields.forEach((field) => delete data[field]);
     return data;
@@ -38,4 +39,15 @@ export function excludeFields(data: any, excludeFields: string[]) {
     password = password.split('').sort(() => Math.random() - 0.5).join('');
 
     return password;
+};
+
+export const getMonthsArray = (): string[] => {
+  // return Array.from({ length: 12 }, (_, i) => 
+  //   dayjs().month(i).format('MMM')
+  // );
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return months;
 };

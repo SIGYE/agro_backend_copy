@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { DatabaseService } from 'src/database/database.service'
 import { LocationService } from 'src/location/location.service'
 import { UsersService } from 'src/users/users.service'
+import { getMonthsArray } from 'src/utils/data.util'
 
 @Injectable()
 export class AnalyticsService {
@@ -252,6 +253,59 @@ export class AnalyticsService {
       )
 
       return animalsWithDetails
+    } catch (error) {
+      console.log('error : ' + error)
+      throw new Error(error)
+    }
+  }
+
+  async getFarmersGrowth(locationId?: number) {
+    if (locationId) {
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+        include: {
+          childrenLocations: true,
+        },
+      })
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+    }
+
+    try {
+      const locationIds = locationId
+        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        : []
+      const locationQuery = locationId
+        ? { locationId: { in: locationIds } }
+        : {}
+        
+        const farmers = await this.databaseService.farmer.findMany({
+          where: {
+            user: { ...locationQuery },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        const currentYear = new Date().getFullYear();
+        const months = getMonthsArray();
+        
+        const farmersGrowth = months.map((month, index) => {
+          const count = farmers.filter(farmer => {
+            const farmerDate = new Date(farmer.createdAt);
+            return farmerDate.getMonth() === index && farmerDate.getFullYear() === currentYear;
+          }).length;
+    
+          return {
+            month,
+            count,
+          };
+        });
+    
+        return farmersGrowth;
     } catch (error) {
       console.log('error : ' + error)
       throw new Error(error)
