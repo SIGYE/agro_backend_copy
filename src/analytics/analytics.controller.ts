@@ -38,4 +38,10 @@ export class AnalyticsController {
   async getVetFarmerAnimals(@Query('locationId') locationId?: number) {
     return new ApiResponse(true, "Vet Farmer Crops", await this.analyticsService.getVetFarmerAnimals(locationId), null);
   }
+  @Get('/farmers-growth')
+  @ApiOperation({ summary: 'Get Farmers Growth' })
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async getFarmersGrowth(@Query('locationId') locationId?: number) {
+    return new ApiResponse(true, "Farmers Growth", await this.analyticsService.getFarmersGrowth(locationId), null);
+  }
 }
