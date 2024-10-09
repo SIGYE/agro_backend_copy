@@ -31,4 +31,11 @@ export class AnalyticsController {
   async getAgroFarmerCrops(@Query('locationId') locationId?: number) {
     return new ApiResponse(true, "Agro Farmer Crops", await this.analyticsService.getAgroFarmerCrops(locationId), null);
   }
+
+  @Get('/dashboard/vet-farmer-animals')
+  @ApiOperation({ summary: 'Get Animals Kept by farmers' })
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async getVetFarmerAnimals(@Query('locationId') locationId?: number) {
+    return new ApiResponse(true, "Vet Farmer Crops", await this.analyticsService.getVetFarmerAnimals(locationId), null);
+  }
 }
