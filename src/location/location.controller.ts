@@ -68,4 +68,19 @@ export class LocationController {
     async getAllWithChildren(@Param("id") id: number): Promise<ApiResponse<LocationWithChildren[]>> {
         return new ApiResponse<any>(true, "Success", await this.locationService.getAllChildrenLocations(id), 200)
     }
+
+    @Get('/recursively-get-all-children/:id')
+    @ApiParam({
+        name : "id",
+        type : Number
+    })
+    async recursivelyGetAllChildrenLocations(@Param('id') id : number) : Promise<ApiResponse<number[]>> {
+        const children = await this.locationService.recursivelyGetAllChildrenLocations(id);
+        console.log('children length : ' + children.length)
+        const childrenSet = new Set(children);
+        console.log('children set length : ' + childrenSet.size)
+        const data = Array.from(childrenSet)
+        return new ApiResponse<number[]>(true , "Success" , data , 200)
+    }
+
 }

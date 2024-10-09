@@ -12,15 +12,16 @@ export class AnimalService {
   }
   async create(createAnimalDto: CreateAnimalDto, userId: string) {
     try {
+      console.log('createAnimalDto : ' + createAnimalDto)
       return await this.dataBaseService.animal.create({
         data: {
           name: createAnimalDto.name,
           createdBy: userId,
           purpose: createAnimalDto.purpose
-
         }
       })
     } catch (error) {
+      console.log('error : ' + error)
       throw new BadRequestException(error.message);
     }
   }
