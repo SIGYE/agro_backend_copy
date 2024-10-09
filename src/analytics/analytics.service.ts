@@ -10,12 +10,12 @@ export class AnalyticsService {
     private readonly databaseService: DatabaseService,
     private readonly locationService: LocationService,
     private readonly userService: UsersService,
-  ) {}
+  ) { }
 
   async getAgroCardAnalytics(locationId?: number) {
     if (locationId) {
       const location = await this.databaseService.location.findUnique({
-        where: { id: locationId ?? 1 },
+        where: { id: locationId },
         include: {
           childrenLocations: true,
         },
@@ -27,7 +27,7 @@ export class AnalyticsService {
     }
     try {
       const locationIds = locationId
-        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        ? await this.locationService.getAllChildrenLocations(locationId)
         : []
 
       const locationQuery = locationId
@@ -85,7 +85,7 @@ export class AnalyticsService {
 
     try {
       const locationIds = locationId
-        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        ? await this.locationService.getAllChildrenLocations(locationId)
         : []
       const locationQuery = locationId
         ? { locationId: { in: locationIds } }
@@ -144,7 +144,7 @@ export class AnalyticsService {
 
     try {
       const locationIds = locationId
-        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        ? await this.locationService.getAllChildrenLocations(locationId)
         : []
 
       const locationQuery = locationId
@@ -211,7 +211,7 @@ export class AnalyticsService {
 
     try {
       const locationIds = locationId
-        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        ? await this.locationService.getAllChildrenLocations(locationId)
         : []
       const locationQuery = locationId
         ? { locationId: { in: locationIds } }
