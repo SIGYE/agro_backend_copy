@@ -37,7 +37,6 @@ export class CreateUserDto {
         type: String,
         example: 'YYYY-MM-DD'
     })
-    @Transform(({ value }) => moment(value).format('YYYY-MM-DD'))
     dob: string;
     @ApiProperty()
     password?: string
