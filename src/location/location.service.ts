@@ -174,12 +174,20 @@ export class LocationService {
 
     // get methods for the location entity
 
-    async getAll(): Promise<LocationWithParent[]> {
-        return this.databaseService.location.findMany({
-            include: {
-                parentLocation: true,
-            },
-        })
+    async getAll(page?: number, limit?: number): Promise<{ data: LocationWithParent[], total: number }> {
+        const skip = (page - 1) * limit;
+        const [data, total] = await Promise.all([
+            this.databaseService.location.findMany({
+                skip,
+                take: limit,
+                include: {
+                    parentLocation: true
+                }
+            }),
+            this.databaseService.location.count(),
+        ]);
+
+        return { data, total };
     }
 
     async getLocationById(id: number): Promise<Location> {
