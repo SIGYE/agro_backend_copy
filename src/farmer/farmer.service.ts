@@ -201,7 +201,7 @@ export class FarmerService {
       if (!location) {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
-      let childrenLocations = await this.locationService.getAllChildrenLocationIds(locationId);
+      let childrenLocations = await this.locationService.getAllChildrenLocations(locationId);
       console.log(childrenLocations)
 
 
