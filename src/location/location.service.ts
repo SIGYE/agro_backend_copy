@@ -250,23 +250,29 @@ export class LocationService {
 
     // get all children locations up to lowest level by id (return array of ids of locations)
     async recursivelyGetAllChildrenLocations(id: number): Promise<number[]> {
-        const children = await this.databaseService.location.findMany({
-            where: {
-                locationId: id,
-            },
-        })
+        try {
+            const children = await this.databaseService.location.findMany({
+                where: {
+                    locationId: id,
+                },
+            })
 
-        if (children.length > 0) {
-            const ids = children.map((child) => child.id)
-            const childrenIds = await Promise.all(
-                ids.map((childId) => this.recursivelyGetAllChildrenLocations(childId)),
-            )
-            //   console.log('childrenIds : ' + childrenIds)
-            //   console.log('ids : ' + ids)
-            return [...ids, ...childrenIds.flat()]
-        } else {
-            return [id]
+            if (children.length > 0) {
+                const ids = children.map((child) => child.id)
+                const childrenIds = await Promise.all(
+                    ids.map((childId) => this.recursivelyGetAllChildrenLocations(childId)),
+                )
+                //   console.log('childrenIds : ' + childrenIds)
+                //   console.log('ids : ' + ids)
+                return [...ids, ...childrenIds.flat()]
+            } else {
+                return [id]
+            }
+        } catch (e) {
+            throw e
         }
+
+
     }
 
 
