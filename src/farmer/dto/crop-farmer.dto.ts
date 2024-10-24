@@ -18,4 +18,8 @@ export class cropFarmerDto {
     @IsNotEmpty()
     @IsString()
     cropsId: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    fertilizerId: string
 }

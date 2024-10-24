@@ -5,7 +5,8 @@ export class LoginPayload {
     email: string
     userName: string
     token: string
-    isDefaultPassword : boolean
+    isDefaultPassword: boolean
     role: Role
     status: Status
+    locationId: number
 }
