@@ -237,8 +237,8 @@ model CropFertilizerFarmerRegistration {
   id                       String                 @id @default(uuid())
   fertilizerId             String
   cropFarmerRegistrationId String
-  // amount                   Int
-  // measurement              String
+  amount                   Int
+  measurement              String
   feterlizer               Feterlizer             @relation(fields: [fertilizerId], references: [id])
   cropFarmerRegistration   CropFarmerRegistration @relation(fields: [cropFarmerRegistrationId], references: [id])
   createdAt                DateTime               @default(now())
