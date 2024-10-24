@@ -71,6 +71,7 @@ async function bootstrap() {
     .addTag('Cooperative')
     .addTag('LivestockRegistration')
     .addTag('SlaughterHouse')
+    .addTag('Fertiliser')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);

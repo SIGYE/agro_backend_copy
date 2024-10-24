@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { FertiliserService } from './fertiliser.service';
 import { CreateFertiliserDto } from './dto/create-fertiliser.dto';
 import { UpdateFertiliserDto } from './dto/update-fertiliser.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
@@ -11,6 +11,7 @@ import { ApiResponse } from 'src/responses/api.response';
 @Controller('fertiliser')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
+@ApiTags('Fertiliser')
 export class FertiliserController {
   constructor(private readonly fertiliserService: FertiliserService) { }
 
