@@ -6,10 +6,12 @@ import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { Role } from '@prisma/client';
-import { Allow } from 'class-validator';
+import { Allow } from 'src/decorators/allow.decorator';
+
 
 // @UseGuards(AuthGuard)
 @ApiTags('Roles')
+@Allow()
 // @ApiBearerAuth()
 @Controller('roles')
 export class RolesController {
