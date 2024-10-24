@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Agronomy, Farmer, Prisma, Status, User, Veterinary } from '@prisma/client';
+import { Agronomy, Farmer, Gender, Prisma, Status, User, Veterinary } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -77,6 +77,9 @@ export class UsersService {
         password: createUserDto.password,
         nationalId: createUserDto.nationalId,
         username: username,
+        telephone: createUserDto.telephone,
+        gender: createUserDto.gender,
+        dob: new Date(createUserDto.dob),
         locationChildrenIds: JSON.stringify(childrenLocationsIds),
         role: {
           connect: {
@@ -391,6 +394,8 @@ export class UsersService {
           telephone: row[3],
           email: row[4],
           locationId: 0,
+          gender: row[5],
+          dob: row[6],
 
 
         };
@@ -442,6 +447,8 @@ export class UsersService {
           telephone: row[3],
           email: row[4],
           locationId: 0,
+          gender: row[5],
+          dob: row[6],
 
 
         };
@@ -494,6 +501,8 @@ export class UsersService {
           telephone: row[3],
           email: row[4],
           locationId: 0,
+          gender: row[5],
+          dob: row[6],
 
 
         };
@@ -546,6 +555,8 @@ export class UsersService {
           telephone: row[3],
           email: row[4],
           locationId: 0,
+          gender: row[5],
+          dob: row[6],
 
 
         };

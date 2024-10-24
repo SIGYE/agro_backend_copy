@@ -40,6 +40,8 @@ model User {
   telephone         String?            @unique
   firstName         String
   lastName          String
+  gender            Gender?
+  dob               DateTime?
   nationalId        String?            @unique
   password          String
   otp               String?

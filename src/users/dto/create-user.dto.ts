@@ -1,7 +1,11 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Status } from "@prisma/client";
+import { Status, Gender } from "@prisma/client";
+import { Transform, Type } from "class-transformer";
 
-import { IsEmail, IsOptional, IsNotEmpty, IsString, MinLength, MaxLength, Matches, Min, Max, Length } from "class-validator";
+
+import { IsEmail, IsOptional, IsNotEmpty, IsString, MinLength, MaxLength, Matches, Min, Max, Length, IsEnum } from "class-validator";
+import moment from "moment";
+
 
 export class CreateUserDto {
     @IsNotEmpty()
@@ -23,13 +27,18 @@ export class CreateUserDto {
     @Length(12)
     @Matches(/^250\d{9}$/)
     telephone: string
-
+    @ApiProperty()
+    @IsEnum(Gender)
+    gender: Gender
     @ApiProperty()
     @IsEmail()
     email: string
-
-
-
+    @ApiProperty({
+        type: String,
+        example: 'YYYY-MM-DD'
+    })
+    @Transform(({ value }) => moment(value).format('YYYY-MM-DD'))
+    dob: string;
     @ApiProperty()
     password?: string
 
