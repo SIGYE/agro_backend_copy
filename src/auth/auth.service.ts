@@ -183,7 +183,8 @@ export class AuthService {
       status: user.status,
       role: user.role,
       isDefaultPassword: user.isDefaultPassword,
-      token: this.jwtService.sign(tokenProps)
+      token: this.jwtService.sign(tokenProps),
+      locationId: user.locationId
     };
 
     return loginPayload;
@@ -231,7 +232,8 @@ export class AuthService {
       status: user.status,
       role: user.role,
       isDefaultPassword: user.isDefaultPassword,
-      token: this.jwtService.sign(tokenProps)
+      token: this.jwtService.sign(tokenProps),
+      locationId: user.locationId
     };
 
     return loginPayload;

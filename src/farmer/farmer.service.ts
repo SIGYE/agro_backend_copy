@@ -93,7 +93,7 @@ export class FarmerService {
         }
       })
       for (let crop of assignCropsToFarmers.crops) {
-        await this.databaseService.cropFarmerRegistration.create({
+        let cropFarmer = await this.databaseService.cropFarmerRegistration.create({
           data: {
             plantationArea: crop.plantationArea,
             seeds: crop.seeds,
@@ -107,8 +107,15 @@ export class FarmerService {
               connect: {
                 id: crop.cropsId
               }
-            }
+            },
           }
+        })
+        await this.databaseService.cropFertilizerFarmerRegistration.create({
+          data: {
+            fertilizerId: crop.fertilizerId,
+            cropFarmerRegistrationId: cropFarmer.id
+          }
+
         })
       }
       return farmer;
