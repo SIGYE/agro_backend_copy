@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsString } from "class-validator"
+import { IsNotEmpty, IsNumber, IsString } from "class-validator"
 
 export class cropFarmerDto {
     @IsNotEmpty()
@@ -22,4 +22,12 @@ export class cropFarmerDto {
     @IsNotEmpty()
     @IsString()
     fertilizerId: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsNumber()
+    amountOfFertilizer: number
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    measurementUnit: string
 }

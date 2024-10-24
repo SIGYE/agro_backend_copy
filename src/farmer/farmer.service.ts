@@ -34,7 +34,7 @@ export class FarmerService {
       // Assign crops to farmer if cropsId is present
       if (CreateFarmerDto.crops) {
         for (let crop of CreateFarmerDto.crops) {
-          await this.databaseService.cropFarmerRegistration.create({
+          let cropFarmer = await this.databaseService.cropFarmerRegistration.create({
             data: {
               plantationArea: crop.plantationArea,
               seeds: crop.seeds,
@@ -50,7 +50,18 @@ export class FarmerService {
                 }
               }
             }
-          });
+          })
+          await this.databaseService.cropFertilizerFarmerRegistration.create({
+            data: {
+              fertilizerId: crop.fertilizerId,
+              cropFarmerRegistrationId: cropFarmer.id,
+              amount: crop.amountOfFertilizer,
+              measurement: crop.measurementUnit
+
+
+            }
+
+          })
         }
       }
 
@@ -113,7 +124,9 @@ export class FarmerService {
         await this.databaseService.cropFertilizerFarmerRegistration.create({
           data: {
             fertilizerId: crop.fertilizerId,
-            cropFarmerRegistrationId: cropFarmer.id
+            cropFarmerRegistrationId: cropFarmer.id,
+            amount: crop.amountOfFertilizer,
+            measurement: crop.measurementUnit
           }
 
         })
