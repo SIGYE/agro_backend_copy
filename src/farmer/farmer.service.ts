@@ -202,6 +202,7 @@ export class FarmerService {
         throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
       let childrenLocations = await this.locationService.getAllChildrenLocationIds(locationId);
+      console.log(childrenLocations)
 
 
       // Retrieve farmers associated with the cooperative

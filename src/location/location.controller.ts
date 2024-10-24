@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { LocationService, LocationWithChildren, LocationWithParent } from './location.service';
 import { ApiParam, ApiTags } from '@nestjs/swagger';
 import { Allow } from 'src/decorators/allow.decorator';
@@ -16,8 +16,8 @@ export class LocationController {
     // / get methods for the location entity 
 
     @Get('/all')
-    async getAll(): Promise<ApiResponse<LocationWithParent[]>> {
-        return new ApiResponse<LocationWithParent[]>(true, "Success", await this.locationService.getAll(), 200)
+    async getAll(@Query('page') page: number, @Query('limit') limit: number): Promise<ApiResponse<{ data: LocationWithParent[], total: number }>> {
+        return new ApiResponse(true, "Success", await this.locationService.getAll(page, limit), 200)
     }
 
     @Get('/:id')
@@ -71,16 +71,16 @@ export class LocationController {
 
     @Get('/recursively-get-all-children/:id')
     @ApiParam({
-        name : "id",
-        type : Number
+        name: "id",
+        type: Number
     })
-    async recursivelyGetAllChildrenLocations(@Param('id') id : number) : Promise<ApiResponse<number[]>> {
+    async recursivelyGetAllChildrenLocations(@Param('id') id: number): Promise<ApiResponse<number[]>> {
         const children = await this.locationService.recursivelyGetAllChildrenLocations(id);
         console.log('children length : ' + children.length)
         const childrenSet = new Set(children);
         console.log('children set length : ' + childrenSet.size)
         const data = Array.from(childrenSet)
-        return new ApiResponse<number[]>(true , "Success" , data , 200)
+        return new ApiResponse<number[]>(true, "Success", data, 200)
     }
 
 }
