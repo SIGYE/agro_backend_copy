@@ -5,6 +5,8 @@ import { DatabaseService } from '../database/database.service';
 import { connect } from 'http2';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { LocationService } from 'src/location/location.service';
+import { AssignCropToCooperativeDto } from './dto/assignCooperativeCrop.dto';
+import { AssignAnimalToCooperativeDto } from './dto/assignCooperativeAnimals.dto';
 
 
 @Injectable()
@@ -13,7 +15,7 @@ export class CooperativeService {
 
   async create(createCooperativeDto: CreateCooperativeDto) {
     try {
-      return await this.databaseService.cooperative.create({
+      let cooperative = await this.databaseService.cooperative.create({
         data: {
           name: createCooperativeDto.name,
           registrationNumber: createCooperativeDto.registrationNumber,
@@ -25,9 +27,140 @@ export class CooperativeService {
             },
           },
         }
-      });
+      })
+      // Assign crops to Cooperative if cropsId is present
+      if (createCooperativeDto.crops) {
+        for (let crop of createCooperativeDto.crops) {
+          let cropCooperative = await this.databaseService.cooperativeCropRegistration.create({
+            data: {
+              plantationArea: crop.plantationArea,
+              seeds: crop.seeds,
+              produceHarvested: crop.produceHarvested,
+              cooperative: {
+                connect: {
+                  id: cooperative.id
+                }
+              },
+              crop: {
+                connect: {
+                  id: crop.cropsId
+                }
+              }
+            }
+          })
+          await this.databaseService.cropFertilizerCooperativeRegistration.create({
+            data: {
+              fertilizerId: crop.fertilizerId,
+              cooperativeCropRegistrationId: cropCooperative.id,
+              amount: crop.amountOfFertilizer,
+              measurement: crop.measurementUnit
+
+
+            }
+
+          })
+        }
+      }
+      // Assign animals to farmer if animalIds is present
+      if (createCooperativeDto.animals) {
+        for (let animal of createCooperativeDto.animals) {
+          await this.databaseService.animalFarmerRegistration.create({
+            data: {
+              farmer: {
+                connect: {
+                  id: cooperative.id
+                }
+              },
+              animal: {
+                connect: {
+                  id: animal.animalId
+                }
+              },
+              totalNumber: animal.totalNumber,
+              femaleNumber: animal.femaleNumber,
+              maleNumber: animal.maleNumber
+
+
+            }
+          });
+        }
+      }
     } catch (error) {
       throw new BadRequestException('Error creating cooperative');
+    }
+  }
+
+  async assignCropsToCooperative(assignCropsToCooperative: AssignCropToCooperativeDto) {
+    try {
+      let cooperative = await this.databaseService.cooperative.findUnique({
+        where: {
+          id: assignCropsToCooperative.cooperativeId
+        }
+      })
+      for (let crop of assignCropsToCooperative.crops) {
+        let cropCooperative = await this.databaseService.cooperativeCropRegistration.create({
+          data: {
+            plantationArea: crop.plantationArea,
+            seeds: crop.seeds,
+            produceHarvested: crop.produceHarvested,
+            cooperative: {
+              connect: {
+                id: cooperative.id
+              }
+            },
+            crop: {
+              connect: {
+                id: crop.cropsId
+              }
+            },
+          }
+        })
+        await this.databaseService.cropFertilizerCooperativeRegistration.create({
+          data: {
+            fertilizerId: crop.fertilizerId,
+            cooperativeCropRegistrationId: cropCooperative.id,
+            amount: crop.amountOfFertilizer,
+            measurement: crop.measurementUnit
+          }
+
+        })
+      }
+      return cooperative;
+
+    } catch (e) {
+      throw new BadRequestException(e.message)
+    }
+  }
+  async assignAnimalsToCooperative(assignAnimalsToCooperative: AssignAnimalToCooperativeDto) {
+    try {
+      let cooperative = await this.databaseService.cooperative.findUnique({
+        where: {
+          id: assignAnimalsToCooperative.cooperativeId
+        }
+      });
+      for (let animal of assignAnimalsToCooperative.animals) {
+        await this.databaseService.cooperativeAnimalRegistration.create({
+          data: {
+            cooperative: {
+              connect: {
+                id: cooperative.id
+              }
+            },
+            animal: {
+              connect: {
+                id: animal.animalId
+              }
+            },
+            totalNumber: animal.totalNumber,
+            femaleNumber: animal.femaleNumber,
+            maleNumber: animal.maleNumber
+          }
+        });
+      }
+      return cooperative;
+
+    } catch (e) {
+      throw new BadRequestException(e.message);
     }
   }
 

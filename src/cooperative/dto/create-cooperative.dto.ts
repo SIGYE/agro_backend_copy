@@ -31,7 +31,7 @@ export class CreateCooperativeDto {
     locationId: number;
     @ApiProperty({
         isArray: true,
-        type: CreateCooperativeDto
+        type: CropCooperativeDto
     })
     @ValidateNested({ each: true })
     @Type(() => CropCooperativeDto)

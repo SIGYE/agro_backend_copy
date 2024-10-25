@@ -6,6 +6,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
+import { AssignCropToCooperativeDto } from './dto/assignCooperativeCrop.dto';
+import { AssignAnimalToCooperativeDto } from './dto/assignCooperativeAnimals.dto';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -42,6 +44,15 @@ export class CooperativeController {
   @Put('assign-farmers-to-cooperative')
   async assignFarmersToCooperative(@Body() data: AssignFarmersTOCooperative) {
     return new ApiResponse(true, "Farmers Assigned", await this.cooperativeService.assignFarmersToCooperative(data), null);
+  }
+  @Put('assign-crops-to-cooperative')
+  async assignCropsToCooperative(@Body() data: AssignCropToCooperativeDto) {
+    return new ApiResponse(true, "Crops Assigned", await this.cooperativeService.assignCropsToCooperative(data), null);
+  }
+
+  @Put('assign-animals-to-cooperative')
+  async assignAnimalsToCooperative(@Body() data: AssignAnimalToCooperativeDto) {
+    return new ApiResponse(true, "Animals Assigned", await this.cooperativeService.assignAnimalsToCooperative(data), null);
   }
 
   @Delete(':id')
