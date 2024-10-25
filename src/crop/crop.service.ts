@@ -1,12 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCropDto } from './dto/create-crop.dto';
 import { UpdateCropDto } from './dto/update-crop.dto';
 import { DatabaseService } from 'src/database/database.service';
 import * as XLSX from 'xlsx';
+import { LocationService } from 'src/location/location.service';
 
 @Injectable()
 export class CropService {
-  constructor(private readonly dataBaseService: DatabaseService) { }
+  constructor(private readonly dataBaseService: DatabaseService, private readonly locationService: LocationService) { }
   async create(createCropDto: CreateCropDto, userId: string) {
 
     try {
@@ -27,6 +28,36 @@ export class CropService {
       return await this.dataBaseService.crop.findMany();
     }
     catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async findAllCropFarmerRegistration(locationId: number) {
+    try {
+      // Check if the location exists
+      const location = await this.dataBaseService.location.findUnique({
+        where: { id: locationId }
+      });
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`);
+      }
+      let locations = await this.locationService.getAllChildrenLocationIds(locationId);
+      return await this.dataBaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              location: {
+                id: {
+                  in: locations
+                }
+
+              }
+            }
+          }
+        }
+      });
+    } catch (error) {
       throw new BadRequestException(error.message);
     }
   }

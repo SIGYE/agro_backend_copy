@@ -27,6 +27,10 @@ export class CropController {
   async findAll() {
     return new ApiResponse<Crop[]>(true, "All Crops", await this.cropService.findAll(), null);
   }
+  @Get('farmer-crops-by-location/:locationId')
+  async findAllCropFarmerRegistration(@Param('locationId') locationId: string) {
+    return new ApiResponse(true, "All Crops", await this.cropService.findAllCropFarmerRegistration(parseInt(locationId)), null);
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {

@@ -258,8 +258,7 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
-
-  async getFarmersGrowth(locationId?: number) {
+  async cropHarvestAnalytics(locationId?: number) {
     if (locationId) {
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId },
@@ -275,37 +274,52 @@ export class AnalyticsService {
 
     try {
       const locationIds = locationId
-        ? await this.locationService.getAllChildrenLocationIds(locationId)
+        ? await this.locationService.getAllChildrenLocations(locationId)
         : []
+
       const locationQuery = locationId
         ? { locationId: { in: locationIds } }
         : {}
-        
-        const farmers = await this.databaseService.farmer.findMany({
-          where: {
+      // Query the data without using _sum directly, since it's a string field
+      const farmerCrops = await this.databaseService.cropFarmerRegistration.groupBy({
+        by: ['cropId'],
+        where: {
+          farmer: {
             user: { ...locationQuery },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        });
+        },
+        _count: {
+          _all: true,
+        },
+      })
 
-        const currentYear = new Date().getFullYear();
-        const months = getMonthsArray();
-        
-        const farmersGrowth = months.map((month, index) => {
-          const count = farmers.filter(farmer => {
-            const farmerDate = new Date(farmer.createdAt);
-            return farmerDate.getMonth() === index && farmerDate.getFullYear() === currentYear;
-          }).length;
-    
+      // Parse and sum `produceHarvested` values manually
+      const cropsWithDetails = await Promise.all(
+        farmerCrops.map(async (crop) => {
+          const cropDetails = await this.databaseService.cropFarmerRegistration.findMany({
+            where: { cropId: crop.cropId },
+            select: {
+              produceHarvested: true,
+              crop: { select: { name: true } },
+            },
+          })
+
+          // Sum up the produceHarvested values after parsing them to numbers
+          const harvestedQuantity = cropDetails.reduce((sum, detail) => {
+            return sum + (parseFloat(detail.produceHarvested) || 0)
+          }, 0)
+
           return {
-            month,
-            count,
-          };
-        });
-    
-        return farmersGrowth;
+            cropId: crop.cropId,
+            cropName: cropDetails[0]?.crop.name,
+            count: crop._count._all,
+            harvestedQuantity,
+          }
+        })
+      )
+
+      return cropsWithDetails
+
     } catch (error) {
       console.log('error : ' + error)
       throw new Error(error)

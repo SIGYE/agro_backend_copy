@@ -9,7 +9,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
 @UseGuards(AuthGuard)
 @ApiTags('Analytics')
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(private readonly analyticsService: AnalyticsService) { }
 
   @Get('/dashboard/agro-card-data')
   @ApiOperation({ summary: 'Get Agro Card Analytics' })
@@ -38,10 +38,10 @@ export class AnalyticsController {
   async getVetFarmerAnimals(@Query('locationId') locationId?: number) {
     return new ApiResponse(true, "Vet Farmer Crops", await this.analyticsService.getVetFarmerAnimals(locationId), null);
   }
-  @Get('/farmers-growth')
-  @ApiOperation({ summary: 'Get Farmers Growth' })
+  @Get('/dashboard/crop-harvest')
   @ApiQuery({ name: 'locationId', required: false, type: Number })
-  async getFarmersGrowth(@Query('locationId') locationId?: number) {
-    return new ApiResponse(true, "Farmers Growth", await this.analyticsService.getFarmersGrowth(locationId), null);
+  async getCropHarvest(@Query('locationId') locationId?: number) {
+    return new ApiResponse(true, "Crop Harvest", await this.analyticsService.cropHarvestAnalytics(locationId), null);
   }
+
 }
