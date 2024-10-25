@@ -31,12 +31,14 @@ export class CreateUserDto {
     @IsEnum(Gender)
     gender: Gender
     @ApiProperty()
+    @IsOptional()
     @IsEmail()
-    email: string
+    email?: string
     @ApiProperty({
         type: String,
         example: 'YYYY-MM-DD'
     })
+
     dob: string;
     @ApiProperty()
     password?: string
