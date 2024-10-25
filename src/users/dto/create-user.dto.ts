@@ -19,7 +19,8 @@ export class CreateUserDto {
     @Length(16, 16)
     @IsNotEmpty()
     @ApiProperty()
-    nationalId: string
+    @IsOptional()
+    nationalId?: string
 
     @IsOptional()
     @ApiProperty()
