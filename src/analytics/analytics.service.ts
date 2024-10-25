@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { DatabaseService } from 'src/database/database.service'
 import { LocationService } from 'src/location/location.service'
 import { UsersService } from 'src/users/users.service'
+import { getMonthsArray } from 'src/utils/data.util'
 
 @Injectable()
 export class AnalyticsService {
