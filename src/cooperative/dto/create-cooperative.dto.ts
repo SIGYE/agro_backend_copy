@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsInt, IsOptional, ValidateNested } from 'class-validator';
+import { CropCooperativeDto } from './cropCooperativeDto';
+import { animalCooperativeDto } from './animalCooperative.dto';
 
 export class CreateCooperativeDto {
     @ApiProperty()
@@ -26,4 +29,21 @@ export class CreateCooperativeDto {
     @IsNotEmpty()
     @ApiProperty()
     locationId: number;
+    @ApiProperty({
+        isArray: true,
+        type: CreateCooperativeDto
+    })
+    @ValidateNested({ each: true })
+    @Type(() => CropCooperativeDto)
+    @IsOptional()
+    crops?: CropCooperativeDto[]
+    @ApiProperty({
+        isArray: true,
+        type: animalCooperativeDto
+    })
+    @ValidateNested({ each: true })
+    @Type(() => animalCooperativeDto)
+    @IsOptional()
+    animals?: animalCooperativeDto[]
+
 }
