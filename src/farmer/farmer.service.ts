@@ -235,7 +235,14 @@ export class FarmerService {
           },
         },
         include: {
-          user: true
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              telephone: true
+            }
+          }
         }
       });
 
