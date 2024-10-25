@@ -310,8 +310,9 @@ export class LocationService {
             return ids;
         };
 
-        return extractChildIds(locationWithChildren).filter(childId => childId !== id); // Exclude the parent ID if needed
+        return extractChildIds(locationWithChildren); // No filtering of the parent ID
     }
+
 
 
 }
