@@ -16,8 +16,6 @@ export class CreateUserDto {
     @ApiProperty()
     lastName: string
 
-    @Length(16, 16)
-    @IsNotEmpty()
     @ApiProperty()
     @IsOptional()
     nationalId?: string
