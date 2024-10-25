@@ -257,4 +257,71 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
+  async cropHarvestAnalytics(locationId?: number) {
+    if (locationId) {
+      const location = await this.databaseService.location.findUnique({
+        where: { id: locationId },
+        include: {
+          childrenLocations: true,
+        },
+      })
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+    }
+
+    try {
+      const locationIds = locationId
+        ? await this.locationService.getAllChildrenLocations(locationId)
+        : []
+
+      const locationQuery = locationId
+        ? { locationId: { in: locationIds } }
+        : {}
+      // Query the data without using _sum directly, since it's a string field
+      const farmerCrops = await this.databaseService.cropFarmerRegistration.groupBy({
+        by: ['cropId'],
+        where: {
+          farmer: {
+            user: { ...locationQuery },
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      })
+
+      // Parse and sum `produceHarvested` values manually
+      const cropsWithDetails = await Promise.all(
+        farmerCrops.map(async (crop) => {
+          const cropDetails = await this.databaseService.cropFarmerRegistration.findMany({
+            where: { cropId: crop.cropId },
+            select: {
+              produceHarvested: true,
+              crop: { select: { name: true } },
+            },
+          })
+
+          // Sum up the produceHarvested values after parsing them to numbers
+          const harvestedQuantity = cropDetails.reduce((sum, detail) => {
+            return sum + (parseFloat(detail.produceHarvested) || 0)
+          }, 0)
+
+          return {
+            cropId: crop.cropId,
+            cropName: cropDetails[0]?.crop.name,
+            count: crop._count._all,
+            harvestedQuantity,
+          }
+        })
+      )
+
+      return cropsWithDetails
+
+    } catch (error) {
+      console.log('error : ' + error)
+      throw new Error(error)
+    }
+  }
 }
