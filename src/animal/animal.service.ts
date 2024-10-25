@@ -114,4 +114,22 @@ export class AnimalService {
 
     return { success, failed, errors };
   }
+  // async assignLivestockDisease(livestockId: string, diseaseId: string) {
+  //   try {
+  //     return await this.dataBaseService.livestock.update({
+  //       where: {
+  //         id: livestockId
+  //       },
+  //       data: {
+  //         diseases: {
+  //           connect: {
+  //             id: diseaseId
+  //           }
+  //         }
+  //       }
+  //     });
+  //   } catch (error) {
+  //     throw new BadRequestException(error.message);
+  //   }
+  // }
 }
