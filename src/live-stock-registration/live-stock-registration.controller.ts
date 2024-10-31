@@ -4,6 +4,7 @@ import { CreateLiveStockRegistrationDto } from './dto/create-live-stock-registra
 import { UpdateLiveStockRegistrationDto } from './dto/update-live-stock-registration.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { ApiResponse } from 'src/responses/api.response';
 
 @Controller('live-stock-registration')
 @ApiBearerAuth()
@@ -13,27 +14,55 @@ export class LiveStockRegistrationController {
   constructor(private readonly liveStockRegistrationService: LiveStockRegistrationService) { }
 
   @Post()
-  create(@Body() createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
-    return this.liveStockRegistrationService.create(createLiveStockRegistrationDto);
+  async create(@Body() createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
+    try {
+      return new ApiResponse(true, "Live Stock Registration Created", await this.liveStockRegistrationService.create(createLiveStockRegistrationDto), 201);
+    } catch (e) {
+      new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get()
-  findAll() {
-    return this.liveStockRegistrationService.findAll();
+  async findAll() {
+    try {
+      return new ApiResponse(true, "All Live Stock Registrations", await this.liveStockRegistrationService.findAll(), 200);
+    } catch (e) {
+      new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('animals-by-livestock/:id')
+  async findAllAnimalsByLiveStock(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "All Animals By Live Stock", await this.liveStockRegistrationService.findAllAnimalsInLivesStockRegistration(id), 200);
+    } catch (e) {
+      new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.liveStockRegistrationService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "Live Stock Registration Retrieved", await this.liveStockRegistrationService.findOne(id), 200);
+    } catch (e) {
+      new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLiveStockRegistrationDto: UpdateLiveStockRegistrationDto) {
-    return this.liveStockRegistrationService.update(+id, updateLiveStockRegistrationDto);
+  async update(@Param('id') id: string, @Body() updateLiveStockRegistrationDto: UpdateLiveStockRegistrationDto) {
+    try {
+      return new ApiResponse(true, "Live Stock Registration Updated", await this.liveStockRegistrationService.update(id, updateLiveStockRegistrationDto), 200);
+    } catch (e) {
+      new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.liveStockRegistrationService.remove(+id);
+  async remove(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "Live Stock Registration Deleted", await this.liveStockRegistrationService.remove(id), 200);
+    } catch (e) {
+      new ApiResponse(false, e.message, null, 400);
+    }
   }
 }

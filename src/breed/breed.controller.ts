@@ -4,6 +4,7 @@ import { CreateBreedDto } from './dto/create-breed.dto';
 import { UpdateBreedDto } from './dto/update-breed.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { ApiResponse } from 'src/responses/api.response';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @ApiTags('Breed')
@@ -12,27 +13,47 @@ export class BreedController {
   constructor(private readonly breedService: BreedService) { }
 
   @Post()
-  create(@Body() createBreedDto: CreateBreedDto) {
-    return this.breedService.create(createBreedDto);
+  async create(@Body() createBreedDto: CreateBreedDto) {
+    try {
+      return new ApiResponse(true, "Breed Created", await this.breedService.create(createBreedDto), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get()
-  findAll() {
-    return this.breedService.findAll();
+  async findAll() {
+    try {
+      return new ApiResponse(true, "All Breeds", await this.breedService.findAll(), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.breedService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "Breed Retrieved", await this.breedService.findOne(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBreedDto: UpdateBreedDto) {
-    return this.breedService.update(+id, updateBreedDto);
+  async update(@Param('id') id: string, @Body() updateBreedDto: UpdateBreedDto) {
+    try {
+      return new ApiResponse(true, "Breed Updated", await this.breedService.update(id, updateBreedDto), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.breedService.remove(+id);
+  async remove(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "Breed Deleted", await this.breedService.remove(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 }

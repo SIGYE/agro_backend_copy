@@ -288,6 +288,59 @@ export class FarmerService {
       throw new BadRequestException('Error fetching crop farmer registrations by location');
     }
   }
+  async getCropsFarmerRegistrationsByFarmer(farmerId: string) {
+    try {
+      // Check if the farmer exists
+      const farmer = await this.databaseService.farmer.findUnique({
+        where: { id: farmerId }
+      });
+
+      if (!farmer) {
+        throw new NotFoundException(`Farmer with ID ${farmerId} not found`);
+      }
+
+      // Retrieve cropFarmerRegistrations associated with the farmer
+      const cropFarmerRegistrations = await this.databaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmerId: farmerId
+        },
+        include: {
+          crop: true
+        }
+      });
+
+      return cropFarmerRegistrations;
+    } catch (error) {
+      throw new BadRequestException('Error fetching crop farmer registrations by farmer');
+    }
+  }
+
+  async getAnimalFarmerRegistrationsByFarmer(farmerId: string) {
+    try {
+      // Check if the farmer exists
+      const farmer = await this.databaseService.farmer.findUnique({
+        where: { id: farmerId }
+      });
+
+      if (!farmer) {
+        throw new NotFoundException(`Farmer with ID ${farmerId} not found`);
+      }
+
+      // Retrieve animalFarmerRegistrations associated with the farmer
+      const animalFarmerRegistrations = await this.databaseService.animalFarmerRegistration.findMany({
+        where: {
+          farmerId: farmerId
+        },
+        include: {
+          animal: true
+        }
+      });
+
+      return animalFarmerRegistrations;
+    } catch (error) {
+      throw new BadRequestException('Error fetching animal farmer registrations by farmer');
+    }
+  }
 
   async getAnimalRegistrationsByLocation(locationId: number) {
     try {

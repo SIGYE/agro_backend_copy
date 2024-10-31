@@ -185,6 +185,29 @@ export class CooperativeService {
     }
   }
 
+  async findAllCooperativeCrops(cooperativeId: string) {
+    try {
+      return await this.databaseService.cooperativeCropRegistration.findMany({
+        where: {
+          cooperativeId
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException('Error fetching cooperative crops');
+    }
+  }
+  async findAllCooperativeAnimals(cooperativeId: string) {
+    try {
+      return await this.databaseService.cooperativeAnimalRegistration.findMany({
+        where: {
+          cooperativeId
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException('Error fetching cooperative animals');
+    }
+  }
+
 
   async findOne(id: string) {
     try {

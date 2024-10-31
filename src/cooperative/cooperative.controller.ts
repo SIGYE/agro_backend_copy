@@ -36,6 +36,14 @@ export class CooperativeController {
   async findOne(@Param('id') id: string) {
     return new ApiResponse(true, "Cooperative Retrieved", await this.cooperativeService.findOne(id), null);
   }
+  @Get('crops-by-cooperative/:id')
+  async findAllCropsByCooperative(@Param('id') id: string) {
+    return new ApiResponse(true, "All Crops By Cooperative", await this.cooperativeService.findAllCooperativeCrops(id), null);
+  }
+  @Get('animals-by-cooperative/:id')
+  async findAllAnimalsByCooperative(@Param('id') id: string) {
+    return new ApiResponse(true, "All Animals By Cooperative", await this.cooperativeService.findAllCooperativeAnimals(id), null);
+  }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateCooperativeDto: UpdateCooperativeDto) {
