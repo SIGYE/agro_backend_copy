@@ -1,26 +1,114 @@
 import { Injectable } from '@nestjs/common';
 import { CreateLiveStockRegistrationDto } from './dto/create-live-stock-registration.dto';
 import { UpdateLiveStockRegistrationDto } from './dto/update-live-stock-registration.dto';
+import { DatabaseService } from 'src/database/database.service';
 
 @Injectable()
 export class LiveStockRegistrationService {
-  create(createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
-    return 'This action adds a new liveStockRegistration';
+  constructor(private readonly databaseService: DatabaseService) { }
+  async create(createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
+    try {
+      let breed = await this.databaseService.breed.findUnique({
+        where: {
+          id: createLiveStockRegistrationDto.breedId
+        }
+      })
+      if (!breed) {
+        throw new Error("Breed not found")
+      }
+      let animalFarmerRegistration = await this.databaseService.animalFarmerRegistration.findUnique({
+        where: {
+          id: createLiveStockRegistrationDto.animalFarmerRegistrationId
+        }
+      })
+      if (!animalFarmerRegistration) {
+        throw new Error("Animal Farmer Registration not found")
+      }
+      return await this.databaseService.liveStockRegistration.create({
+        data: {
+          breedId: createLiveStockRegistrationDto.breedId,
+          animalFarmerRegistrationId: createLiveStockRegistrationDto.animalFarmerRegistrationId,
+          dob: new Date(createLiveStockRegistrationDto.dob),
+          weight: createLiveStockRegistrationDto.weight,
+          weightMeasurement: createLiveStockRegistrationDto.weightMeasurement,
+          produce: createLiveStockRegistrationDto.produce,
+          produceMeasurement: createLiveStockRegistrationDto.produceMeasurement
+        }
+      }
+      )
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 
-  findAll() {
-    return `This action returns all liveStockRegistration`;
+  async findAll() {
+    try {
+      return await this.databaseService.liveStockRegistration.findMany()
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
+  }
+  async findAllAnimalsInLivesStockRegistration(liveStockRegistrationId: string) {
+    try {
+      return await this.databaseService.liveStockRegistration.findUnique({
+        where: {
+          id: liveStockRegistrationId
+        }
+      }).animalFarmerRegistration().animal()
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} liveStockRegistration`;
+  async findOne(id: string) {
+    try {
+      return await this.databaseService.liveStockRegistration.findUnique({
+        where: {
+          id: id
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
+
   }
 
-  update(id: number, updateLiveStockRegistrationDto: UpdateLiveStockRegistrationDto) {
-    return `This action updates a #${id} liveStockRegistration`;
+  async update(id: string, updateLiveStockRegistrationDto: UpdateLiveStockRegistrationDto) {
+    try {
+      return await this.databaseService.liveStockRegistration.update({
+        where: {
+          id: id
+        },
+        data: {
+          breedId: updateLiveStockRegistrationDto.breedId,
+          animalFarmerRegistrationId: updateLiveStockRegistrationDto.animalFarmerRegistrationId,
+          dob: new Date(updateLiveStockRegistrationDto.dob),
+          weight: updateLiveStockRegistrationDto.weight,
+          weightMeasurement: updateLiveStockRegistrationDto.weightMeasurement,
+          produce: updateLiveStockRegistrationDto.produce,
+          produceMeasurement: updateLiveStockRegistrationDto.produceMeasurement
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} liveStockRegistration`;
+  async remove(id: string) {
+    try {
+      return await this.databaseService.liveStockRegistration.delete({
+        where: {
+          id: id
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 }

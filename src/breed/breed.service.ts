@@ -1,26 +1,91 @@
 import { Injectable } from '@nestjs/common';
 import { CreateBreedDto } from './dto/create-breed.dto';
 import { UpdateBreedDto } from './dto/update-breed.dto';
+import { DatabaseService } from 'src/database/database.service';
 
 @Injectable()
 export class BreedService {
-  create(createBreedDto: CreateBreedDto) {
-    return 'This action adds a new breed';
+  constructor(private readonly databaseService: DatabaseService) { }
+  async create(createBreedDto: CreateBreedDto) {
+    try {
+      let animal = await this.databaseService.animal.findUnique({
+        where: {
+          id: createBreedDto.animalId
+        }
+      })
+      if (!animal) {
+        throw new Error("Animal not found")
+      }
+      return await this.databaseService.breed.create({
+        data: {
+          breedName: createBreedDto.name,
+          animalId: createBreedDto.animalId
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
+
   }
 
-  findAll() {
-    return `This action returns all breed`;
+  async findAll() {
+    try {
+      return await this.databaseService.breed.findMany()
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} breed`;
+  async findOne(id: string) {
+    try {
+      return await this.databaseService.breed.findUnique({
+        where: {
+          id: id
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 
-  update(id: number, updateBreedDto: UpdateBreedDto) {
-    return `This action updates a #${id} breed`;
+  async update(id: string, updateBreedDto: UpdateBreedDto) {
+    try {
+      let breed = await this.databaseService.breed.findUnique({
+        where: {
+          id: id
+        }
+      })
+      if (!breed) {
+        throw new Error("Breed not found")
+      }
+      return await this.databaseService.breed.update({
+        where: {
+          id: id
+        },
+        data: {
+          breedName: updateBreedDto.name
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} breed`;
+  async remove(id: string) {
+    try {
+
+      return await this.databaseService.breed.delete({
+        where: {
+          id: id
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
   }
 }
