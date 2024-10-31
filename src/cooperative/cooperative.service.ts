@@ -190,6 +190,9 @@ export class CooperativeService {
       return await this.databaseService.cooperativeCropRegistration.findMany({
         where: {
           cooperativeId
+        },
+        include: {
+          crop: true
         }
       });
     } catch (error) {
@@ -201,6 +204,9 @@ export class CooperativeService {
       return await this.databaseService.cooperativeAnimalRegistration.findMany({
         where: {
           cooperativeId
+        },
+        include: {
+          animal: true
         }
       });
     } catch (error) {
