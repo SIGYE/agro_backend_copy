@@ -49,6 +49,12 @@ export class AnalyticsController {
   async getCropHarvestByYearAndLocation(@Param('locationId') locationId: number, @Query('year') year: number) {
     return new ApiResponse(true, "Crop Harvest", await this.analyticsService.getHarvestByYearAndLocation(locationId, year), 200);
   }
+  @Get('/dashboard/animal-production-by-year-and-location/:locationId')
+  @ApiParam({ name: 'locationId', required: true, type: Number })
+  @ApiQuery({ name: 'year', required: true, type: Number })
+  async getAnimalProductionByYearAndLocation(@Param('locationId') locationId: number, @Query('year') year: number) {
+    return new ApiResponse(true, "Animal Production", await this.analyticsService.getProduceByYearAndLocation(locationId, year), 200);
+  }
 
 
 
