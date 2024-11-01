@@ -406,7 +406,46 @@ export class AnalyticsService {
         throw new NotFoundException(`Location with ID ${locationId} not found`)
       }
       const locationIds = await this.locationService.getAllChildrenLocations(locationId)
-      // const records = await this.databaseService.animalFarmerRegistration
+      const records = await this.databaseService.liveStockRegistration.findMany({
+        where: {
+          animalFarmerRegistration: {
+            farmer: {
+              user: {
+                locationId: {
+                  in: locationIds
+                }
+              }
+            },
+            createdAt: {
+              gte: new Date(year, 0, 1),
+              lte: new Date(year, 11, 31)
+            }
+          }
+
+        },
+        select: {
+          produce: true,
+          createdAt: true
+        }
+      })
+      const produce = records.map(record => {
+        return {
+          month: record.createdAt.getMonth(),
+          quantity: record.produce
+        }
+      })
+      const months = getMonthsArray()
+      const produceByMonth = months.map(month => {
+        const monthProduce = produce.filter(produce => produce.month === months.indexOf(month))
+        const totalProduce = monthProduce.reduce((sum, produce) => {
+          return sum + (produce.quantity || 0)
+        }, 0)
+        return {
+          month,
+          totalProduce
+        }
+      })
+      return produceByMonth
     }
     catch (error) {
       throw new Error(error)
