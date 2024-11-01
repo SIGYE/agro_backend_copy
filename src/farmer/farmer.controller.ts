@@ -58,6 +58,10 @@ export class FarmerController {
   async findAllFarmerAnimalsByLocation(@Param('id') id: number) {
     return new ApiResponse(true, "All Farmers Animals By Location", await this.farmerService.getAnimalRegistrationsByLocation(id), null)
   }
+  @Get('livestocks-by-farmerRegistration/:id')
+  async findAllLiveStocksByFarmerRegistration(@Param('id') id: string) {
+    return new ApiResponse(true, "All Live Stocks By Farmer Registration", await this.farmerService.getAnimalFarmerRegistrationLivestock(id), 200)
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
