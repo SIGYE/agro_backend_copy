@@ -341,6 +341,18 @@ export class FarmerService {
       throw new BadRequestException('Error fetching animal farmer registrations by farmer');
     }
   }
+  async getAnimalFarmerRegistrationLivestock(animalFarmerRegistrationId: string) {
+    try {
+      return await this.databaseService.animalFarmerRegistration.findUnique({
+        where: {
+          id: animalFarmerRegistrationId
+        }
+      }).liveStockRegistrations()
+    }
+    catch (e) {
+      throw new BadRequestException(e.message)
+    }
+  }
 
   async getAnimalRegistrationsByLocation(locationId: number) {
     try {

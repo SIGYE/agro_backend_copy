@@ -50,18 +50,32 @@ export class AnalyticsService {
             },
           },
         })
-      // const totalPlantedArea = await this.databaseService.cropFarmerRegistration.groupBy({
-      //   by: ['cropId'],
-      //   _sum: {
-      //     plantedArea: true,
-      //   }
-      // })
+      const records = await this.databaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              locationId: {
+                in: locationIds
+              }
+            }
+          }
+        },
+        select: {
+          plantationArea: true
+        }
+      });
+
+      // Convert `plantedArea` values to numbers and calculate the sum
+      const totalPlantedArea = records.reduce((sum, record) => {
+        const plantedAreaNumber = parseFloat(record.plantationArea) || 0; // Convert string to number, defaulting to 0 if NaN
+        return sum + plantedAreaNumber;
+      }, 0);
 
       const cardData = {
         totalFarmers,
         totalCooperatives,
         totalCrops,
-        totalPlantedArea: 0,
+        totalPlantedArea,
       }
       return cardData
     } catch (error) {
@@ -325,4 +339,80 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
+  async getHarvestByYearAndLocation(locationId: number, year: number) {
+    try {
+      const location = await this.databaseService.location.findUnique({
+        where: {
+          id: locationId
+        }
+      })
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
+      // const locationQuery = { locationId: { in: locationIds } }
+      const records = await this.databaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              locationId: {
+                in: locationIds
+              }
+            }
+          },
+          createdAt: {
+            gte: new Date(year, 0, 1),
+            lte: new Date(year, 11, 31)
+          }
+        },
+        select: {
+          produceHarvested: true,
+          createdAt: true
+        }
+      })
+      const harvests = records.map(record => {
+        return {
+          month: record.createdAt.getMonth(),
+          quantity: record.produceHarvested
+        }
+      })
+      console.log(harvests)
+      const months = getMonthsArray()
+      const harvestsByMonth = months.map(month => {
+        const monthHarvests = harvests.filter(harvest => harvest.month === months.indexOf(month))
+        const totalHarvest = monthHarvests.reduce((sum, harvest) => {
+          return sum + (parseFloat(harvest.quantity) || 0)
+        }, 0)
+        return {
+          month,
+          totalHarvest
+        }
+      })
+      return harvestsByMonth
+    }
+    catch (error) {
+      throw new Error(error)
+    }
+  }
+
+  async getProduceByYearAndLocation(locationId: number, year: number) {
+    try {
+      const location = await this.databaseService.location.findUnique({
+        where: {
+          id: locationId
+        }
+      })
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
+      // const records = await this.databaseService.animalFarmerRegistration
+    }
+    catch (error) {
+      throw new Error(error)
+    }
+
+  }
+
+
 }
