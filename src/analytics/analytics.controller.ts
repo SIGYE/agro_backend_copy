@@ -56,6 +56,11 @@ export class AnalyticsController {
     return new ApiResponse(true, "Animal Production", await this.analyticsService.getProduceByYearAndLocation(locationId, year), 200);
   }
 
+  @Get('/dashboard/farmer-age-range/:locationId')
+  @ApiParam({ name: 'locationId', required: false, type: Number })
+  async getFarmerAgeRange(@Param('locationId') locationId?: number) {
+    return new ApiResponse(true, "Farmer Age Range", await this.analyticsService.getFarmerAgeRangeByLocation(locationId), 200);
+  }
 
 
 }

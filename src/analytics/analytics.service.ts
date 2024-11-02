@@ -452,6 +452,70 @@ export class AnalyticsService {
     }
 
   }
+  async getFarmerAgeRangeByLocation(locationId: number) {
+    try {
+      const location = await this.databaseService.location.findUnique({
+        where: {
+          id: locationId
+        }
+      })
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
+      const farmers = await this.databaseService.farmer.findMany({
+        where: {
+          user: {
+            locationId: {
+              in: locationIds
+            }
+          }
+        },
+        select: {
+          user: {
+            select: {
+              dob: true
+            }
+          }
+        }
+      })
+      const ageRanges = {
+        '18-25': 0,
+        '26-35': 0,
+        '36-45': 0,
+        '46-55': 0,
+        '56-65': 0,
+        '66+': 0
+      }
+      const today = new Date()
+      farmers.forEach(farmer => {
+        const dob = new Date(farmer.user.dob)
+        const age = today.getFullYear() - dob.getFullYear()
+        if (age >= 18 && age <= 25) {
+          ageRanges['18-25']++
+        }
+        else if (age >= 26 && age <= 35) {
+          ageRanges['26-35']++
+        }
+        else if (age >= 36 && age <= 45) {
+          ageRanges['36-45']++
+        }
+        else if (age >= 46 && age <= 55) {
+          ageRanges['46-55']++
+        }
+        else if (age >= 56 && age <= 65) {
+          ageRanges['56-65']++
+        }
+        else {
+          ageRanges['66+']++
+        }
+      })
+      return ageRanges
+    }
+    catch (error) {
+      throw new Error(error)
+    }
+  }
 
 
 }
