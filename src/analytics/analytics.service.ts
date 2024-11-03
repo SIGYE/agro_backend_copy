@@ -517,5 +517,56 @@ export class AnalyticsService {
     }
   }
 
+  async getTopCropFarmerRegistrations(locationId: number) {
+    try {
+      const location = await this.databaseService.location.findUnique({
+        where: {
+          id: locationId
+        }
+      })
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`)
+      }
+      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
+      const records = await this.databaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              locationId: {
+                in: locationIds
+              }
+            }
+          }
+        },
+        select: {
+          crop: {
+            select: {
+              name: true
+            }
+          },
+          produceHarvested: true
+        }
+      })
+      const crops = records.map(record => {
+        return {
+          crop: record.crop.name,
+          produceHarvested: record.produceHarvested
+        }
+      })
+      const cropCounts = crops.reduce((acc, crop) => {
+        if (!acc[crop.crop]) {
+          acc[crop.crop] = 0
+        }
+        acc[crop.crop] += crop.produceHarvested
+        return acc
+      }, {})
+      const topCrops = Object.keys(cropCounts).sort((a, b) => cropCounts[b] - cropCounts[a]).slice(0, 5)
+      return topCrops
+    }
+    catch (error) {
+      throw new Error(error)
+    }
+  }
+
 
 }
