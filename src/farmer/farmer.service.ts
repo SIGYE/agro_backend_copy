@@ -8,6 +8,8 @@ import { UsersService } from 'src/users/users.service';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
 import * as XLSX from 'xlsx';
 import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
+import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
+import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 
 @Injectable()
 export class FarmerService {
@@ -167,6 +169,51 @@ export class FarmerService {
 
     } catch (e) {
       throw new BadRequestException(e.message);
+    }
+  }
+
+  async updateCropFarmerRegistration(cropFarmerRegistrationId: string, updateCropFarmerRegistrationDto: UpdateCropFarmerDto) {
+    try {
+      let cropFarmerRegistration = await this.databaseService.cropFarmerRegistration.findUnique({
+        where: {
+          id: cropFarmerRegistrationId
+        }
+      });
+      if (!cropFarmerRegistration) {
+        throw new NotFoundException(`Crop Farmer Registration with ID ${cropFarmerRegistrationId} not found`);
+      }
+      let cropFarmer = await this.databaseService.cropFarmerRegistration.update({
+        where: {
+          id: cropFarmerRegistrationId
+        },
+        data: updateCropFarmerRegistrationDto
+      });
+      return cropFarmer;
+
+    } catch (e) {
+      throw new BadRequestException(e.message)
+    }
+  }
+
+  async updateAnimalFarmerRegistration(animalFarmerRegistrationId: string, updateAnimalFarmerRegistrationDto: UpdateAnimalFarmerDto) {
+    try {
+      let animalFarmerRegistration = await this.databaseService.animalFarmerRegistration.findUnique({
+        where: {
+          id: animalFarmerRegistrationId
+        }
+      });
+      if (!animalFarmerRegistration) {
+        throw new NotFoundException(`Animal Farmer Registration with ID ${animalFarmerRegistrationId} not found`);
+      }
+      let animalFarmer = await this.databaseService.animalFarmerRegistration.update({
+        where: {
+          id: animalFarmerRegistrationId
+        },
+        data: updateAnimalFarmerRegistrationDto
+      });
+      return animalFarmer;
+    } catch (e) {
+      throw new BadRequestException(e.message)
     }
   }
 
