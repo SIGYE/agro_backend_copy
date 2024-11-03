@@ -29,6 +29,14 @@ export class BreedController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('animal/:id')
+  async findAllByAnimal(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "All Breeds", await this.breedService.findAllByAnimal(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {

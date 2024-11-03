@@ -38,6 +38,19 @@ export class BreedService {
     }
   }
 
+  async findAllByAnimal(animalId: string) {
+    try {
+      return await this.databaseService.breed.findMany({
+        where: {
+          animalId: animalId
+        }
+      })
+    }
+    catch (error) {
+      throw new Error(error.message)
+    }
+  }
+
   async findOne(id: string) {
     try {
       return await this.databaseService.breed.findUnique({
