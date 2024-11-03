@@ -8,6 +8,8 @@ import { ApiResponse } from 'src/responses/api.response';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { AssignCropToCooperativeDto } from './dto/assignCooperativeCrop.dto';
 import { AssignAnimalToCooperativeDto } from './dto/assignCooperativeAnimals.dto';
+import { UpdateCropCooperativeDto } from './dto/updateCropCooperative.dto';
+import { UpdateAnimalCooperativeDto } from './dto/updateAnimalCooperative.dto';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -63,6 +65,14 @@ export class CooperativeController {
     return new ApiResponse(true, "Animals Assigned", await this.cooperativeService.assignAnimalsToCooperative(data), null);
   }
 
+  @Put('update-cooperative-crop:/id')
+  async updateCooperativeCrop(@Param('id') id: string, @Body() data: UpdateCropCooperativeDto) {
+    return new ApiResponse(true, "Cooperative Crop Updated", await this.cooperativeService.updateCropCooperativeRegistration(id, data), 200);
+  }
+  @Put('update-cooperative-animal:/id')
+  async updateCooperativeAnimal(@Param('id') id: string, @Body() data: UpdateAnimalCooperativeDto) {
+    return new ApiResponse(true, "Cooperative Animal Updated", await this.cooperativeService.updateAnimalCooperativeRegistration(id, data), 200);
+  }
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return new ApiResponse(true, "Cooperative Deleted", await this.cooperativeService.remove(id), null);

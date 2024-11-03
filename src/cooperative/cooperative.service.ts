@@ -7,6 +7,8 @@ import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative'
 import { LocationService } from 'src/location/location.service';
 import { AssignCropToCooperativeDto } from './dto/assignCooperativeCrop.dto';
 import { AssignAnimalToCooperativeDto } from './dto/assignCooperativeAnimals.dto';
+import { UpdateCropCooperativeDto } from './dto/updateCropCooperative.dto';
+import { UpdateAnimalCooperativeDto } from './dto/updateAnimalCooperative.dto';
 
 
 @Injectable()
@@ -159,6 +161,40 @@ export class CooperativeService {
       }
       return cooperative;
 
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
+  }
+  async updateCropCooperativeRegistration(id: string, updateCooperativeCropRegistrationDto: UpdateCropCooperativeDto) {
+    try {
+      return await this.databaseService.cooperativeCropRegistration.update({
+        where: {
+          id
+        },
+        data: {
+
+          plantationArea: updateCooperativeCropRegistrationDto.plantationArea,
+          seeds: updateCooperativeCropRegistrationDto.seeds,
+          produceHarvested: updateCooperativeCropRegistrationDto.produceHarvested
+        }
+      })
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
+  }
+
+  async updateAnimalCooperativeRegistration(id: string, updateCooperativeAnimalRegistrationDto: UpdateAnimalCooperativeDto) {
+    try {
+      return await this.databaseService.cooperativeAnimalRegistration.update({
+        where: {
+          id
+        },
+        data: {
+          totalNumber: updateCooperativeAnimalRegistrationDto.totalNumber,
+          femaleNumber: updateCooperativeAnimalRegistrationDto.femaleNumber,
+          maleNumber: updateCooperativeAnimalRegistrationDto.maleNumber
+        }
+      })
     } catch (e) {
       throw new BadRequestException(e.message);
     }
