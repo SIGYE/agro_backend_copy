@@ -394,7 +394,11 @@ export class FarmerService {
         where: {
           id: animalFarmerRegistrationId
         }
-      }).liveStockRegistrations()
+      }).liveStockRegistrations({
+        include: {
+          breed: true
+        }
+      })
     }
     catch (e) {
       throw new BadRequestException(e.message)
