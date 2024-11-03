@@ -62,7 +62,7 @@ export class AnalyticsController {
     return new ApiResponse(true, "Farmer Age Range", await this.analyticsService.getFarmerAgeRangeByLocation(locationId), 200);
   }
 
-  @Get('/dashboard/top-crops')
+  @Get('/dashboard/top-crops/:locationId')
   @ApiParam({ name: 'locationId', required: false, type: Number })
   async getTopCrops(@Param('locationId') locationId?: number) {
     return new ApiResponse(true, "Top Crops", await this.analyticsService.getTopCropFarmerRegistrations(locationId), 200);
