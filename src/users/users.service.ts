@@ -38,6 +38,7 @@ export class UsersService {
       where: {
         OR: [
           { email: createUserDto.email },
+          { telephone: createUserDto.telephone },
           { nationalId: createUserDto.nationalId }
         ]
       }

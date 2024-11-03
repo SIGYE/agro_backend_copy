@@ -3,5 +3,6 @@ export enum Role_Enum {
     AGRONOMIST = "AGRONOMIST",
     VETERINARIAN = "VETERINARIAN",
     FARMER = "FARMER",
-    ADMIN = "ADMIN"
+    ADMIN = "ADMIN",
+    BUTCHER = "BUTCHER",
 }

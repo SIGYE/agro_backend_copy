@@ -7,6 +7,8 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
 import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
+import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
+import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 
 @Controller('farmer')
 @ApiBearerAuth()
@@ -84,5 +86,15 @@ export class FarmerController {
   @Put('assign-animals-to-farmer')
   async assignAnimalsToFarmer(@Body() data: AssignAnimalToFarmerDto) {
     return new ApiResponse(true, "Animals Assigned", await this.farmerService.assignAnimalsToFarmer(data), null);
+  }
+
+  @Put('update-crop-farmer-registration/:id')
+  async updateCropFarmerRegistration(@Param('id') id: string, @Body() data: UpdateCropFarmerDto) {
+    return new ApiResponse(true, "Crop Farmer Registration Updated", await this.farmerService.updateCropFarmerRegistration(id, data), 201);
+  }
+
+  @Put('update-animal-farmer-registration/:id')
+  async updateAnimalFarmerRegistration(@Param('id') id: string, @Body() data: UpdateAnimalFarmerDto) {
+    return new ApiResponse(true, "Animal Farmer Registration Updated", await this.farmerService.updateAnimalFarmerRegistration(id, data), 201);
   }
 }

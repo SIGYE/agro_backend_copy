@@ -2,14 +2,10 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsString, ValidateNested } from "class-validator";
 import { SlaughterAnimalDto } from "./slaughter-animal.dto";
 import { Type } from "class-transformer";
+import { CreateUserDto } from "src/users/dto/create-user.dto";
 
-export class CreateSlaughterHouseDto {
-    @ApiProperty()
-    @IsString()
-    name: string;
-    @ApiProperty()
-    @IsString()
-    telephone: string;
+export class CreateSlaughterHouseDto extends CreateUserDto {
+
     @ApiProperty({
         isArray: true,
         type: SlaughterAnimalDto

@@ -6,18 +6,32 @@ import { SlaughterAnimalDto } from './dto/slaughter-animal.dto';
 import { SlaughterRegistrationDto } from './dto/slaughter-registration.dto';
 import { SlaughterProductDto } from './dto/slaughter-product.dto';
 import { AnimalSlaughtProductDto } from './dto/animal-slaught-product.dto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class SlaughterHouseService {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService, private readonly userService: UsersService) { }
   async create(createSlaughterHouseDto: CreateSlaughterHouseDto) {
     try {
+      let role = await this.databaseService.role.findFirst({
+        where: {
+          name: "BUTCHER"
+        }
+      });
+      let user = await this.userService.create({ roleId: role.id, ...createSlaughterHouseDto });
       let slaughterHouse = await this.databaseService.slaughterHouse.create({
         data: {
-          name: createSlaughterHouseDto.name,
+          name: createSlaughterHouseDto.firstName,
           telephone: createSlaughterHouseDto.telephone,
+          user: {
+            connect: {
+              id: user.id
+            }
+          }
         }
       })
+
+
 
       if (createSlaughterHouseDto.slaughterAnimalRegistrations) {
         for (let slaughterAnimal of createSlaughterHouseDto.slaughterAnimalRegistrations) {
@@ -89,7 +103,7 @@ export class SlaughterHouseService {
           id: id
         },
         data: {
-          name: updateSlaughterHouseDto.name,
+          name: updateSlaughterHouseDto.firstName,
           telephone: updateSlaughterHouseDto.telephone
         }
       })

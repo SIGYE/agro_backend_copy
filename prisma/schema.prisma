@@ -57,6 +57,7 @@ model User {
   agronomies        Agronomy[]
   veterinaries      Veterinary[]
   umufashamyumvire  Umufashamyumvire[]
+  slaughters        SlaughterHouse[]
   locationChildrenIds  String?
 
   diseases     Disease[]     @relation("DiseaseCreatedBy")
@@ -216,6 +217,8 @@ model SlaughterHouse {
   id                           String                        @id @default(uuid())
   name                         String
   telephone                    String
+  userId                       String?
+  user                         User?                          @relation(fields: [userId], references: [id])
   slaughterAnimalRegistrations SlaughterAnimalRegistration[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
