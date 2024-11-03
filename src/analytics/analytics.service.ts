@@ -553,14 +553,20 @@ export class AnalyticsService {
           produceHarvested: record.produceHarvested
         }
       })
+      console.log(crops)
       const cropCounts = crops.reduce((acc, crop) => {
         if (!acc[crop.crop]) {
           acc[crop.crop] = 0
         }
-        acc[crop.crop] += crop.produceHarvested
+        acc[crop.crop] += (parseFloat(crop.produceHarvested) || 0)
         return acc
       }, {})
-      const topCrops = Object.keys(cropCounts).sort((a, b) => cropCounts[b] - cropCounts[a]).slice(0, 5)
+
+      const topCrops = Object.keys(cropCounts)
+        .sort((a, b) => cropCounts[b] - cropCounts[a])
+        .slice(0, 5)
+        .map(crop => ({ name: crop, count: cropCounts[crop] }));
+
       return topCrops
     }
     catch (error) {
