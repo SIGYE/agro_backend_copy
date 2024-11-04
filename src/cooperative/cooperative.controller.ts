@@ -65,11 +65,11 @@ export class CooperativeController {
     return new ApiResponse(true, "Animals Assigned", await this.cooperativeService.assignAnimalsToCooperative(data), null);
   }
 
-  @Put('update-cooperative-crop:/id')
+  @Put('update-cooperative-crop/:id')
   async updateCooperativeCrop(@Param('id') id: string, @Body() data: UpdateCropCooperativeDto) {
     return new ApiResponse(true, "Cooperative Crop Updated", await this.cooperativeService.updateCropCooperativeRegistration(id, data), 200);
   }
-  @Put('update-cooperative-animal:/id')
+  @Put('update-cooperative-animal/:id')
   async updateCooperativeAnimal(@Param('id') id: string, @Body() data: UpdateAnimalCooperativeDto) {
     return new ApiResponse(true, "Cooperative Animal Updated", await this.cooperativeService.updateAnimalCooperativeRegistration(id, data), 200);
   }

@@ -186,7 +186,18 @@ export class FarmerService {
         where: {
           id: cropFarmerRegistrationId
         },
-        data: updateCropFarmerRegistrationDto
+        data: {
+          plantationArea: updateCropFarmerRegistrationDto.plantationArea,
+          seeds: updateCropFarmerRegistrationDto.seeds,
+          produceHarvested: updateCropFarmerRegistrationDto.produceHarvested,
+          crop: {
+            connect: {
+              id: updateCropFarmerRegistrationDto.cropsId
+            }
+          },
+
+
+        }
       });
       return cropFarmer;
 
