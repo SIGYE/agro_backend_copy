@@ -53,17 +53,17 @@ export class FarmerService {
               }
             }
           })
-          await this.databaseService.cropFertilizerFarmerRegistration.create({
-            data: {
-              fertilizerId: crop.fertilizerId,
-              cropFarmerRegistrationId: cropFarmer.id,
-              amount: crop.amountOfFertilizer,
-              measurement: crop.measurementUnit
+          for (let fertilizer of crop.fertilisers) {
+            await this.databaseService.cropFertilizerFarmerRegistration.create({
+              data: {
+                fertilizerId: fertilizer.fertiliserId,
+                cropFarmerRegistrationId: cropFarmer.id,
+                amount: fertilizer.amountOfFertilizer,
+                measurement: crop.measurementUnit
+              }
+            })
+          }
 
-
-            }
-
-          })
         }
       }
 
@@ -123,15 +123,16 @@ export class FarmerService {
             },
           }
         })
-        await this.databaseService.cropFertilizerFarmerRegistration.create({
-          data: {
-            fertilizerId: crop.fertilizerId,
-            cropFarmerRegistrationId: cropFarmer.id,
-            amount: crop.amountOfFertilizer,
-            measurement: crop.measurementUnit
-          }
-
-        })
+        for (let fertilizer of crop.fertilisers) {
+          await this.databaseService.cropFertilizerFarmerRegistration.create({
+            data: {
+              fertilizerId: fertilizer.fertiliserId,
+              cropFarmerRegistrationId: cropFarmer.id,
+              amount: fertilizer.amountOfFertilizer,
+              measurement: crop.measurementUnit
+            }
+          })
+        }
       }
       return farmer;
 
