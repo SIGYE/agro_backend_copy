@@ -50,17 +50,17 @@ export class CooperativeService {
               }
             }
           })
-          await this.databaseService.cropFertilizerCooperativeRegistration.create({
-            data: {
-              fertilizerId: crop.fertilizerId,
-              cooperativeCropRegistrationId: cropCooperative.id,
-              amount: crop.amountOfFertilizer,
-              measurement: crop.measurementUnit
+          for (let fertilizer of crop.fertilisers) {
+            await this.databaseService.cropFertilizerCooperativeRegistration.create({
+              data: {
+                fertilizerId: fertilizer.fertiliserId,
+                cooperativeCropRegistrationId: cropCooperative.id,
+                amount: fertilizer.amountOfFertilizer,
+                measurement: crop.measurementUnit
+              }
+            })
 
-
-            }
-
-          })
+          }
         }
       }
       // Assign animals to farmer if animalIds is present
@@ -117,15 +117,17 @@ export class CooperativeService {
             },
           }
         })
-        await this.databaseService.cropFertilizerCooperativeRegistration.create({
-          data: {
-            fertilizerId: crop.fertilizerId,
-            cooperativeCropRegistrationId: cropCooperative.id,
-            amount: crop.amountOfFertilizer,
-            measurement: crop.measurementUnit
-          }
+        for (let fertilizer of crop.fertilisers) {
+          await this.databaseService.cropFertilizerCooperativeRegistration.create({
+            data: {
+              fertilizerId: fertilizer.fertiliserId,
+              cooperativeCropRegistrationId: cropCooperative.id,
+              amount: fertilizer.amountOfFertilizer,
+              measurement: crop.measurementUnit
+            }
+          })
+        }
 
-        })
       }
       return cooperative;
 
