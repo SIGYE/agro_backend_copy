@@ -66,9 +66,9 @@ export class CooperativeService {
       // Assign animals to farmer if animalIds is present
       if (createCooperativeDto.animals) {
         for (let animal of createCooperativeDto.animals) {
-          await this.databaseService.animalFarmerRegistration.create({
+          await this.databaseService.cooperativeAnimalRegistration.create({
             data: {
-              farmer: {
+              cooperative: {
                 connect: {
                   id: cooperative.id
                 }
@@ -88,7 +88,7 @@ export class CooperativeService {
         }
       }
     } catch (error) {
-      throw new BadRequestException('Error creating cooperative');
+      throw new BadRequestException('Error creating cooperative ', error);
     }
   }
 
