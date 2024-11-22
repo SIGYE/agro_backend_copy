@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLiveStockRegistrationDto } from './dto/create-live-stock-registration.dto';
 import { UpdateLiveStockRegistrationDto } from './dto/update-live-stock-registration.dto';
 import { DatabaseService } from 'src/database/database.service';
@@ -8,13 +8,14 @@ export class LiveStockRegistrationService {
   constructor(private readonly databaseService: DatabaseService) { }
   async create(createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
     try {
+      console.log("in service")
       let breed = await this.databaseService.breed.findUnique({
         where: {
           id: createLiveStockRegistrationDto.breedId
         }
       })
       if (!breed) {
-        throw new Error("Breed not found")
+        throw new NotFoundException("Breed not found")
       }
       let animalFarmerRegistration = await this.databaseService.animalFarmerRegistration.findUnique({
         where: {
@@ -22,12 +23,20 @@ export class LiveStockRegistrationService {
         }
       })
       if (!animalFarmerRegistration) {
-        throw new Error("Animal Farmer Registration not found")
+        throw new NotFoundException("Animal Farmer Registration not found")
       }
-      return await this.databaseService.liveStockRegistration.create({
+      let reg = await this.databaseService.liveStockRegistration.create({
         data: {
-          breedId: createLiveStockRegistrationDto.breedId,
-          animalFarmerRegistrationId: createLiveStockRegistrationDto.animalFarmerRegistrationId,
+          breed: {
+            connect: {
+              id: createLiveStockRegistrationDto.breedId
+            }
+          },
+          animalFarmerRegistration: {
+            connect: {
+              id: createLiveStockRegistrationDto.animalFarmerRegistrationId,
+            }
+          },
           dob: new Date(createLiveStockRegistrationDto.dob),
           weight: createLiveStockRegistrationDto.weight,
           weightMeasurement: createLiveStockRegistrationDto.weightMeasurement,
@@ -36,6 +45,8 @@ export class LiveStockRegistrationService {
         }
       }
       )
+      console.log(reg)
+      return reg
     }
     catch (error) {
       throw new Error(error.message)

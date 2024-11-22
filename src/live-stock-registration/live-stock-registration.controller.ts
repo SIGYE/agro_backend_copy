@@ -13,12 +13,14 @@ import { ApiResponse } from 'src/responses/api.response';
 export class LiveStockRegistrationController {
   constructor(private readonly liveStockRegistrationService: LiveStockRegistrationService) { }
 
-  @Post()
+  @Post('create')
   async create(@Body() createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
     try {
+      console.log("in here")
+      console.log(await this.liveStockRegistrationService.create(createLiveStockRegistrationDto))
       return new ApiResponse(true, "Live Stock Registration Created", await this.liveStockRegistrationService.create(createLiveStockRegistrationDto), 201);
     } catch (e) {
-      new ApiResponse(false, e.message, null, 400);
+      return new ApiResponse(false, e.message, null, 400);
     }
   }
 
@@ -27,7 +29,7 @@ export class LiveStockRegistrationController {
     try {
       return new ApiResponse(true, "All Live Stock Registrations", await this.liveStockRegistrationService.findAll(), 200);
     } catch (e) {
-      new ApiResponse(false, e.message, null, 400);
+      return new ApiResponse(false, e.message, null, 400);
     }
   }
   @Get('animals-by-livestock/:id')
@@ -35,7 +37,7 @@ export class LiveStockRegistrationController {
     try {
       return new ApiResponse(true, "All Animals By Live Stock", await this.liveStockRegistrationService.findAllAnimalsInLivesStockRegistration(id), 200);
     } catch (e) {
-      new ApiResponse(false, e.message, null, 400);
+      return new ApiResponse(false, e.message, null, 400);
     }
   }
 
@@ -44,7 +46,7 @@ export class LiveStockRegistrationController {
     try {
       return new ApiResponse(true, "Live Stock Registration Retrieved", await this.liveStockRegistrationService.findOne(id), 200);
     } catch (e) {
-      new ApiResponse(false, e.message, null, 400);
+      return new ApiResponse(false, e.message, null, 400);
     }
   }
 
@@ -53,7 +55,7 @@ export class LiveStockRegistrationController {
     try {
       return new ApiResponse(true, "Live Stock Registration Updated", await this.liveStockRegistrationService.update(id, updateLiveStockRegistrationDto), 200);
     } catch (e) {
-      new ApiResponse(false, e.message, null, 400);
+      return new ApiResponse(false, e.message, null, 400);
     }
   }
 
@@ -62,7 +64,7 @@ export class LiveStockRegistrationController {
     try {
       return new ApiResponse(true, "Live Stock Registration Deleted", await this.liveStockRegistrationService.remove(id), 200);
     } catch (e) {
-      new ApiResponse(false, e.message, null, 400);
+      return new ApiResponse(false, e.message, null, 400);
     }
   }
 }
