@@ -51,54 +51,54 @@ export class AuthService {
   };
 
 
-  // async createDevAdmin(createDevAdmin : CreateDevAdminDto) : Promise<User> {
-  //     // check if the registration code is valid 
-  //     if(createDevAdmin.registration_code == process.env.DEV_ADMIN_KEY){
-  //         createDevAdmin.password = await bcrypt.hash(createDevAdmin.password, 10)
-  //         let usersnumber = await this.databaseService.user.count();
-  //         const username = createDevAdmin.firstName.toLowerCase()  + usersnumber; 
+  async createDevAdmin(createDevAdmin: CreateDevAdminDto): Promise<User> {
+    // check if the registration code is valid 
+    if (createDevAdmin.registration_code == process.env.DEV_ADMIN_KEY) {
+      createDevAdmin.password = await bcrypt.hash(createDevAdmin.password, 10)
+      let usersnumber = await this.databaseService.user.count();
+      const username = createDevAdmin.firstName.toLowerCase() + usersnumber;
 
-  //         let userPresent = await this.databaseService.user.findFirst({
-  //             where: {
-  //               OR: [
-  //                 { email: createDevAdmin.email },
-  //                 { telephone: createDevAdmin.telephone },
-  //                 {nationalId :  createDevAdmin.nationalId}
-  //               ]
-  //             }
-  //           });
-
-
-  //         if(userPresent){
-  //           throw new BadRequestException("The user with email , natinal Id or telephone already exists")
-  //         }
+      let userPresent = await this.databaseService.user.findFirst({
+        where: {
+          OR: [
+            { email: createDevAdmin.email },
+            { telephone: createDevAdmin.telephone },
+            { nationalId: createDevAdmin.nationalId }
+          ]
+        }
+      });
 
 
-  //         let user : User = await await this.databaseService.user.create({
-  //           data: {
-  //             firstName: createDevAdmin.firstName,
-  //             lastName: createDevAdmin.lastName,
-  //             email: createDevAdmin.email,   
-  //             nationalId : createDevAdmin.nationalId,
-  //             password: createDevAdmin.password,
-  //             status: createDevAdmin.status,
-  //             username: username,
-  //             telephone: createDevAdmin.telephone,
-  //             role : {
-  //               connect : 
-  //                {
-  //                    name : 'DEV_ACCESS'
-  //                }
-  //            }
-  //           }
-  //         });
-  //         user = excludeFields(user , ['password'])
-  //         this.mailService.sendWelcomeEmail(createDevAdmin.email , 'Innovative VAS')
-  //         return user;
-  //     }else{
-  //         throw new BadRequestException("Invalid Registration Key")
-  //     }
-  // }
+      if (userPresent) {
+        throw new BadRequestException("The user with email , natinal Id or telephone already exists")
+      }
+
+
+      let user: User = await await this.databaseService.user.create({
+        data: {
+          firstName: createDevAdmin.firstName,
+          lastName: createDevAdmin.lastName,
+          email: createDevAdmin.email,
+          nationalId: createDevAdmin.nationalId,
+          password: createDevAdmin.password,
+          status: Status.ACTIVE,
+          username: username,
+          telephone: createDevAdmin.telephone,
+          role: {
+            connect:
+            {
+              name: 'ADMIN'
+            }
+          }
+        }
+      });
+
+      this.mailService.sendWelcomeEmail(createDevAdmin.email, 'Agro App')
+      return user;
+    } else {
+      throw new BadRequestException("Invalid Registration Key")
+    }
+  }
 
   async sendOtp(telephone: string): Promise<string> {
     let user = await this.databaseService.user.findUnique({
