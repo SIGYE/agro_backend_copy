@@ -1,6 +1,9 @@
 # Stage 1: Build Stage
 FROM node:18-alpine AS builder
 
+# Install OpenSSL
+RUN apk add --no-cache openssl
+
 # Set the working directory
 WORKDIR /app
 
@@ -17,16 +20,21 @@ RUN npm install -g prisma
 COPY . .
 
 # Generate Prisma client
-RUN prisma generate
+RUN npx prisma generate
 
-# Run database migrations
-RUN prisma migrate deploy 
+# Run database migrations 
+
+RUN npx prisma migrate deploy
+
 
 # Build the application
 RUN npm run build
 
 # Stage 2: Production Stage
 FROM node:18-alpine AS production
+
+# Install OpenSSL
+RUN apk add --no-cache openssl
 
 # Set the working directory
 WORKDIR /app
@@ -49,4 +57,4 @@ RUN mkdir -p /app/uploads
 EXPOSE 3000
 
 # Start the application with a check for environment variables
-CMD ["sh", "-c", "if [ -z \"$DATABASE_URL\" ]; then echo 'DATABASE_URL is not set. Skipping migrations.'; else prisma migrate deploy; fi && node dist/main.js"]
+CMD ["sh", "-c", "if [ -z \"$DATABASE_URL\" ]; then echo 'DATABASE_URL is not set. Skipping migrations.'; else npx prisma migrate deploy; fi && node dist/main.js"]
