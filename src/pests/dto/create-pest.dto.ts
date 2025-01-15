@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { DiseaseType } from "@prisma/client";
+import { PestType } from "@prisma/client";
 import { IsEnum, IsString } from "class-validator";
 
-export class CreateDiseaseDto {
+export class CreatePestDto {
     @ApiProperty()
     @IsString()
     name: string;
@@ -10,6 +10,6 @@ export class CreateDiseaseDto {
     @IsString()
     medication: string
     @ApiProperty()
-    diseaseType: DiseaseType
+    pestType: PestType
 
 }

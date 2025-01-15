@@ -23,6 +23,7 @@ export class CooperativeService {
           registrationNumber: createCooperativeDto.registrationNumber,
           telephone: createCooperativeDto.telephone,
           membersNumber: createCooperativeDto.membersNumber,
+          type: createCooperativeDto.cooperativeType,
           Location: {
             connect: {
               id: createCooperativeDto.locationId,

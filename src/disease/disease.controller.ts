@@ -1,16 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put } from '@nestjs/common';
 import { DiseaseService } from './disease.service';
 import { CreateDiseaseDto } from './dto/create-disease.dto';
 import { UpdateDiseaseDto } from './dto/update-disease.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
-import { User } from '@prisma/client';
+import { DiseaseType, User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
+import { AssignDiseaseDto } from './dto/assign-disease.dto';
 
 @Controller('disease')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
+@ApiTags('Disease')
 export class DiseaseController {
   constructor(private readonly diseaseService: DiseaseService) { }
 
@@ -32,11 +34,35 @@ export class DiseaseController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('/all-by-type/:type')
+  async findAllByType(@Param('type') type: DiseaseType) {
+    try {
+      return new ApiResponse(true, "Disease Retrieved", await this.diseaseService.findAllByType(type), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('/all/type/:type/farmer/:farmer')
+  async findAllByTypeAndFarmer(@Param('type') type: DiseaseType, @Param('farmer') farmer: string) {
+    try {
+      return new ApiResponse(true, "Disease Retrieved", await this.diseaseService.findAllByTypeAndUserId(type, farmer), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
     try {
       return new ApiResponse(true, "Disease Retrieved", await this.diseaseService.findOne(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Put('/assign')
+  async assignDisease(@Body() assignDiseaseDto: AssignDiseaseDto) {
+    try {
+      return new ApiResponse(true, "Disease Assigned", await this.diseaseService.assignDisease(assignDiseaseDto), 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
