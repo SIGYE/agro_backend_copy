@@ -1,20 +1,21 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateDiseaseDto } from './dto/create-disease.dto';
-import { UpdateDiseaseDto } from './dto/update-disease.dto';
+import { CreatePestDto } from './dto/create-pest.dto';
+import { UpdatePestDto } from './dto/update-pest.dto';
 import { DatabaseService } from 'src/database/database.service';
-import { DiseaseType } from '@prisma/client';
-import { AssignDiseaseDto } from './dto/assign-disease.dto';
+import { PestType } from '@prisma/client';
+import { AssignPestDto } from './dto/assign-pest.dto';
+
 
 @Injectable()
-export class DiseaseService {
+export class PestsService {
   constructor(private readonly databaseService: DatabaseService) { }
-  async create(createDiseaseDto: CreateDiseaseDto, userId: string) {
+  async create(createPestsDto: CreatePestDto, userId: string) {
     try {
-      return await this.databaseService.disease.create({
+      return await this.databaseService.pest.create({
         data: {
-          name: createDiseaseDto.name,
-          medication: createDiseaseDto.medication,
-          type: createDiseaseDto.diseaseType,
+          name: createPestsDto.name,
+          medication: createPestsDto.medication,
+          type: createPestsDto.pestType,
           creator: {
             connect: {
               id: userId
@@ -26,40 +27,40 @@ export class DiseaseService {
       throw e;
     }
   }
-  async assignDisease(assignDiseaseDto: AssignDiseaseDto) {
+  async assignPests(assignPestsDto: AssignPestDto) {
     try {
-      const disease = await this.databaseService.disease.findUnique({
-        where: { id: assignDiseaseDto.diseaseId },
+      const pest = await this.databaseService.pest.findUnique({
+        where: { id: assignPestsDto.pestId },
       });
 
-      if (!disease) {
-        throw new NotFoundException('Disease not found');
+      if (!pest) {
+        throw new NotFoundException('Pests not found');
       }
 
-      // Handle crop disease assignments
-      if (assignDiseaseDto.crops && assignDiseaseDto.crops.length > 0 && disease.type == DiseaseType.CROP) {
+      // Handle crop pest assignments
+      if (assignPestsDto.crops && assignPestsDto.crops.length > 0 && pest.type == PestType.CROP) {
         // Verify all crop registrations exist
         const cropRegistrations = await this.databaseService.cropFarmerRegistration.findMany({
           where: {
             id: {
-              in: assignDiseaseDto.crops
+              in: assignPestsDto.crops
             }
           }
         });
 
-        if (cropRegistrations.length !== assignDiseaseDto.crops.length) {
+        if (cropRegistrations.length !== assignPestsDto.crops.length) {
           throw new BadRequestException('Some crop registrations were not found');
         }
 
         // Update each crop registration individually to handle the relation
         await Promise.all(
-          assignDiseaseDto.crops.map(cropRegId =>
+          assignPestsDto.crops.map(cropRegId =>
             this.databaseService.cropFarmerRegistration.update({
               where: { id: cropRegId },
               data: {
-                diseases: {
+                pests: {
                   connect: {
-                    id: disease.id
+                    id: pest.id
                   }
                 }
               }
@@ -68,30 +69,30 @@ export class DiseaseService {
         );
       }
 
-      // Handle animal disease assignments
-      if (assignDiseaseDto.animals && assignDiseaseDto.animals.length > 0 && disease.type == DiseaseType.LIVESTOCK) {
+      // Handle animal pest assignments
+      if (assignPestsDto.animals && assignPestsDto.animals.length > 0 && pest.type == PestType.LIVESTOCK) {
         // Verify all animal registrations exist
         const animalRegistrations = await this.databaseService.animalFarmerRegistration.findMany({
           where: {
             id: {
-              in: assignDiseaseDto.animals
+              in: assignPestsDto.animals
             }
           }
         });
 
-        if (animalRegistrations.length !== assignDiseaseDto.animals.length) {
+        if (animalRegistrations.length !== assignPestsDto.animals.length) {
           throw new BadRequestException('Some animal registrations were not found');
         }
 
         // Update each animal registration individually to handle the relation
         await Promise.all(
-          assignDiseaseDto.animals.map(animalRegId =>
+          assignPestsDto.animals.map(animalRegId =>
             this.databaseService.animalFarmerRegistration.update({
               where: { id: animalRegId },
               data: {
-                diseases: {
+                pests: {
                   connect: {
-                    id: disease.id
+                    id: pest.id
                   }
                 }
               }
@@ -102,29 +103,29 @@ export class DiseaseService {
 
       return {
         success: true,
-        message: 'Disease assigned successfully',
-        affectedCrops: assignDiseaseDto.crops?.length || 0,
-        affectedAnimals: assignDiseaseDto.animals?.length || 0
+        message: 'Pests assigned successfully',
+        affectedCrops: assignPestsDto.crops?.length || 0,
+        affectedAnimals: assignPestsDto.animals?.length || 0
       };
 
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new Error('Failed to assign disease: ' + error.message);
+      throw new Error('Failed to assign pest: ' + error.message);
     }
   }
 
   async findAll() {
     try {
-      return await this.databaseService.disease.findMany();
+      return await this.databaseService.pest.findMany();
     } catch (e) {
       throw e;
     }
   }
-  async findAllByType(type: DiseaseType) {
+  async findAllByType(type: PestType) {
     try {
-      return await this.databaseService.disease.findMany({
+      return await this.databaseService.pest.findMany({
         where: {
           type: type
         }
@@ -134,9 +135,9 @@ export class DiseaseService {
       throw e
     }
   }
-  async findAllByTypeAndUserId(type: DiseaseType, userId: string) {
+  async findAllByTypeAndUserId(type: PestType, userId: string) {
     try {
-      return await this.databaseService.disease.findMany({
+      return await this.databaseService.pest.findMany({
         where: {
           type: type,
           createdBy: userId
@@ -149,7 +150,7 @@ export class DiseaseService {
 
   async findOne(id: string) {
     try {
-      return await this.databaseService.disease.findUnique({
+      return await this.databaseService.pest.findUnique({
         where: {
           id: id
         }
@@ -159,14 +160,14 @@ export class DiseaseService {
     }
   }
 
-  async update(id: string, updateDiseaseDto: UpdateDiseaseDto) {
+  async update(id: string, updatePestsDto: UpdatePestDto) {
     try {
-      return await this.databaseService.disease.update({
+      return await this.databaseService.pest.update({
         where: {
           id: id
         },
         data: {
-          name: updateDiseaseDto.name
+          name: updatePestsDto.name
         }
       });
     } catch (e) {
@@ -176,7 +177,7 @@ export class DiseaseService {
 
   async remove(id: string) {
     try {
-      return await this.databaseService.disease.delete({
+      return await this.databaseService.pest.delete({
         where: {
           id: id
         }

@@ -11,7 +11,10 @@ enum Status {
   ACTIVE
   INACTIVE
 }
-
+enum CooperativeType{
+  ITSINDA
+  COOPERATIVE
+}
 enum HealthStatus {
   HEALTHY
   SICK
@@ -29,6 +32,15 @@ enum Purpose {
   MEAT
   WORK
   OTHER
+}
+
+enum PestType{
+  LIVESTOCK
+  CROP
+}
+enum DiseaseType{
+  LIVESTOCK
+  CROP
 }
 
 model User {
@@ -61,6 +73,7 @@ model User {
   locationChildrenIds  String?
 
   diseases     Disease[]     @relation("DiseaseCreatedBy")
+  pests        Pest[]        @relation("PestCreatedBy")
   vaccinations Vaccination[] @relation("VaccinationCreatedBy")
   vitamins     Vitamin[]     @relation("VitaminCreatedBy")
   feterlizers  Feterlizer[]  @relation("FeterlizerCreatedBy")
@@ -113,9 +126,25 @@ model Disease {
   name              String
   createdBy         String
   creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id])
-  liveStockDiseases LiveStockDisease[]
+  animals        AnimalFarmerRegistration[]
+  crops             CropFarmerRegistration[]
+  type              DiseaseType
+  medication        String
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+}
+model Pest{
+  id                String             @id @default(uuid())
+  name              String
+  createdBy         String
+  creator           User               @relation("PestCreatedBy", fields: [createdBy], references: [id])
+  animals         AnimalFarmerRegistration[]
+  crops             CropFarmerRegistration[]
+  type              PestType
+  medication        String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
 }
 
 model Vaccination {
@@ -207,6 +236,7 @@ model Cooperative {
   Location                       Location                       @relation(fields: [locationId], references: [id])
   locationId                       Int
   farmers                        Farmer[]
+  type                           CooperativeType?
   cooperativeCropRegistrations   CooperativeCropRegistration[]
   cooperativeAnimalRegistrations CooperativeAnimalRegistration[]
   createdAt                      DateTime                        @default(now())
@@ -234,6 +264,8 @@ model CropFarmerRegistration {
   farmer                            Farmer                             @relation(fields: [farmerId], references: [id])
   crop                              Crop                               @relation(fields: [cropId], references: [id])
   cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
+  diseases                           Disease[]
+  pests                              Pest[]
   createdAt                         DateTime                           @default(now())
   updatedAt                         DateTime                           @updatedAt
 }
@@ -286,6 +318,8 @@ model AnimalFarmerRegistration {
   farmer                          Farmer                            @relation(fields: [farmerId], references: [id])
   animal                          Animal                            @relation(fields: [animalId], references: [id])
   liveStockRegistrations          LiveStockRegistration[]
+  diseases                        Disease[]
+  pests                           Pest[]
   farmerAnimalRegistrationProduce FarmerAnimalRegistrationProduce[]
   createdAt                       DateTime                          @default(now())
   updatedAt                       DateTime                          @updatedAt
@@ -302,7 +336,6 @@ model LiveStockRegistration {
   dob                         DateTime
   animalFarmerRegistration    AnimalFarmerRegistration     @relation(fields: [animalFarmerRegistrationId], references: [id])
   breed                       Breed                        @relation(fields: [breedId], references: [id])
-  liveStockDiseases           LiveStockDisease[]
   liveStockVaccinations       LiveStockVaccination[]
   liveStockVitamins           LiveStockVitamins[]
   slaughterAnimalRegistration SlaughterAnimalRegistration?
@@ -310,15 +343,15 @@ model LiveStockRegistration {
   updatedAt                   DateTime                     @updatedAt
 }
 
-model LiveStockDisease {
-  id                      String                @id @default(uuid())
-  liveStockRegistrationId String
-  diseaseId               String
-  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
-  disease                 Disease               @relation(fields: [diseaseId], references: [id])
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-}
+// model LiveStockDisease {
+//   id                      String                @id @default(uuid())
+//   liveStockRegistrationId String
+//   diseaseId               String
+//   liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
+//   disease                 Disease               @relation(fields: [diseaseId], references: [id])
+//   createdAt               DateTime              @default(now())
+//   updatedAt               DateTime              @updatedAt
+// }
 
 model LiveStockVaccination {
   id                      String                @id @default(uuid())
