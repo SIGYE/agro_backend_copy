@@ -42,6 +42,17 @@ enum DiseaseType{
   LIVESTOCK
   CROP
 }
+enum AnimalState{
+  HEALTHY
+  SICK
+  SLAUGHTERED
+  DEAD
+
+}
+enum SeasonStatus{
+  ON_GOING
+  ENDED
+}
 
 model User {
   id                String             @id @default(uuid())
@@ -70,6 +81,7 @@ model User {
   veterinaries      Veterinary[]
   umufashamyumvire  Umufashamyumvire[]
   slaughters        SlaughterHouse[]
+  cooperativeManager Cooperative[]
   locationChildrenIds  String?
 
   diseases     Disease[]     @relation("DiseaseCreatedBy")
@@ -126,7 +138,7 @@ model Disease {
   name              String
   createdBy         String
   creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id])
-  animals        AnimalFarmerRegistration[]
+  animals        LiveStockRegistration[]
   crops             CropFarmerRegistration[]
   type              DiseaseType
   medication        String
@@ -138,7 +150,7 @@ model Pest{
   name              String
   createdBy         String
   creator           User               @relation("PestCreatedBy", fields: [createdBy], references: [id])
-  animals         AnimalFarmerRegistration[]
+  animals         LiveStockRegistration[]
   crops             CropFarmerRegistration[]
   type              PestType
   medication        String
@@ -173,31 +185,54 @@ model Feterlizer {
   createdBy                              String
   creator                                User                                    @relation("FeterlizerCreatedBy", fields: [createdBy], references: [id])
   cropFertilizerFarmerRegistrations      CropFertilizerFarmerRegistration[]
-  cropFertilizerCooperativeRegistrations CropFertilizerCooperativeRegistration[]
   createdAt                              DateTime                                @default(now())
   updatedAt                              DateTime                                @updatedAt
 }
 
 model Crop {
   id                           String                        @id @default(uuid())
-  name                         String
+  name                         String                        @unique
   createdBy                    String
   creator                      User                          @relation("CropCreatedBy", fields: [createdBy], references: [id])
-  cropFarmerRegistrations      CropFarmerRegistration[]
-  cooperativeCropRegistrations CooperativeCropRegistration[]
+  cropType                     CropType[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
+}
+model CropType{
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique
+  cropId   String   @unique
+  crop      Crop @relation(fields: [cropId], references: [id])
+  seasons   Season[]
+  cropFarmerRegistrations      CropFarmerRegistration[]
+}
+
+model Season{
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  plantationArea                    String
+  seeds                             String
+  produceHarvested                  String
+  expectedYield                      String
+  startDate                         DateTime
+  endDate                           DateTime
+  seasonStatus                      SeasonStatus @default(ON_GOING)
+  cropTypeId    String
+  croType    CropType @relation(fields: [cropTypeId], references: [id])
+
 }
 
 model Animal {
   id                             String                          @id @default(uuid())
   name                           String
-  purpose                        Purpose
   createdBy                      String
   creator                        User                            @relation("AnimalCreatedBy", fields: [createdBy], references: [id])
   animalProducts                 AnimalProduct[]
   animalFarmerRegistrations      AnimalFarmerRegistration[]
-  cooperativeAnimalRegistrations CooperativeAnimalRegistration[]
   slaughterAnimalRegistrations   SlaughterAnimalRegistration[]
   breeds                         Breed[]
   createdAt                      DateTime                        @default(now())
@@ -209,7 +244,6 @@ model AnimalProduct {
   name                                  String
   animalId                              String
   animal                                Animal                                 @relation(fields: [animalId], references: [id])
-  cooperativeAnimalRegistrationProduces CooperativeAnimalRegistrationProduce[]
   farmerAnimalRegistrationProduces      FarmerAnimalRegistrationProduce[]
   createdAt                             DateTime                               @default(now())
   updatedAt                             DateTime                               @updatedAt
@@ -236,9 +270,9 @@ model Cooperative {
   Location                       Location                       @relation(fields: [locationId], references: [id])
   locationId                       Int
   farmers                        Farmer[]
-  type                           CooperativeType?
-  cooperativeCropRegistrations   CooperativeCropRegistration[]
-  cooperativeAnimalRegistrations CooperativeAnimalRegistration[]
+  type                           CooperativeType
+  cooperativeManager             User                          @relation(fields: [cooperativeManagerId], references: [id])
+  cooperativeManagerId           String
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
 }
@@ -257,12 +291,9 @@ model SlaughterHouse {
 model CropFarmerRegistration {
   id                                String                             @id @default(uuid())
   farmerId                          String
-  cropId                            String
-  plantationArea                    String
-  seeds                             String
-  produceHarvested                  String
+  cropTypeId                            String
   farmer                            Farmer                             @relation(fields: [farmerId], references: [id])
-  crop                              Crop                               @relation(fields: [cropId], references: [id])
+  cropType                              CropType                               @relation(fields: [cropTypeId], references: [id])
   cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
   diseases                           Disease[]
   pests                              Pest[]
@@ -282,31 +313,31 @@ model CropFertilizerFarmerRegistration {
   updatedAt                DateTime               @updatedAt
 }
 
-model CooperativeCropRegistration {
-  id                                     String                                  @id @default(uuid())
-  cooperativeId                          String
-  cropId                                 String
-  plantationArea                         String
-  seeds                                  String
-  produceHarvested                       String
-  cooperative                            Cooperative                             @relation(fields: [cooperativeId], references: [id])
-  crop                                   Crop                                    @relation(fields: [cropId], references: [id])
-  cropFertilizerCooperativeRegistrations CropFertilizerCooperativeRegistration[]
-  createdAt                              DateTime                                @default(now())
-  updatedAt                              DateTime                                @updatedAt
-}
+// model CooperativeCropRegistration {
+//   id                                     String                                  @id @default(uuid())
+//   cooperativeId                          String
+//   cropId                                 String
+//   plantationArea                         String
+//   seeds                                  String
+//   produceHarvested                       String
+//   cooperative                            Cooperative                             @relation(fields: [cooperativeId], references: [id])
+//   crop                                   Crop                                    @relation(fields: [cropId], references: [id])
+//   cropFertilizerCooperativeRegistrations CropFertilizerCooperativeRegistration[]
+//   createdAt                              DateTime                                @default(now())
+//   updatedAt                              DateTime                                @updatedAt
+// }
 
-model CropFertilizerCooperativeRegistration {
-  id                            String                      @id @default(uuid())
-  fertilizerId                  String
-  cooperativeCropRegistrationId String
-  amount                        Int
-  measurement                   String
-  feterlizer                    Feterlizer                  @relation(fields: [fertilizerId], references: [id])
-  cooperativeCropRegistration   CooperativeCropRegistration @relation(fields: [cooperativeCropRegistrationId], references: [id])
-  createdAt                     DateTime                    @default(now())
-  updatedAt                     DateTime                    @updatedAt
-}
+// model CropFertilizerCooperativeRegistration {
+//   id                            String                      @id @default(uuid())
+//   fertilizerId                  String
+//   cooperativeCropRegistrationId String
+//   amount                        Int
+//   measurement                   String
+//   feterlizer                    Feterlizer                  @relation(fields: [fertilizerId], references: [id])
+//   cooperativeCropRegistration   CooperativeCropRegistration @relation(fields: [cooperativeCropRegistrationId], references: [id])
+//   createdAt                     DateTime                    @default(now())
+//   updatedAt                     DateTime                    @updatedAt
+// }
 
 model AnimalFarmerRegistration {
   id                              String                            @id @default(uuid())
@@ -318,9 +349,6 @@ model AnimalFarmerRegistration {
   farmer                          Farmer                            @relation(fields: [farmerId], references: [id])
   animal                          Animal                            @relation(fields: [animalId], references: [id])
   liveStockRegistrations          LiveStockRegistration[]
-  diseases                        Disease[]
-  pests                           Pest[]
-  farmerAnimalRegistrationProduce FarmerAnimalRegistrationProduce[]
   createdAt                       DateTime                          @default(now())
   updatedAt                       DateTime                          @updatedAt
 }
@@ -331,13 +359,16 @@ model LiveStockRegistration {
   breedId                     String
   weight                      Int
   weightMeasurement           String
-  produce                     Float
-  produceMeasurement          String
+  animalState                 AnimalState
   dob                         DateTime
   animalFarmerRegistration    AnimalFarmerRegistration     @relation(fields: [animalFarmerRegistrationId], references: [id])
   breed                       Breed                        @relation(fields: [breedId], references: [id])
   liveStockVaccinations       LiveStockVaccination[]
   liveStockVitamins           LiveStockVitamins[]
+  diseases                        Disease[]
+  pests                           Pest[]
+  farmerAnimalRegistrationProduce FarmerAnimalRegistrationProduce[]
+  purpose                        Purpose
   slaughterAnimalRegistration SlaughterAnimalRegistration?
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
@@ -373,39 +404,39 @@ model LiveStockVitamins {
   updatedAt               DateTime              @updatedAt
 }
 
-model CooperativeAnimalRegistration {
-  id                                    String                                 @id @default(uuid())
-  cooperativeId                         String
-  animalId                              String
-  totalNumber                           Int
-  maleNumber                            Int
-  femaleNumber                          Int
-  cooperative                           Cooperative                            @relation(fields: [cooperativeId], references: [id])
-  animal                                Animal                                 @relation(fields: [animalId], references: [id])
-  cooperativeAnimalRegistrationProduces CooperativeAnimalRegistrationProduce[]
-  createdAt                             DateTime                               @default(now())
-  updatedAt                             DateTime                               @updatedAt
-}
+// model CooperativeAnimalRegistration {
+//   id                                    String                                 @id @default(uuid())
+//   cooperativeId                         String
+//   animalId                              String
+//   totalNumber                           Int
+//   maleNumber                            Int
+//   femaleNumber                          Int
+//   cooperative                           Cooperative                            @relation(fields: [cooperativeId], references: [id])
+//   animal                                Animal                                 @relation(fields: [animalId], references: [id])
+//   cooperativeAnimalRegistrationProduces CooperativeAnimalRegistrationProduce[]
+//   createdAt                             DateTime                               @default(now())
+//   updatedAt                             DateTime                               @updatedAt
+// }
 
-model CooperativeAnimalRegistrationProduce {
-  id                              String                        @id @default(uuid())
-  cooperativeAnimalRegistrationId String
-  animalProductId                 String
-  amount                          Int
-  measurements                    String
-  cooperativeAnimalRegistration   CooperativeAnimalRegistration @relation(fields: [cooperativeAnimalRegistrationId], references: [id])
-  animalProduct                   AnimalProduct                 @relation(fields: [animalProductId], references: [id])
-  createdAt                       DateTime                      @default(now())
-  updatedAt                       DateTime                      @updatedAt
-}
+// model CooperativeAnimalRegistrationProduce {
+//   id                              String                        @id @default(uuid())
+//   cooperativeAnimalRegistrationId String
+//   animalProductId                 String
+//   amount                          Int
+//   measurements                    String
+//   cooperativeAnimalRegistration   CooperativeAnimalRegistration @relation(fields: [cooperativeAnimalRegistrationId], references: [id])
+//   animalProduct                   AnimalProduct                 @relation(fields: [animalProductId], references: [id])
+//   createdAt                       DateTime                      @default(now())
+//   updatedAt                       DateTime                      @updatedAt
+// }
 
 model FarmerAnimalRegistrationProduce {
   id                         String                   @id @default(uuid())
-  animalFarmerRegistrationId String
+  LivestockRegistrationId String
   animalProductId            String
   amount                     Int
   measurements               String
-  animalFarmerRegistration   AnimalFarmerRegistration @relation(fields: [animalFarmerRegistrationId], references: [id])
+  animalFarmerRegistration   LiveStockRegistration @relation(fields: [LivestockRegistrationId], references: [id])
   animalProduct              AnimalProduct            @relation(fields: [animalProductId], references: [id])
   createdAt                  DateTime                 @default(now())
   updatedAt                  DateTime                 @updatedAt

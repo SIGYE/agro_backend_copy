@@ -40,8 +40,8 @@ export class LiveStockRegistrationService {
           dob: new Date(createLiveStockRegistrationDto.dob),
           weight: createLiveStockRegistrationDto.weight,
           weightMeasurement: createLiveStockRegistrationDto.weightMeasurement,
-          produce: createLiveStockRegistrationDto.produce,
-          produceMeasurement: createLiveStockRegistrationDto.produceMeasurement
+          purpose: createLiveStockRegistrationDto.purpose,
+          animalState: createLiveStockRegistrationDto.animalState
         }
       }
       )
@@ -99,9 +99,7 @@ export class LiveStockRegistrationService {
           animalFarmerRegistrationId: updateLiveStockRegistrationDto.animalFarmerRegistrationId,
           dob: new Date(updateLiveStockRegistrationDto.dob),
           weight: updateLiveStockRegistrationDto.weight,
-          weightMeasurement: updateLiveStockRegistrationDto.weightMeasurement,
-          produce: updateLiveStockRegistrationDto.produce,
-          produceMeasurement: updateLiveStockRegistrationDto.produceMeasurement
+          weightMeasurement: updateLiveStockRegistrationDto.weightMeasurement
         }
       })
     }

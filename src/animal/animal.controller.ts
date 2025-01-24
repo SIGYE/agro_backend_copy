@@ -8,6 +8,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CreateAnimalProductDto } from './dto/create-animal-product.dto';
 
 @Controller('animal')
 @UseGuards(AuthGuard)
@@ -19,12 +20,29 @@ export class AnimalController {
   @Post()
   @ApiBody({ type: CreateAnimalDto })
   async create(@Body() createAnimalDto: CreateAnimalDto, @CurrentUser() user: User): Promise<ApiResponse<Animal>> {
-    return new ApiResponse<Animal>(true, "Animal Created", await this.animalService.create(createAnimalDto, user.id), null);
+    return new ApiResponse<Animal>(true, "Animal Created", await this.animalService.create(createAnimalDto, user.id), 201);
+  }
+  @Post('/create-product')
+  async createAnimalProduct(@Body() createAnimalProduct: CreateAnimalProductDto) {
+    try {
+      return new ApiResponse(true, "Animal Product Created", await this.animalService.createAnimalProduct(createAnimalProduct), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
+
   }
 
   @Get()
   async findAll() {
     return new ApiResponse<Animal[]>(true, "All Animals", await this.animalService.findAll(), null);
+  }
+  @Get('products/:id')
+  async findAllAnimalProducts(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "All Animal Products", await this.animalService.findAllAnimalProducts(id), null);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
   @Get(':id')

@@ -1,9 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsInt, IsOptional, ValidateNested, IsEnum } from 'class-validator';
-import { CropCooperativeDto } from './cropCooperativeDto';
-import { animalCooperativeDto } from './animalCooperative.dto';
 import { CooperativeType } from '@prisma/client';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 
 export class CreateCooperativeDto {
     @ApiProperty()
@@ -33,21 +32,9 @@ export class CreateCooperativeDto {
     @IsNotEmpty()
     @ApiProperty()
     locationId: number;
-    @ApiProperty({
-        isArray: true,
-        type: CropCooperativeDto
-    })
-    @ValidateNested({ each: true })
-    @Type(() => CropCooperativeDto)
-    @IsOptional()
-    crops?: CropCooperativeDto[]
-    @ApiProperty({
-        isArray: true,
-        type: animalCooperativeDto
-    })
-    @ValidateNested({ each: true })
-    @Type(() => animalCooperativeDto)
-    @IsOptional()
-    animals?: animalCooperativeDto[]
+    @ApiProperty()
+    @Type(() => CreateUserDto)
+    managerDto: CreateUserDto
+
 
 }

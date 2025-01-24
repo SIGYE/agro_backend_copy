@@ -5,4 +5,5 @@ export enum Role_Enum {
     FARMER = "FARMER",
     ADMIN = "ADMIN",
     BUTCHER = "BUTCHER",
+    COOPERATIVE_MANAGER = "COOPERATIVE_MANAGER"
 }

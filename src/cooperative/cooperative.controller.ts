@@ -6,10 +6,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
-import { AssignCropToCooperativeDto } from './dto/assignCooperativeCrop.dto';
-import { AssignAnimalToCooperativeDto } from './dto/assignCooperativeAnimals.dto';
-import { UpdateCropCooperativeDto } from './dto/updateCropCooperative.dto';
-import { UpdateAnimalCooperativeDto } from './dto/updateAnimalCooperative.dto';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -55,24 +51,9 @@ export class CooperativeController {
   async assignFarmersToCooperative(@Body() data: AssignFarmersTOCooperative) {
     return new ApiResponse(true, "Farmers Assigned", await this.cooperativeService.assignFarmersToCooperative(data), null);
   }
-  @Put('assign-crops-to-cooperative')
-  async assignCropsToCooperative(@Body() data: AssignCropToCooperativeDto) {
-    return new ApiResponse(true, "Crops Assigned", await this.cooperativeService.assignCropsToCooperative(data), null);
-  }
 
-  @Put('assign-animals-to-cooperative')
-  async assignAnimalsToCooperative(@Body() data: AssignAnimalToCooperativeDto) {
-    return new ApiResponse(true, "Animals Assigned", await this.cooperativeService.assignAnimalsToCooperative(data), null);
-  }
 
-  @Put('update-cooperative-crop/:id')
-  async updateCooperativeCrop(@Param('id') id: string, @Body() data: UpdateCropCooperativeDto) {
-    return new ApiResponse(true, "Cooperative Crop Updated", await this.cooperativeService.updateCropCooperativeRegistration(id, data), 200);
-  }
-  @Put('update-cooperative-animal/:id')
-  async updateCooperativeAnimal(@Param('id') id: string, @Body() data: UpdateAnimalCooperativeDto) {
-    return new ApiResponse(true, "Cooperative Animal Updated", await this.cooperativeService.updateAnimalCooperativeRegistration(id, data), 200);
-  }
+
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return new ApiResponse(true, "Cooperative Deleted", await this.cooperativeService.remove(id), null);

@@ -3,6 +3,7 @@ import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { DatabaseService } from 'src/database/database.service';
 import * as XLSX from 'xlsx';
+import { CreateAnimalProductDto } from './dto/create-animal-product.dto';
 
 
 @Injectable()
@@ -16,8 +17,7 @@ export class AnimalService {
       return await this.dataBaseService.animal.create({
         data: {
           name: createAnimalDto.name,
-          createdBy: userId,
-          purpose: createAnimalDto.purpose
+          createdBy: userId
         }
       })
     } catch (error) {
@@ -25,6 +25,23 @@ export class AnimalService {
       throw new BadRequestException(error.message);
     }
   }
+  async createAnimalProduct(createAnimalProduct: CreateAnimalProductDto) {
+    try {
+      return await this.dataBaseService.animalProduct.create({
+        data: {
+          name: createAnimalProduct.name,
+          animal: {
+            connect: {
+              id: createAnimalProduct.animalId
+            }
+          }
+        }
+      })
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
+  }
+
 
   async findAll() {
     try {
@@ -33,7 +50,17 @@ export class AnimalService {
       throw new BadRequestException(error.message);
     }
   }
-
+  async findAllAnimalProducts(animalId: string) {
+    try {
+      return await this.dataBaseService.animalProduct.findMany({
+        where: {
+          animalId: animalId
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
   async findOne(id: string) {
     try {
       return await this.dataBaseService.animal.findUnique({
@@ -53,8 +80,7 @@ export class AnimalService {
           id: id
         },
         data: {
-          name: updateAnimalDto.name,
-          purpose: updateAnimalDto.purpose
+          name: updateAnimalDto.name
         }
       });
     }

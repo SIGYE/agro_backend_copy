@@ -38,17 +38,15 @@ export class FarmerService {
         for (let crop of CreateFarmerDto.crops) {
           let cropFarmer = await this.databaseService.cropFarmerRegistration.create({
             data: {
-              plantationArea: crop.plantationArea,
-              seeds: crop.seeds,
-              produceHarvested: crop.produceHarvested,
               farmer: {
                 connect: {
                   id: farmer.id
                 }
               },
-              crop: {
+
+              cropType: {
                 connect: {
-                  id: crop.cropsId
+                  id: crop.cropTypesId
                 }
               }
             }
@@ -108,17 +106,14 @@ export class FarmerService {
       for (let crop of assignCropsToFarmers.crops) {
         let cropFarmer = await this.databaseService.cropFarmerRegistration.create({
           data: {
-            plantationArea: crop.plantationArea,
-            seeds: crop.seeds,
-            produceHarvested: crop.produceHarvested,
             farmer: {
               connect: {
                 id: farmer.id
               }
             },
-            crop: {
+            cropType: {
               connect: {
-                id: crop.cropsId
+                id: crop.cropTypesId
               }
             },
           }
@@ -188,15 +183,11 @@ export class FarmerService {
           id: cropFarmerRegistrationId
         },
         data: {
-          plantationArea: updateCropFarmerRegistrationDto.plantationArea,
-          seeds: updateCropFarmerRegistrationDto.seeds,
-          produceHarvested: updateCropFarmerRegistrationDto.produceHarvested,
-          crop: {
+          cropType: {
             connect: {
-              id: updateCropFarmerRegistrationDto.cropsId
+              id: updateCropFarmerRegistrationDto.cropTypesId
             }
           },
-
 
         }
       });
@@ -364,7 +355,11 @@ export class FarmerService {
           farmerId: farmerId
         },
         include: {
-          crop: true
+          cropType: {
+            include: {
+              crop: true
+            }
+          }
         }
       });
 

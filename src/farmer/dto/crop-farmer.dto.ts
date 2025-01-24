@@ -4,22 +4,8 @@ import { FertiliserDto } from "./fertiliser.dto"
 import { Type } from "class-transformer"
 
 export class cropFarmerDto {
-    @IsNotEmpty()
-    @IsString()
-    @ApiProperty()
-    plantationArea: string
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    seeds: string
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    produceHarvested: string
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    cropsId: string
+
+    cropTypesId: string
     @ApiProperty({
         isArray: true,
         type: FertiliserDto
@@ -32,4 +18,5 @@ export class cropFarmerDto {
     @IsNotEmpty()
     @IsString()
     measurementUnit: string
+
 }

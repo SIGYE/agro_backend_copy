@@ -6,9 +6,5 @@ export class CreateAnimalDto {
     @IsNotEmpty()
     @ApiProperty()
     name: string
-    @IsNotEmpty()
-    @ApiProperty()
-    @IsEnum(Purpose)
-    purpose: Purpose
 
 }

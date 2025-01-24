@@ -5,19 +5,22 @@ import { DatabaseService } from '../database/database.service';
 import { connect } from 'http2';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { LocationService } from 'src/location/location.service';
-import { AssignCropToCooperativeDto } from './dto/assignCooperativeCrop.dto';
-import { AssignAnimalToCooperativeDto } from './dto/assignCooperativeAnimals.dto';
-import { UpdateCropCooperativeDto } from './dto/updateCropCooperative.dto';
-import { UpdateAnimalCooperativeDto } from './dto/updateAnimalCooperative.dto';
+import { UsersService } from 'src/users/users.service';
 
 
 @Injectable()
 export class CooperativeService {
-  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService) { }
+  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService, private readonly userServcice: UsersService) { }
 
   async create(createCooperativeDto: CreateCooperativeDto) {
     try {
-      let cooperative = await this.databaseService.cooperative.create({
+      let role = await this.databaseService.role.findFirst({
+        where: {
+          name: "COOPERATIVE_MANAGER"
+        }
+      });
+      let user = await this.userServcice.create({ roleId: role.id, ...createCooperativeDto.managerDto });
+      return await this.databaseService.cooperative.create({
         data: {
           name: createCooperativeDto.name,
           registrationNumber: createCooperativeDto.registrationNumber,
@@ -29,179 +32,24 @@ export class CooperativeService {
               id: createCooperativeDto.locationId,
             },
           },
-        }
-      })
-      // Assign crops to Cooperative if cropsId is present
-      if (createCooperativeDto.crops) {
-        for (let crop of createCooperativeDto.crops) {
-          let cropCooperative = await this.databaseService.cooperativeCropRegistration.create({
-            data: {
-              plantationArea: crop.plantationArea,
-              seeds: crop.seeds,
-              produceHarvested: crop.produceHarvested,
-              cooperative: {
-                connect: {
-                  id: cooperative.id
-                }
-              },
-              crop: {
-                connect: {
-                  id: crop.cropsId
-                }
-              }
+          cooperativeManager: {
+            connect: {
+              id: user.id
             }
-          })
-          for (let fertilizer of crop.fertilisers) {
-            await this.databaseService.cropFertilizerCooperativeRegistration.create({
-              data: {
-                fertilizerId: fertilizer.fertiliserId,
-                cooperativeCropRegistrationId: cropCooperative.id,
-                amount: fertilizer.amountOfFertilizer,
-                measurement: crop.measurementUnit
-              }
-            })
-
           }
         }
-      }
-      // Assign animals to farmer if animalIds is present
-      if (createCooperativeDto.animals) {
-        for (let animal of createCooperativeDto.animals) {
-          await this.databaseService.cooperativeAnimalRegistration.create({
-            data: {
-              cooperative: {
-                connect: {
-                  id: cooperative.id
-                }
-              },
-              animal: {
-                connect: {
-                  id: animal.animalId
-                }
-              },
-              totalNumber: animal.totalNumber,
-              femaleNumber: animal.femaleNumber,
-              maleNumber: animal.maleNumber
+      })
 
 
-            }
-          });
-        }
-      }
+
     } catch (error) {
       throw new BadRequestException('Error creating cooperative ', error);
     }
   }
 
-  async assignCropsToCooperative(assignCropsToCooperative: AssignCropToCooperativeDto) {
-    try {
-      let cooperative = await this.databaseService.cooperative.findUnique({
-        where: {
-          id: assignCropsToCooperative.cooperativeId
-        }
-      })
-      for (let crop of assignCropsToCooperative.crops) {
-        let cropCooperative = await this.databaseService.cooperativeCropRegistration.create({
-          data: {
-            plantationArea: crop.plantationArea,
-            seeds: crop.seeds,
-            produceHarvested: crop.produceHarvested,
-            cooperative: {
-              connect: {
-                id: cooperative.id
-              }
-            },
-            crop: {
-              connect: {
-                id: crop.cropsId
-              }
-            },
-          }
-        })
-        for (let fertilizer of crop.fertilisers) {
-          await this.databaseService.cropFertilizerCooperativeRegistration.create({
-            data: {
-              fertilizerId: fertilizer.fertiliserId,
-              cooperativeCropRegistrationId: cropCooperative.id,
-              amount: fertilizer.amountOfFertilizer,
-              measurement: crop.measurementUnit
-            }
-          })
-        }
 
-      }
-      return cooperative;
 
-    } catch (e) {
-      throw new BadRequestException(e.message)
-    }
-  }
-  async assignAnimalsToCooperative(assignAnimalsToCooperative: AssignAnimalToCooperativeDto) {
-    try {
-      let cooperative = await this.databaseService.cooperative.findUnique({
-        where: {
-          id: assignAnimalsToCooperative.cooperativeId
-        }
-      });
-      for (let animal of assignAnimalsToCooperative.animals) {
-        await this.databaseService.cooperativeAnimalRegistration.create({
-          data: {
-            cooperative: {
-              connect: {
-                id: cooperative.id
-              }
-            },
-            animal: {
-              connect: {
-                id: animal.animalId
-              }
-            },
-            totalNumber: animal.totalNumber,
-            femaleNumber: animal.femaleNumber,
-            maleNumber: animal.maleNumber
-          }
-        });
-      }
-      return cooperative;
 
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
-  }
-  async updateCropCooperativeRegistration(id: string, updateCooperativeCropRegistrationDto: UpdateCropCooperativeDto) {
-    try {
-      return await this.databaseService.cooperativeCropRegistration.update({
-        where: {
-          id
-        },
-        data: {
-
-          plantationArea: updateCooperativeCropRegistrationDto.plantationArea,
-          seeds: updateCooperativeCropRegistrationDto.seeds,
-          produceHarvested: updateCooperativeCropRegistrationDto.produceHarvested
-        }
-      })
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
-  }
-
-  async updateAnimalCooperativeRegistration(id: string, updateCooperativeAnimalRegistrationDto: UpdateAnimalCooperativeDto) {
-    try {
-      return await this.databaseService.cooperativeAnimalRegistration.update({
-        where: {
-          id
-        },
-        data: {
-          totalNumber: updateCooperativeAnimalRegistrationDto.totalNumber,
-          femaleNumber: updateCooperativeAnimalRegistrationDto.femaleNumber,
-          maleNumber: updateCooperativeAnimalRegistrationDto.maleNumber
-        }
-      })
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
-  }
 
   async findAll() {
     try {
@@ -226,12 +74,23 @@ export class CooperativeService {
 
   async findAllCooperativeCrops(cooperativeId: string) {
     try {
-      return await this.databaseService.cooperativeCropRegistration.findMany({
+      return await this.databaseService.crop.findMany({
         where: {
-          cooperativeId
+          cropType: {
+            some: {
+              cropFarmerRegistrations: {
+                some: {
+                  farmer: {
+                    cooperativeId: cooperativeId
+                  }
+                }
+              }
+            }
+
+          }
         },
         include: {
-          crop: true
+          cropType: true
         }
       });
     } catch (error) {
@@ -240,12 +99,18 @@ export class CooperativeService {
   }
   async findAllCooperativeAnimals(cooperativeId: string) {
     try {
-      return await this.databaseService.cooperativeAnimalRegistration.findMany({
+      return await this.databaseService.animal.findMany({
         where: {
-          cooperativeId
+          animalFarmerRegistrations: {
+            some: {
+              farmer: {
+                cooperativeId
+              }
+            }
+          }
         },
         include: {
-          animal: true
+          breeds: true
         }
       });
     } catch (error) {
