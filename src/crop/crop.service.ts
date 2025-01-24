@@ -11,11 +11,36 @@ export class CropService {
   async create(createCropDto: CreateCropDto, userId: string) {
 
     try {
-      return await this.dataBaseService.crop.create({
+      let crop = await this.dataBaseService.crop.create({
         data: {
           name: createCropDto.name,
           createdBy: userId
 
+        }
+      })
+      if (createCropDto.cropTypes && createCropDto.cropTypes.length > 0) {
+        for (let cropType of createCropDto.cropTypes) {
+          await this.dataBaseService.cropType.create({
+            data: {
+              name: cropType.name,
+              cropId: crop.id
+            }
+          })
+        }
+      } else {
+        await this.dataBaseService.cropType.create({
+          data: {
+            name: createCropDto.name,
+            cropId: crop.id
+          }
+        })
+      }
+      return await this.dataBaseService.crop.findUnique({
+        where: {
+          id: crop.id
+        },
+        include: {
+          cropType: true
         }
       })
     } catch (error) {
@@ -122,7 +147,8 @@ export class CropService {
       try {
         // Map the row to a userDto-like object based on the cell index
         let cropDto = {
-          name: row[0]
+          name: row[0],
+          cropTypes: []
 
         };
 

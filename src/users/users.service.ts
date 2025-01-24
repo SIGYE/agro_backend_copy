@@ -342,6 +342,31 @@ export class UsersService {
       throw new BadRequestException(e.message)
     }
   }
+  async registerCooperativeManager(createUserDto: CreateUserDto): Promise<Veterinary> {
+    try {
+      let role = await this.databaseService.role.findFirst({
+        where: {
+          name: "COOPERATIVE_MANAGER"
+        }
+      })
+      let user = await this.create({ roleId: role.id, ...createUserDto });
+
+      return await this.databaseService.veterinary.create({
+        data: {
+          user: {
+            connect: {
+              id: user.id
+            }
+          }
+
+        }
+
+      })
+    }
+    catch (e) {
+      throw new BadRequestException(e.message)
+    }
+  }
   async registerUmufashaMyumvire(createUserDto: CreateUserDto): Promise<Veterinary> {
     try {
       let role = await this.databaseService.role.findFirst({
