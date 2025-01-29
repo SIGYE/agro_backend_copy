@@ -4,7 +4,7 @@ import { FertiliserDto } from "./fertiliser.dto"
 import { Type } from "class-transformer"
 
 export class cropFarmerDto {
-
+    @ApiProperty()
     cropTypesId: string
     @ApiProperty({
         isArray: true,
