@@ -50,7 +50,12 @@ export class CropService {
 
   async findAll() {
     try {
-      return await this.dataBaseService.crop.findMany();
+      return await this.dataBaseService.crop.findMany({
+        include: {
+          cropType: true
+        }
+
+      });
     }
     catch (error) {
       throw new BadRequestException(error.message);
@@ -61,7 +66,7 @@ export class CropService {
     try {
       // Check if the location exists
       const location = await this.dataBaseService.location.findUnique({
-        where: { id: locationId }
+        where: { id: locationId },
       });
 
       if (!location) {
