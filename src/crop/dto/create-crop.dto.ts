@@ -8,7 +8,10 @@ export class CreateCropDto {
     @IsNotEmpty()
     @IsString()
     name: string
-    @ApiProperty()
+    @ApiProperty({
+        isArray: true,
+        type: CreateCropTypeDto
+    })
     @Type(() => CreateCropTypeDto)
     @ValidateNested({ each: true })
     cropTypes: CreateCropTypeDto[]
