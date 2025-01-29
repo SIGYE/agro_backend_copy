@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
+import { CooperativeType } from '@prisma/client';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -27,6 +28,16 @@ export class CooperativeController {
   @Get('by-location/:locationId')
   async findAllCooperativesByLocation(@Param('locationId') locationId: string) {
     return new ApiResponse(true, "All Cooperatives", await this.cooperativeService.findAllCooperativesByLocation(parseInt(locationId)), null);
+
+  }
+  @Get('/:type')
+  async findAllByType(@Param('type') type: CooperativeType) {
+    return new ApiResponse(true, "All Cooperatives", await this.cooperativeService.findAllBySType(type), null);
+
+  }
+  @Get('by-location/:locationId/type/:type')
+  async findAllCooperativesByLocationAndType(@Param('locationId') locationId: string, @Param('type') type: CooperativeType) {
+    return new ApiResponse(true, "All Cooperatives", await this.cooperativeService.findAllCooperativesByLocationAndType(parseInt(locationId), type), null);
 
   }
 

@@ -6,6 +6,7 @@ import { connect } from 'http2';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { LocationService } from 'src/location/location.service';
 import { UsersService } from 'src/users/users.service';
+import { CooperativeType } from '@prisma/client';
 
 
 @Injectable()
@@ -71,7 +72,31 @@ export class CooperativeService {
       throw new BadRequestException('Error fetching cooperatives');
     }
   }
-
+  async findAllBySType(cooperativeType: CooperativeType) {
+    try {
+    return await this.databaseService.cooperative.findMany({
+      where:{
+        type:cooperativeType
+      }
+    });
+    } catch (error) {
+      throw new BadRequestException('Error fetching cooperatives');
+    }
+  }
+  async findAllCooperativesByLocationAndType(locationId: number,type:CooperativeType) {
+    try {
+      return await this.databaseService.cooperative.findMany({
+        where: {
+          locationId: {
+            in: await this.locationService.getAllChildrenLocations(locationId)
+          },
+          type:type
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException('Error fetching cooperatives');
+    }
+  }
   async findAllCooperativeCrops(cooperativeId: string) {
     try {
       return await this.databaseService.crop.findMany({
