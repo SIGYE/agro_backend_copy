@@ -21,7 +21,11 @@ export class FarmerController {
   @Post('register-farmer')
   @ApiBody({ type: CreateFarmerDto })
   async create(@Body() createFarmerDto: CreateFarmerDto) {
-    return new ApiResponse(true, "Farmer Created", await this.farmerService.registerFarmer(createFarmerDto), null);
+    try {
+      return new ApiResponse(true, "Farmer Created", await this.farmerService.registerFarmer(createFarmerDto), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get()

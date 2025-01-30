@@ -24,82 +24,86 @@ export class UsersService {
 
   }
   async create(createUserDto: CreateUserDto): Promise<User> {
-    if (createUserDto.password) {
-      createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
-    } else {
-      let password = generatePassword()
-      console.log("password: ", password)
-      createUserDto.password = await bcrypt.hash(password, 10)
-    }
-    let usersnumber = await this.databaseService.user.count();
-    const username = createUserDto.firstName.toLowerCase() + usersnumber;
-
-    let userPresent = await this.databaseService.user.findFirst({
-      where: {
-        OR: [
-          { email: createUserDto.email },
-          { telephone: createUserDto.telephone },
-          { nationalId: createUserDto.nationalId }
-        ]
+    try {
+      if (createUserDto.password) {
+        createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
+      } else {
+        let password = generatePassword()
+        console.log("password: ", password)
+        createUserDto.password = await bcrypt.hash(password, 10)
       }
-    });
+      let usersnumber = await this.databaseService.user.count();
+      const username = createUserDto.firstName.toLowerCase() + usersnumber;
+
+      let userPresent = await this.databaseService.user.findFirst({
+        where: {
+          OR: [
+            { email: createUserDto.email },
+            { telephone: createUserDto.telephone },
+            { nationalId: createUserDto.nationalId }
+          ]
+        }
+      });
 
 
-    if (userPresent) {
-      throw new BadRequestException("The user with the national Id , telephone and email already exists")
-    }
-
-    let role = await this.databaseService.role.findUnique({
-      where: {
-        id: createUserDto.roleId
+      if (userPresent) {
+        throw new BadRequestException("The user with the national Id , telephone and email already exists")
       }
-    })
 
-    if (!role) {
-      throw new NotFoundException("The role does not exist")
-    }
+      let role = await this.databaseService.role.findUnique({
+        where: {
+          id: createUserDto.roleId
+        }
+      })
 
-    let location = await this.databaseService.location.findUnique({
-      where: {
-        id: createUserDto.locationId
+      if (!role) {
+        throw new NotFoundException("The role does not exist")
       }
-    })
 
-    if (!location) {
-      throw new NotFoundException("The location does not exist")
-    }
-    let childrenLocationsIds = await this.locationService.getAllChildrenLocations(location.id)
+      let location = await this.databaseService.location.findUnique({
+        where: {
+          id: createUserDto.locationId
+        }
+      })
 
-    let user = await this.databaseService.user.create({
-      data: {
-        firstName: createUserDto.firstName,
-        lastName: createUserDto.lastName,
-        email: createUserDto.email,
-        password: createUserDto.password,
-        nationalId: createUserDto.nationalId,
-        username: username,
-        telephone: createUserDto.telephone,
-        gender: createUserDto.gender,
-        dob: new Date(createUserDto.dob),
-        locationChildrenIds: JSON.stringify(childrenLocationsIds),
-        role: {
-          connect: {
-            id: role.id
-          }
-        },
-        location: {
-          connect: {
-            id: location.id
+      if (!location) {
+        throw new NotFoundException("The location does not exist")
+      }
+      let childrenLocationsIds = await this.locationService.getAllChildrenLocations(location.id)
+
+      let user = await this.databaseService.user.create({
+        data: {
+          firstName: createUserDto.firstName,
+          lastName: createUserDto.lastName,
+          email: createUserDto.email,
+          password: createUserDto.password,
+          nationalId: createUserDto.nationalId,
+          username: username,
+          telephone: createUserDto.telephone,
+          gender: createUserDto.gender,
+          dob: new Date(createUserDto.dob),
+          locationChildrenIds: JSON.stringify(childrenLocationsIds),
+          role: {
+            connect: {
+              id: role.id
+            }
+          },
+          location: {
+            connect: {
+              id: location.id
+            }
           }
         }
+      });
+      if (user) {
+        sendSms(user.telephone, { id: randomUUID(), content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is ${createUserDto.password}. Please change your password after logging in.` })
+        console.log(createUserDto.password)
+        return user
+      } else {
+        return null
       }
-    });
-    if (user) {
-      sendSms(user.telephone, { id: randomUUID(), content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is ${createUserDto.password}. Please change your password after logging in.` })
-      console.log(createUserDto.password)
-      return user
-    } else {
-      return null
+    } catch (e) {
+      throw e
     }
 
   }
