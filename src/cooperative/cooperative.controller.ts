@@ -7,6 +7,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { CooperativeType } from '@prisma/client';
+import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -61,6 +62,14 @@ export class CooperativeController {
   @Put('assign-farmers-to-cooperative')
   async assignFarmersToCooperative(@Body() data: AssignFarmersTOCooperative) {
     return new ApiResponse(true, "Farmers Assigned", await this.cooperativeService.assignFarmersToCooperative(data), null);
+  }
+  @Put('assign-create-farmers-to-cooperative')
+  async assignCreateFarmersToCooperative(@Body() data: CreateCooperativeFarmerDto) {
+    try {
+      return new ApiResponse(true, "Farmers Assigned", await this.cooperativeService.assignCreateFarmerToCooperative(data), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
 

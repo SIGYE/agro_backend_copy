@@ -5,9 +5,10 @@ import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { UsersService } from 'src/users/users.service';
 import { LocationService } from 'src/location/location.service';
+import { FarmerService } from 'src/farmer/farmer.service';
 
 @Module({
   controllers: [CooperativeController],
-  providers: [CooperativeService, JwtService, Reflector, UsersService, LocationService],
+  providers: [CooperativeService, JwtService, Reflector, UsersService, LocationService, FarmerService],
 })
 export class CooperativeModule { }
