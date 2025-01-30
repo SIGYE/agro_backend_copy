@@ -7,11 +7,13 @@ import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative'
 import { LocationService } from 'src/location/location.service';
 import { UsersService } from 'src/users/users.service';
 import { CooperativeType } from '@prisma/client';
+import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
+import { FarmerService } from 'src/farmer/farmer.service';
 
 
 @Injectable()
 export class CooperativeService {
-  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService, private readonly userServcice: UsersService) { }
+  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService, private readonly userServcice: UsersService, private readonly farmerService: FarmerService) { }
 
   async create(createCooperativeDto: CreateCooperativeDto) {
     try {
@@ -74,23 +76,23 @@ export class CooperativeService {
   }
   async findAllBySType(cooperativeType: CooperativeType) {
     try {
-    return await this.databaseService.cooperative.findMany({
-      where:{
-        type:cooperativeType
-      }
-    });
+      return await this.databaseService.cooperative.findMany({
+        where: {
+          type: cooperativeType
+        }
+      });
     } catch (error) {
       throw new BadRequestException('Error fetching cooperatives');
     }
   }
-  async findAllCooperativesByLocationAndType(locationId: number,type:CooperativeType) {
+  async findAllCooperativesByLocationAndType(locationId: number, type: CooperativeType) {
     try {
       return await this.databaseService.cooperative.findMany({
         where: {
           locationId: {
             in: await this.locationService.getAllChildrenLocations(locationId)
           },
-          type:type
+          type: type
         }
       });
     } catch (error) {
@@ -193,6 +195,30 @@ export class CooperativeService {
     } catch (error) {
       throw new BadRequestException('Error assigning farmers to cooperative');
     }
+  }
+
+  async assignCreateFarmerToCooperative(assignFarmerToCooperativeDto: CreateCooperativeFarmerDto) {
+    try {
+      for (let farmer of assignFarmerToCooperativeDto.farmers) {
+        let createdFarmer = await this.farmerService.registerFarmer(farmer);
+
+        await this.databaseService.cooperative.update({
+          where: { id: assignFarmerToCooperativeDto.cooperativeId },
+          data: {
+            farmers: {
+              connect: {
+                id: createdFarmer.id
+              },
+            },
+          },
+        });
+
+      }
+
+    } catch (e) {
+      throw e
+    }
+
   }
 
   async remove(id: string) {
