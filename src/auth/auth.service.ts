@@ -141,7 +141,14 @@ export class AuthService {
         farmer: {
           select: {
             id: true,
-            cooperativeId: true
+            cooperative: {
+              select: {
+                id: true,
+                name: true,
+                registrationNumber: true,
+                telephone: true
+              }
+            }
           }
         }
       }
@@ -186,13 +193,17 @@ export class AuthService {
       id: user.id,
       email: user.email,
       userName: user.firstName,
+      fullName: user.firstName + " " + user.lastName,
       status: user.status,
       role: user.role,
       isDefaultPassword: user.isDefaultPassword,
       token: this.jwtService.sign(tokenProps),
       locationId: user.locationId,
-      cooperativeId: user.farmer[0].cooperativeId,
-      farmerId: user.farmer[0].id
+      cooperativeId: user.farmer[0].cooperative.id,
+      cooperativeName: user.farmer[0].cooperative.name,
+      registrationNumber: user?.farmer[0]?.cooperative?.registrationNumber,
+      cooperativePhoneNumber: user?.farmer[0]?.cooperative?.telephone,
+      farmerId: user?.farmer[0]?.id
     };
 
     return loginPayload;
@@ -237,13 +248,17 @@ export class AuthService {
       id: user.id,
       email: user.email,
       userName: user.firstName,
+      fullName: user.firstName + " " + user.lastName,
       status: user.status,
       role: user.role,
       isDefaultPassword: user.isDefaultPassword,
       token: this.jwtService.sign(tokenProps),
       locationId: user.locationId,
-      farmerId: user.farmer[0].id,
-      cooperativeId: user.farmer[0].cooperativeId
+      cooperativeId: user.farmer[0].cooperative.id,
+      cooperativeName: user.farmer[0].cooperative.name,
+      registrationNumber: user?.farmer[0]?.cooperative?.registrationNumber,
+      cooperativePhoneNumber: user?.farmer[0]?.cooperative?.telephone,
+      farmerId: user?.farmer[0]?.id
     };
 
     return loginPayload;

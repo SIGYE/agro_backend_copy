@@ -1,4 +1,4 @@
-import { Role, Status } from "@prisma/client"
+import { Gender, Role, Status } from "@prisma/client"
 
 export class LoginPayload {
     id: string
@@ -9,6 +9,13 @@ export class LoginPayload {
     role: Role
     status: Status
     locationId: number
+    fullName?: string
+    phoneNumber?: string
+    nationalId?: string
+    gender?: Gender
     farmerId?: string
     cooperativeId?: string
+    cooperativeName?: string
+    cooperativePhoneNumber?: string
+    registrationNumber?: string
 }
