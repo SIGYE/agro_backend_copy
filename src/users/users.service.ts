@@ -135,11 +135,17 @@ export class UsersService {
       },
       include: {
         role: true,
-        location: true,
         farmer: {
           select: {
             id: true,
-            cooperativeId: true
+            cooperative: {
+              select: {
+                id: true,
+                name: true,
+                registrationNumber: true,
+                telephone: true
+              }
+            }
           }
         }
       }
@@ -159,11 +165,17 @@ export class UsersService {
       },
       include: {
         role: true,
-        location: true,
         farmer: {
           select: {
             id: true,
-            cooperativeId: true
+            cooperative: {
+              select: {
+                id: true,
+                name: true,
+                registrationNumber: true,
+                telephone: true
+              }
+            }
           }
         }
       }
@@ -182,11 +194,17 @@ export class UsersService {
       },
       include: {
         role: true,
-        location: true,
         farmer: {
           select: {
             id: true,
-            cooperativeId: true
+            cooperative: {
+              select: {
+                id: true,
+                name: true,
+                registrationNumber: true,
+                telephone: true
+              }
+            }
           }
         }
       }
