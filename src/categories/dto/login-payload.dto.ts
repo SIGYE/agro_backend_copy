@@ -9,4 +9,6 @@ export class LoginPayload {
     role: Role
     status: Status
     locationId: number
+    farmerId?: string
+    cooperativeId?: string
 }

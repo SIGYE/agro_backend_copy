@@ -132,12 +132,18 @@ export class AuthService {
 
 
   async loginWithOtp(otpLogin: OtpLoginDto): Promise<LoginPayload> {
-    let user: UserWithRoles = await this.databaseService.user.findUnique({
+    let user = await this.databaseService.user.findUnique({
       where: {
         telephone: otpLogin.telephone
       },
       include: {
-        role: true
+        role: true,
+        farmer: {
+          select: {
+            id: true,
+            cooperativeId: true
+          }
+        }
       }
     })
 
@@ -184,14 +190,16 @@ export class AuthService {
       role: user.role,
       isDefaultPassword: user.isDefaultPassword,
       token: this.jwtService.sign(tokenProps),
-      locationId: user.locationId
+      locationId: user.locationId,
+      cooperativeId: user.farmer[0].cooperativeId,
+      farmerId: user.farmer[0].id
     };
 
     return loginPayload;
   }
 
   async login(loginDto: loginDto): Promise<LoginPayload> {
-    let user: UserWithRoles = null;
+    let user = null;
     const credentialType = await this.validateAll(loginDto.credential);
     log("The credential type is " + credentialType);
 
@@ -233,7 +241,9 @@ export class AuthService {
       role: user.role,
       isDefaultPassword: user.isDefaultPassword,
       token: this.jwtService.sign(tokenProps),
-      locationId: user.locationId
+      locationId: user.locationId,
+      farmerId: user.farmer[0].id,
+      cooperativeId: user.farmer[0].cooperativeId
     };
 
     return loginPayload;
@@ -310,8 +320,8 @@ export class AuthService {
       throw new UnauthorizedException("Wrong username or password")
   }
 
-  async validateEmailUser(email: string, password: string): Promise<UserWithRoles> {
-    let user: UserWithRoles = await this.userService.findUserByEmail(email)
+  async validateEmailUser(email: string, password: string): Promise<User> {
+    let user: User = await this.userService.findUserByEmail(email)
     if (!user) {
       throw new UnauthorizedException("User Not Found")
     }
@@ -322,8 +332,8 @@ export class AuthService {
       throw new UnauthorizedException("Wrong email or password")
   }
 
-  async validatePhoneUser(telephone: string, password: string): Promise<UserWithRoles> {
-    let user: UserWithRoles = await this.userService.findUserByTelephone(telephone)
+  async validatePhoneUser(telephone: string, password: string): Promise<any> {
+    let user: User = await this.userService.findUserByTelephone(telephone)
     if (!user) {
       throw new UnauthorizedException("User Not Found")
     }
