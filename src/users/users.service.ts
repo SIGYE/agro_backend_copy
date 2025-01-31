@@ -128,14 +128,20 @@ export class UsersService {
       }
     });
   }
-  async findUserByEmail(email: string): Promise<UserWithRoles> {
+  async findUserByEmail(email: string): Promise<any> {
     const user = await this.databaseService.user.findUnique({
       where: {
         email: email,
       },
       include: {
         role: true,
-        location: true
+        location: true,
+        farmer: {
+          select: {
+            id: true,
+            cooperativeId: true
+          }
+        }
       }
     });
 
@@ -146,14 +152,20 @@ export class UsersService {
     return user;
   }
 
-  async findUserByUsername(username: string): Promise<UserWithRoles> {
+  async findUserByUsername(username: string): Promise<any> {
     const user = await this.databaseService.user.findUnique({
       where: {
         username: username,
       },
       include: {
         role: true,
-        location: true
+        location: true,
+        farmer: {
+          select: {
+            id: true,
+            cooperativeId: true
+          }
+        }
       }
     });
 
@@ -163,14 +175,20 @@ export class UsersService {
     return user;
   }
 
-  async findUserByTelephone(telephone: string): Promise<UserWithRoles> {
+  async findUserByTelephone(telephone: string): Promise<any> {
     const user = await this.databaseService.user.findUnique({
       where: {
         telephone: telephone,
       },
       include: {
         role: true,
-        location: true
+        location: true,
+        farmer: {
+          select: {
+            id: true,
+            cooperativeId: true
+          }
+        }
       }
     });
 
