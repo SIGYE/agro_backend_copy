@@ -16,8 +16,6 @@ export class LiveStockRegistrationController {
   @Post('create')
   async create(@Body() createLiveStockRegistrationDto: CreateLiveStockRegistrationDto) {
     try {
-      console.log("in here")
-      console.log(await this.liveStockRegistrationService.create(createLiveStockRegistrationDto))
       return new ApiResponse(true, "Live Stock Registration Created", await this.liveStockRegistrationService.create(createLiveStockRegistrationDto), 201);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
