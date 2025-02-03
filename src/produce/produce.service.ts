@@ -31,7 +31,15 @@ export class ProduceService {
 
   async findAll() {
     try {
-      return await this.databaseService.farmerAnimalRegistrationProduce.findMany()
+      return await this.databaseService.farmerAnimalRegistrationProduce.findMany({
+        include: {
+          animalProduct: {
+            select: {
+              name: true
+            }
+          }
+        }
+      })
     } catch (e) {
       throw new BadRequestException(e.message)
     }
@@ -42,6 +50,13 @@ export class ProduceService {
         where: {
           animalFarmerRegistration: {
             id: livestockRegistrationId
+          }
+        },
+        include: {
+          animalProduct: {
+            select: {
+              name: true
+            }
           }
         }
       })
@@ -55,6 +70,13 @@ export class ProduceService {
         where: {
           animalProduct: {
             id: animalProductId
+          }
+        },
+        include: {
+          animalProduct: {
+            select: {
+              name: true
+            }
           }
         }
       })
@@ -76,6 +98,13 @@ export class ProduceService {
 
 
           }
+        },
+        include: {
+          animalProduct: {
+            select: {
+              name: true
+            }
+          }
         }
       })
     } catch (e) {
@@ -90,6 +119,13 @@ export class ProduceService {
       return await this.databaseService.farmerAnimalRegistrationProduce.findUnique({
         where: {
           id
+        },
+        include: {
+          animalProduct: {
+            select: {
+              name: true
+            }
+          }
         }
       })
     } catch (e) {

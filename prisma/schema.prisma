@@ -11,16 +11,16 @@ enum Status {
   ACTIVE
   INACTIVE
 }
-enum CooperativeType{
-  ITSINDA
-  COOPERATIVE
-}
-enum HealthStatus {
-  HEALTHY
-  SICK
-  RECOVERING
-  OTHER
-}
+  enum CooperativeType{
+    ITSINDA
+    COOPERATIVE
+  }
+  enum HealthStatus {
+    HEALTHY
+    SICK
+    RECOVERING
+    OTHER
+  }
 
 enum Gender {
   MALE
