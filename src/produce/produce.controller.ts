@@ -51,6 +51,7 @@ export class ProduceController {
     }
   }
 
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     try {
