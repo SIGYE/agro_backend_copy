@@ -35,6 +35,11 @@ export class CreateSeasonDto {
     @ApiProperty()
     @IsEnum(SeasonStatus)
     status: SeasonStatus
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    @Type(() => String)
+    farmerId: string
 
 
 }
