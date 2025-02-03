@@ -48,7 +48,14 @@ export class SeasonsController {
       return new ApiResponse(false, e.message, null, 400)
     }
   }
-
+  @Get('/farmer/:farmerId/crop-type/:cropTypeId')
+  async findAllByFarmerAndCropType(@Param('farmerId') farmerId: string, @Param('cropTypeId') cropTypeId: string) {
+    try {
+      return new ApiResponse(true, "All Seasons", await this.seasonsService.findAllByFarmerIdAndCropTypeId(farmerId, cropTypeId), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
   @Get(':id')
   async findOne(@Param('id') id: string) {
     try {

@@ -75,6 +75,31 @@ export class SeasonsService {
       throw new BadRequestException(e.message)
     }
   }
+  async findAllByFarmerIdAndCropTypeId(farmerId: string,cropTypeId:string) {
+    try {
+      return await this.databaseService.season.findMany({
+        where: {
+          croType: {
+            id:cropTypeId,
+            cropFarmerRegistrations: {
+              some: {
+                farmer: {
+                  id: farmerId
+                }
+              }
+
+            }
+          }
+
+        },
+        include: {
+          croType: true
+        }
+      })
+    } catch (e) {
+      throw new BadRequestException(e.message)
+    }
+  }
 
   async findOne(id: string) {
     try {
