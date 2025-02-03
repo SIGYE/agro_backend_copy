@@ -199,8 +199,8 @@ export class AuthService {
       isDefaultPassword: user.isDefaultPassword,
       token: this.jwtService.sign(tokenProps),
       locationId: user.locationId,
-      cooperativeId: user.farmer[0].cooperative.id,
-      cooperativeName: user.farmer[0].cooperative.name,
+      cooperativeId: user?.farmer[0]?.cooperative?.id,
+      cooperativeName: user?.farmer[0]?.cooperative?.name,
       registrationNumber: user?.farmer[0]?.cooperative?.registrationNumber,
       cooperativePhoneNumber: user?.farmer[0]?.cooperative?.telephone,
       farmerId: user?.farmer[0]?.id
@@ -254,8 +254,8 @@ export class AuthService {
       isDefaultPassword: user.isDefaultPassword,
       token: this.jwtService.sign(tokenProps),
       locationId: user.locationId,
-      cooperativeId: user.farmer[0].cooperative.id,
-      cooperativeName: user.farmer[0].cooperative.name,
+      cooperativeId: user?.farmer[0]?.cooperative?.id,
+      cooperativeName: user?.farmer[0]?.cooperative?.name,
       registrationNumber: user?.farmer[0]?.cooperative?.registrationNumber,
       cooperativePhoneNumber: user?.farmer[0]?.cooperative?.telephone,
       farmerId: user?.farmer[0]?.id
