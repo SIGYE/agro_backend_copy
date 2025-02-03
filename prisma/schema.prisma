@@ -223,6 +223,9 @@ model Season{
   seasonStatus                      SeasonStatus @default(ON_GOING)
   cropTypeId    String
   croType    CropType @relation(fields: [cropTypeId], references: [id])
+  farmerId      String
+  farmer Farmer @relation(fields: [farmerId], references: [id])
+
 
 }
 
@@ -255,6 +258,7 @@ model Farmer {
   user                      User                       @relation(fields: [userId], references: [id])
   cropFarmerRegistrations   CropFarmerRegistration[]
   animalFarmerRegistrations AnimalFarmerRegistration[]
+  seasons                   Season[]
   cooperative              Cooperative? @relation(fields: [cooperativeId], references: [id])
   cooperativeId            String?
   createdAt                 DateTime                   @default(now())

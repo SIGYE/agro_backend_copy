@@ -17,6 +17,11 @@ export class SeasonsService {
           expectedYield: "0",
           startDate: createSeasonDto.startDate,
           endDate: createSeasonDto.endDate,
+          farmer: {
+            connect: {
+              id: createSeasonDto.farmerId
+            }
+          },
           croType: {
             connect: {
               id: createSeasonDto.cropTypeId
@@ -55,15 +60,8 @@ export class SeasonsService {
     try {
       return await this.databaseService.season.findMany({
         where: {
-          croType: {
-            cropFarmerRegistrations: {
-              some: {
-                farmer: {
-                  id: farmerId
-                }
-              }
-
-            }
+          farmer: {
+            id: farmerId
           }
 
         },
@@ -75,20 +73,15 @@ export class SeasonsService {
       throw new BadRequestException(e.message)
     }
   }
-  async findAllByFarmerIdAndCropTypeId(farmerId: string,cropTypeId:string) {
+  async findAllByFarmerIdAndCropTypeId(farmerId: string, cropTypeId: string) {
     try {
       return await this.databaseService.season.findMany({
         where: {
           croType: {
-            id:cropTypeId,
-            cropFarmerRegistrations: {
-              some: {
-                farmer: {
-                  id: farmerId
-                }
-              }
-
-            }
+            id: cropTypeId
+          },
+          farmer: {
+            id: farmerId
           }
 
         },
