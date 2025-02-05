@@ -81,7 +81,7 @@ export class UsersService {
           username: username,
           telephone: createUserDto.telephone,
           gender: createUserDto.gender,
-          dob: new Date(createUserDto.dob),
+          dob: createUserDto.dob ? new Date(createUserDto.dob) : null,
           locationChildrenIds: JSON.stringify(childrenLocationsIds),
           role: {
             connect: {
