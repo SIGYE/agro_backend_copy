@@ -57,7 +57,7 @@ RUN chmod 644 .env
 RUN mkdir -p /app/uploads
 
 # Expose the application port (default NestJS port)
-EXPOSE 8000
+EXPOSE 7070
 
 # Start the application with a check for environment variables
 CMD ["sh", "-c", "if [ -z \"$DATABASE_URL\" ]; then echo 'DATABASE_URL is not set. Skipping migrations.'; else npx prisma migrate deploy; fi && node dist/main.js"]
