@@ -47,14 +47,17 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 
-# Copy any environment variables file if necessary
-COPY --from=builder /app/.env ./
+# Copy the .env file
+COPY .env ./.env
+
+# Make sure the file has proper permissions
+RUN chmod 644 .env
 
 # Create the uploads directory
 RUN mkdir -p /app/uploads
 
 # Expose the application port (default NestJS port)
-EXPOSE 3000
+EXPOSE 8000
 
 # Start the application with a check for environment variables
 CMD ["sh", "-c", "if [ -z \"$DATABASE_URL\" ]; then echo 'DATABASE_URL is not set. Skipping migrations.'; else npx prisma migrate deploy; fi && node dist/main.js"]
