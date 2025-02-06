@@ -13,11 +13,14 @@ export class LocationController {
         private readonly locationService: LocationService
     ) { }
 
-    // / get methods for the location entity 
-
     @Get('/all')
     async getAll(@Query('page') page: number, @Query('limit') limit: number): Promise<ApiResponse<{ data: LocationWithParent[], total: number }>> {
-        return new ApiResponse(true, "Success", await this.locationService.getAll(page, limit), 200)
+        try {
+            const data = await this.locationService.getAll(page, limit);
+            return new ApiResponse(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
 
     @Get('/:id')
@@ -26,7 +29,12 @@ export class LocationController {
         type: Number
     })
     async getLocationById(@Param('id') id: number): Promise<ApiResponse<Location>> {
-        return new ApiResponse<Location>(true, "Success", await this.locationService.getLocationById(id), 200);
+        try {
+            const data = await this.locationService.getLocationById(id);
+            return new ApiResponse<Location>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
 
     @Get('/children/:id')
@@ -35,7 +43,12 @@ export class LocationController {
         type: Number
     })
     async getChildrenLocations(@Param('id') id: number): Promise<ApiResponse<LocationWithChildren[]>> {
-        return new ApiResponse<LocationWithChildren[]>(true, "Success", await this.locationService.getChildrenLocations(id), 200)
+        try {
+            const data = await this.locationService.getChildrenLocations(id);
+            return new ApiResponse<LocationWithChildren[]>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
 
     @Get('/level/:id')
@@ -44,12 +57,22 @@ export class LocationController {
         type: Number
     })
     async getLocationByLevel(@Param('id') id: number): Promise<ApiResponse<Location[]>> {
-        return new ApiResponse<Location[]>(true, "Success", await this.locationService.getLocationByLevel(id), 200)
+        try {
+            const data = await this.locationService.getLocationByLevel(id);
+            return new ApiResponse<Location[]>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
 
     @Get('/location-levels/all')
     async getAllLocationLevels(): Promise<ApiResponse<locationLevel[]>> {
-        return new ApiResponse<locationLevel[]>(true, "Success", await this.locationService.getAllLocationLevels(), 200)
+        try {
+            const data = await this.locationService.getAllLocationLevels();
+            return new ApiResponse<locationLevel[]>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
 
     @Get('/location-levels/:id')
@@ -58,15 +81,26 @@ export class LocationController {
         type: Number
     })
     async getLOcationLevelById(@Param("id") id: number): Promise<ApiResponse<locationLevel>> {
-        return new ApiResponse<locationLevel>(true, "Success", await this.locationService.getLOcationLevelById(id), 200)
+        try {
+            const data = await this.locationService.getLOcationLevelById(id);
+            return new ApiResponse<locationLevel>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
+
     @Get('/all/children/:id')
     @ApiParam({
         name: "id",
         type: Number
     })
     async getAllWithChildren(@Param("id") id: number): Promise<ApiResponse<LocationWithChildren[]>> {
-        return new ApiResponse<any>(true, "Success", await this.locationService.getAllChildrenLocations(id), 200)
+        try {
+            const data = await this.locationService.getAllChildrenLocations(id);
+            return new ApiResponse<any>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
 
     @Get('/recursively-get-all-children/:id')
@@ -75,12 +109,15 @@ export class LocationController {
         type: Number
     })
     async recursivelyGetAllChildrenLocations(@Param('id') id: number): Promise<ApiResponse<number[]>> {
-        const children = await this.locationService.recursivelyGetAllChildrenLocations(id);
-        console.log('children length : ' + children.length)
-        const childrenSet = new Set(children);
-        console.log('children set length : ' + childrenSet.size)
-        const data = Array.from(childrenSet)
-        return new ApiResponse<number[]>(true, "Success", data, 200)
+        try {
+            const children = await this.locationService.recursivelyGetAllChildrenLocations(id);
+            console.log('children length : ' + children.length);
+            const childrenSet = new Set(children);
+            console.log('children set length : ' + childrenSet.size);
+            const data = Array.from(childrenSet);
+            return new ApiResponse<number[]>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
     }
-
 }

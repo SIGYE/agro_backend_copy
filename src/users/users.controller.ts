@@ -23,108 +23,166 @@ export class UsersController {
   @Allow()
   @Post()
   async createDevAdmin(@Body() createUserDto: CreateUserDto) {
-    const user = await this.usersService.create(createUserDto)
-    return new ApiResponse(true, "Dev Admin Created Successfully", user, null);
+    try {
+      const user = await this.usersService.create(createUserDto)
+      return new ApiResponse(true, "Dev Admin Created Successfully", user, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
   @Get('/all')
   async findAll(): Promise<ApiResponse<User[]>> {
-    return new ApiResponse<User[]>(true, "All Users", await this.usersService.findAll(), null);
+    try {
+      return new ApiResponse<User[]>(true, "All Users", await this.usersService.findAll(), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
   @Get('/id/:id')
   @ApiParam({ name: "id", type: String })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ApiResponse<UserWithRoles>> {
-    return new ApiResponse<UserWithRoles>(true, "User Retrieved", await this.usersService.findOne(id), null);
+    try {
+      return new ApiResponse<UserWithRoles>(true, "User Retrieved", await this.usersService.findOne(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
   @Put('/update/:id')
   @ApiParam({ name: "id", type: String })
   @ApiBody({ type: UpdateUserDto })
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto): Promise<ApiResponse<User>> {
-    return new ApiResponse<User>(true, "Updated User", await this.usersService.update(id, updateUserDto), null);
+    try {
+      return new ApiResponse<User>(true, "Updated User", await this.usersService.update(id, updateUserDto), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
   @Delete('/delete/:id')
   @ApiParam({ name: "id", type: String })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<ApiResponse<User>> {
-    return new ApiResponse<User>(true, "Deleted User", await this.usersService.remove(id), null);
+    try {
+      return new ApiResponse<User>(true, "Deleted User", await this.usersService.remove(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
 
   @Post('change-password')
   @Allow()
   async changePassword(@Req() request: AuthRequest, @Body() changePasswordDTO: ChangePasswordDTO): Promise<ApiResponse<User>> {
-    if (!request.user) {
-      throw new UnauthorizedException("Please Login")
-    } else {
-      return new ApiResponse<User>(true, "Password Changed Successfully", await this.usersService.changeLoggedInPassword(request, changePasswordDTO), null);
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException("Please Login")
+      } else {
+        return new ApiResponse<User>(true, "Password Changed Successfully", await this.usersService.changeLoggedInPassword(request, changePasswordDTO), 200);
+      }
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
     }
+
   }
 
   @Post('register-agronomist')
   @Roles(Role_Enum.ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerAgronomist(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Agronomy>> {
-    return new ApiResponse<Agronomy>(true, "Agronomist Registered Successfully", await this.usersService.registerAgronomist(createUserDto), null);
+    try {
+      return new ApiResponse<Agronomy>(true, "Agronomist Registered Successfully", await this.usersService.registerAgronomist(createUserDto), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
   @Post('register-veterinary')
   @Roles(Role_Enum.ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerVeterinary(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Veterinary>> {
-    return new ApiResponse<Veterinary>(true, "Veterinary Registered Successfully", await this.usersService.registerVet(createUserDto), null);
+    try {
+      return new ApiResponse<Veterinary>(true, "Veterinary Registered Successfully", await this.usersService.registerVet(createUserDto), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
+
   }
   @Post('register-farmer')
   @Roles(Role_Enum.ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerFarmer(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Farmer>> {
-    return new ApiResponse<Farmer>(true, "Farmer Registered Successfully", await this.usersService.registerFarmer(createUserDto), null);
+    try {
+      return new ApiResponse<Farmer>(true, "Farmer Registered Successfully", await this.usersService.registerFarmer(createUserDto), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
   @Post('import-farmers')
   @Roles(Role_Enum.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleVets(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
 
-    return this.usersService.registerMultipleFarmers(file);
+      return this.usersService.registerMultipleFarmers(file);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
   @Post('import-veterinarians')
   @Roles(Role_Enum.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleFarmers(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
 
-    return this.usersService.registerMultipleVets(file);
+      return this.usersService.registerMultipleVets(file);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
   @Post('import-agronomists')
   @Roles(Role_Enum.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleAgronomists(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
 
-    return this.usersService.registerMultipleAgronomists(file);
+      return this.usersService.registerMultipleAgronomists(file);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
   @Post('register-umufasha-myumvire')
   @Roles(Role_Enum.ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerUmufashaMyumvire(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Umufashamyumvire>> {
-    return new ApiResponse<Umufashamyumvire>(true, "Umufasha Myumvire Registered Successfully", await this.usersService.registerUmufashaMyumvire(createUserDto), null);
+    try {
+      return new ApiResponse<Umufashamyumvire>(true, "Umufasha Myumvire Registered Successfully", await this.usersService.registerUmufashaMyumvire(createUserDto), 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
   @Post('import-abafasha-myumvire')
   @Roles(Role_Enum.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleUmufashaMyumvire(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
 
-    return this.usersService.registerMultipleBafashaMyumvire(file);
+      return this.usersService.registerMultipleBafashaMyumvire(file);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
   }
 
 
@@ -135,10 +193,14 @@ export class UsersController {
   @ApiQuery({ name: "status", enum: Status })
   @ApiParam({ name: "userId", type: String })
   async changeAccountStatus(@Req() request: AuthRequest, @Param('userId') userId: string, @Query('status') status: Status): Promise<ApiResponse<User>> {
-    if (!request.user) {
-      throw new UnauthorizedException("Please Login")
-    } else {
-      return new ApiResponse<User>(true, "Account Status Changed Successfully", await this.usersService.changeUserAccountStatus(userId, status), 200);
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException("Please Login")
+      } else {
+        return new ApiResponse<User>(true, "Account Status Changed Successfully", await this.usersService.changeUserAccountStatus(userId, status), 200);
+      }
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
     }
   }
 
