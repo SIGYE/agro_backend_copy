@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, BadRequestException, UseInterceptors } from '@nestjs/common';
-
 import { Crop, User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
@@ -20,38 +19,75 @@ export class CropController {
   @Post()
   @ApiBody({ type: CreateCropDto })
   async create(@Body() createCropDto: CreateCropDto, @CurrentUser() user: User): Promise<ApiResponse<Crop>> {
-    return new ApiResponse<Crop>(true, "Crop Created", await this.cropService.create(createCropDto, user.id), null);
+    try {
+      const data = await this.cropService.create(createCropDto, user.id);
+      return new ApiResponse<Crop>(true, "Crop Created", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get()
   async findAll() {
-    return new ApiResponse<Crop[]>(true, "All Crops", await this.cropService.findAll(), null);
+    try {
+      const data = await this.cropService.findAll();
+      return new ApiResponse<Crop[]>(true, "All Crops", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmer-crops-by-location/:locationId')
   async findAllCropFarmerRegistration(@Param('locationId') locationId: string) {
-    return new ApiResponse(true, "All Crops", await this.cropService.findAllCropFarmerRegistration(parseInt(locationId)), null);
+    try {
+      const data = await this.cropService.findAllCropFarmerRegistration(parseInt(locationId));
+      return new ApiResponse(true, "All Crops", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return new ApiResponse<Crop>(true, "Crop Retrieved", await this.cropService.findOne(id), null);
+    try {
+      const data = await this.cropService.findOne(id);
+      return new ApiResponse<Crop>(true, "Crop Retrieved", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateCropDto: UpdateCropDto) {
-    return new ApiResponse<Crop>(true, "Crop Updated", await this.cropService.update(id, updateCropDto), null);
+    try {
+      const data = await this.cropService.update(id, updateCropDto);
+      return new ApiResponse<Crop>(true, "Crop Updated", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return new ApiResponse<Crop>(true, "Crop Deleted", await this.cropService.remove(id), null);
+    try {
+      const data = await this.cropService.remove(id);
+      return new ApiResponse<Crop>(true, "Crop Deleted", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Post('upload-crops')
   @UseInterceptors(FileInterceptor('file'))
   async uploadCrops(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: User) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
+      const data = await this.cropService.importCrops(file, user.id);
+      return new ApiResponse<any>(true, "All Crops", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
     }
-    return new ApiResponse<any>(true, "All Crops", await this.cropService.importCrops(file, user.id), null);
   }
 }

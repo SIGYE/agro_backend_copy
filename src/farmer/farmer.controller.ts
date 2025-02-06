@@ -14,7 +14,6 @@ import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @ApiTags('Farmer')
-
 export class FarmerController {
   constructor(private readonly farmerService: FarmerService) { }
 
@@ -22,7 +21,8 @@ export class FarmerController {
   @ApiBody({ type: CreateFarmerDto })
   async create(@Body() createFarmerDto: CreateFarmerDto) {
     try {
-      return new ApiResponse(true, "Farmer Created", await this.farmerService.registerFarmer(createFarmerDto), 201);
+      const data = await this.farmerService.registerFarmer(createFarmerDto);
+      return new ApiResponse(true, "Farmer Created", data, 201);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
@@ -30,75 +30,161 @@ export class FarmerController {
 
   @Get()
   async findAll() {
-    return new ApiResponse(true, "All Farmers", await this.farmerService.findAll(), null);
+    try {
+      const data = await this.farmerService.findAll();
+      return new ApiResponse(true, "All Farmers", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmer-crops')
   async findAllFarmerCrops() {
-    return new ApiResponse(true, "All Farmers Crops", await this.farmerService.getAllAnimalFarmerRegistrations(), null);
+    try {
+      const data = await this.farmerService.getAllAnimalFarmerRegistrations();
+      return new ApiResponse(true, "All Farmers Crops", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmer-animals')
   async findAllFarmerAnimals() {
-    return new ApiResponse(true, "All Farmers Animals", await this.farmerService.getAllCropFarmerRegistrations(), null);
+    try {
+      const data = await this.farmerService.getAllCropFarmerRegistrations();
+      return new ApiResponse(true, "All Farmers Animals", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmers-by-cooperative/:id')
   async findAllFarmersByCooperative(@Param('id') id: string) {
-    return new ApiResponse(true, "All Farmers By Cooperative", await this.farmerService.getFarmersByCooperative(id), null);
+    try {
+      const data = await this.farmerService.getFarmersByCooperative(id);
+      return new ApiResponse(true, "All Farmers By Cooperative", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmers-by-location/:id')
   async findAllFarmersByLocation(@Param('id') id: number) {
-    return new ApiResponse(true, "All Farmers By Location", await this.farmerService.getFarmersByLocation(id), null)
+    try {
+      const data = await this.farmerService.getFarmersByLocation(id);
+      return new ApiResponse(true, "All Farmers By Location", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmer-crops-by-location/:id')
   async findAllFarmerCropsByLocation(@Param('id') id: number) {
-    return new ApiResponse(true, "All Farmers Crops By Location", await this.farmerService.getCropFarmerRegistrationsByLocation(id), null)
+    try {
+      const data = await this.farmerService.getCropFarmerRegistrationsByLocation(id);
+      return new ApiResponse(true, "All Farmers Crops By Location", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('crops-by-farmer/:id')
   async findAllCropsByFarmer(@Param('id') id: string) {
-    return new ApiResponse(true, "All Crops By Farmer", await this.farmerService.getCropsFarmerRegistrationsByFarmer(id), null)
+    try {
+      const data = await this.farmerService.getCropsFarmerRegistrationsByFarmer(id);
+      return new ApiResponse(true, "All Crops By Farmer", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('animals-by-farmer/:id')
   async findAllCropsByCooperative(@Param('id') id: string) {
-    return new ApiResponse(true, "All Animals By Farmer", await this.farmerService.getAnimalFarmerRegistrationsByFarmer(id), null)
+    try {
+      const data = await this.farmerService.getAnimalFarmerRegistrationsByFarmer(id);
+      return new ApiResponse(true, "All Animals By Farmer", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('farmer-animals-by-location/:id')
   async findAllFarmerAnimalsByLocation(@Param('id') id: number) {
-    return new ApiResponse(true, "All Farmers Animals By Location", await this.farmerService.getAnimalRegistrationsByLocation(id), null)
+    try {
+      const data = await this.farmerService.getAnimalRegistrationsByLocation(id);
+      return new ApiResponse(true, "All Farmers Animals By Location", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Get('livestocks-by-farmerRegistration/:id')
   async findAllLiveStocksByFarmerRegistration(@Param('id') id: string) {
-    return new ApiResponse(true, "All Live Stocks By Farmer Registration", await this.farmerService.getAnimalFarmerRegistrationLivestock(id), 200)
+    try {
+      const data = await this.farmerService.getAnimalFarmerRegistrationLivestock(id);
+      return new ApiResponse(true, "All Live Stocks By Farmer Registration", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return new ApiResponse(true, "Farmer Retrieved", await this.farmerService.findOne(id), null);
+    try {
+      const data = await this.farmerService.findOne(id);
+      return new ApiResponse(true, "Farmer Retrieved", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateFarmerDto: UpdateFarmerDto) {
-  //   return this.farmerService.update(+id, updateFarmerDto);
-  // }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return new ApiResponse(true, "Farmer Deleted", await this.farmerService.remove(id), null);
+    try {
+      const data = await this.farmerService.remove(id);
+      return new ApiResponse(true, "Farmer Deleted", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Put('assign-crops-to-farmer')
   async assignCropsToFarmer(@Body() data: AssignCropToFarmerDto) {
-    return new ApiResponse(true, "Crops Assigned", await this.farmerService.assignCropsToFarmers(data), null);
+    try {
+      const result = await this.farmerService.assignCropsToFarmers(data);
+      return new ApiResponse(true, "Crops Assigned", result, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
+
   @Put('assign-animals-to-farmer')
   async assignAnimalsToFarmer(@Body() data: AssignAnimalToFarmerDto) {
-    return new ApiResponse(true, "Animals Assigned", await this.farmerService.assignAnimalsToFarmer(data), null);
+    try {
+      const result = await this.farmerService.assignAnimalsToFarmer(data);
+      return new ApiResponse(true, "Animals Assigned", result, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Put('update-crop-farmer-registration/:id')
   async updateCropFarmerRegistration(@Param('id') id: string, @Body() data: UpdateCropFarmerDto) {
-    return new ApiResponse(true, "Crop Farmer Registration Updated", await this.farmerService.updateCropFarmerRegistration(id, data), 201);
+    try {
+      const result = await this.farmerService.updateCropFarmerRegistration(id, data);
+      return new ApiResponse(true, "Crop Farmer Registration Updated", result, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Put('update-animal-farmer-registration/:id')
   async updateAnimalFarmerRegistration(@Param('id') id: string, @Body() data: UpdateAnimalFarmerDto) {
-    return new ApiResponse(true, "Animal Farmer Registration Updated", await this.farmerService.updateAnimalFarmerRegistration(id, data), 201);
+    try {
+      const result = await this.farmerService.updateAnimalFarmerRegistration(id, data);
+      return new ApiResponse(true, "Animal Farmer Registration Updated", result, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 }
