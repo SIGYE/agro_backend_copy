@@ -76,6 +76,7 @@ async function bootstrap() {
     .addTag('Pests')
     .addTag('Seasons')
     .addTag('Produce')
+    .addTag('Reports')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
