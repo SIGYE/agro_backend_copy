@@ -10,6 +10,16 @@ import { AuthGuard } from 'src/guards/auth.guard';
 @ApiTags('Analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) { }
+  @Get('/dashboard/admin-card-data')
+  @ApiOperation({ summary: 'Get dmin Card Analytics' })
+  async getAdminCardAnalytics() {
+    try {
+      const data = await this.analyticsService.adminCards();
+      return new ApiResponse(true, "Admin Card Analytics", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 
   @Get('/dashboard/agro-card-data')
   @ApiOperation({ summary: 'Get Agro Card Analytics' })
@@ -58,33 +68,33 @@ export class AnalyticsController {
     }
   }
 
-  @Get('/dashboard/crop-harvest-by-year-and-location/:locationId')
-  @ApiParam({ name: 'locationId', required: true, type: Number })
+  @Get('/dashboard/crop-harvest-by-year-and-location')
+  @ApiQuery({ name: 'locationId', required: true, type: Number })
   @ApiQuery({ name: 'year', required: true, type: Number })
-  async getCropHarvestByYearAndLocation(@Param('locationId') locationId: number, @Query('year') year: number) {
+  async getCropHarvestByYearAndLocation(@Query('locationId') locationId: number, @Query('year') year: number) {
     try {
-      const data = await this.analyticsService.getHarvestByYearAndLocation(locationId, year);
+      const data = await this.analyticsService.getHarvestByYearAndLocation(year, locationId);
       return new ApiResponse(true, "Crop Harvest", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
 
-  @Get('/dashboard/animal-production-by-year-and-location/:locationId')
-  @ApiParam({ name: 'locationId', required: true, type: Number })
+  @Get('/dashboard/animal-production-by-year-and-location')
+  @ApiQuery({ name: 'locationId', required: true, type: Number })
   @ApiQuery({ name: 'year', required: true, type: Number })
-  async getAnimalProductionByYearAndLocation(@Param('locationId') locationId: number, @Query('year') year: number) {
+  async getAnimalProductionByYearAndLocation(@Query('locationId') locationId: number, @Query('year') year: number) {
     try {
-      const data = await this.analyticsService.getProduceByYearAndLocation(locationId, year);
+      const data = await this.analyticsService.getProduceByYearAndLocation(year, locationId);
       return new ApiResponse(true, "Animal Production", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
 
-  @Get('/dashboard/farmer-age-range/:locationId')
-  @ApiParam({ name: 'locationId', required: false, type: Number })
-  async getFarmerAgeRange(@Param('locationId') locationId?: number) {
+  @Get('/dashboard/farmer-age-range')
+  @ApiQuery({ name: 'locationId', required: true, type: Number })
+  async getFarmerAgeRange(@Query('locationId') locationId?: number) {
     try {
       const data = await this.analyticsService.getFarmerAgeRangeByLocation(locationId);
       return new ApiResponse(true, "Farmer Age Range", data, 200);
@@ -93,12 +103,12 @@ export class AnalyticsController {
     }
   }
 
-  @Get('/dashboard/top-crops/:locationId/limit/:limit')
-  @ApiParam({ name: 'locationId', required: false, type: Number })
-  @ApiParam({ name: 'limit', required: false, type: Number })
-  async getTopCrops(@Param('locationId') locationId?: number, @Param('limit') limit?: number) {
+  @Get('/dashboard/top-crops')
+  @ApiQuery({ name: 'locationId', required: true, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getTopCrops(@Query('limit') limit?: number, @Query('locationId') locationId?: number) {
     try {
-      const data = await this.analyticsService.getTopCropFarmerRegistrations(locationId, limit);
+      const data = await this.analyticsService.getTopCropFarmerRegistrations(limit, locationId);
       return new ApiResponse(true, "Top Crops", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
