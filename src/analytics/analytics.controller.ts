@@ -69,7 +69,7 @@ export class AnalyticsController {
   }
 
   @Get('/dashboard/crop-harvest-by-year-and-location')
-  @ApiQuery({ name: 'locationId', required: true, type: Number })
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'year', required: true, type: Number })
   async getCropHarvestByYearAndLocation(@Query('locationId') locationId: number, @Query('year') year: number) {
     try {
@@ -81,7 +81,7 @@ export class AnalyticsController {
   }
 
   @Get('/dashboard/animal-production-by-year-and-location')
-  @ApiQuery({ name: 'locationId', required: true, type: Number })
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'year', required: true, type: Number })
   async getAnimalProductionByYearAndLocation(@Query('locationId') locationId: number, @Query('year') year: number) {
     try {
@@ -93,7 +93,7 @@ export class AnalyticsController {
   }
 
   @Get('/dashboard/farmer-age-range')
-  @ApiQuery({ name: 'locationId', required: true, type: Number })
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
   async getFarmerAgeRange(@Query('locationId') locationId?: number) {
     try {
       const data = await this.analyticsService.getFarmerAgeRangeByLocation(locationId);
@@ -104,7 +104,7 @@ export class AnalyticsController {
   }
 
   @Get('/dashboard/top-crops')
-  @ApiQuery({ name: 'locationId', required: true, type: Number })
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getTopCrops(@Query('limit') limit?: number, @Query('locationId') locationId?: number) {
     try {

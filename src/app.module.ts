@@ -29,10 +29,11 @@ import { DiseaseModule } from './disease/disease.module';
 import { PestsModule } from './pests/pests.module';
 import { SeasonsModule } from './seasons/seasons.module';
 import { ProduceModule } from './produce/produce.module';
+import { ReportsModule } from './reports/reports.module';
 
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule, FertiliserModule, DiseaseModule, PestsModule, SeasonsModule, ProduceModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule, FertiliserModule, DiseaseModule, PestsModule, SeasonsModule, ProduceModule, ReportsModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,

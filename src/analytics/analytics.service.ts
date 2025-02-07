@@ -398,16 +398,13 @@ export class AnalyticsService {
         }
 
       }
+      let locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {}
       // First get all the data we need
       const rawSeasons = await this.databaseService.season.findMany({
         where: {
           farmer: {
             user: {
-              location: {
-                id: {
-                  in: locationIds
-                }
-              }
+              ...locationQuery
             },
           },
           createdAt: {
@@ -499,6 +496,7 @@ export class AnalyticsService {
         }
 
       }
+      let locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {}
 
       const records = await this.databaseService.farmerAnimalRegistrationProduce.findMany({
         where: {
@@ -506,9 +504,7 @@ export class AnalyticsService {
             animalFarmerRegistration: {
               farmer: {
                 user: {
-                  locationId: {
-                    in: locationIds
-                  }
+                  ...locationQuery
                 }
               }
             }
@@ -559,12 +555,11 @@ export class AnalyticsService {
         }
 
       }
+      let locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {}
       const farmers = await this.databaseService.farmer.findMany({
         where: {
           user: {
-            locationId: {
-              in: locationIds
-            }
+            ...locationQuery
           }
         },
         select: {
@@ -629,13 +624,12 @@ export class AnalyticsService {
         }
 
       }
+      let locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {}
       const rawSeasons = await this.databaseService.season.findMany({
         where: {
           farmer: {
             user: {
-              locationId: {
-                in: locationIds
-              }
+              ...locationQuery
             }
           },
         },
