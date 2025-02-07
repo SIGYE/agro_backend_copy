@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { CooperativeType } from '@prisma/client'
 import { DatabaseService } from 'src/database/database.service'
 import { LocationService } from 'src/location/location.service'
 import { UsersService } from 'src/users/users.service'
 import { getMonthsArray } from 'src/utils/data.util'
+import { AdminCardsDto } from './dto/adminCards.dto'
 export type CropAggregationType = {
   cropId: string;
   cropName: string;
@@ -380,24 +382,31 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
-  async getHarvestByYearAndLocation(locationId: number, year: number) {
+  async getHarvestByYearAndLocation(year: number, locationId?: number) {
     try {
-      const location = await this.databaseService.location.findUnique({
-        where: {
-          id: locationId
+      let locationIds = []
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        })
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`)
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId)
         }
-      })
-      if (!location) {
-        throw new NotFoundException(`Location with ID ${locationId} not found`)
+
       }
-      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
       // First get all the data we need
       const rawSeasons = await this.databaseService.season.findMany({
         where: {
           farmer: {
             user: {
               location: {
-                id: locationId
+                id: {
+                  in: locationIds
+                }
               }
             },
           },
@@ -474,17 +483,23 @@ export class AnalyticsService {
     }
   }
 
-  async getProduceByYearAndLocation(locationId: number, year: number) {
+  async getProduceByYearAndLocation(year: number, locationId?: number) {
     try {
-      const location = await this.databaseService.location.findUnique({
-        where: {
-          id: locationId
+      let locationIds = []
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        })
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`)
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId)
         }
-      })
-      if (!location) {
-        throw new NotFoundException(`Location with ID ${locationId} not found`)
+
       }
-      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
+
       const records = await this.databaseService.farmerAnimalRegistrationProduce.findMany({
         where: {
           animalFarmerRegistration: {
@@ -528,17 +543,22 @@ export class AnalyticsService {
     }
 
   }
-  async getFarmerAgeRangeByLocation(locationId: number) {
+  async getFarmerAgeRangeByLocation(locationId?: number) {
     try {
-      const location = await this.databaseService.location.findUnique({
-        where: {
-          id: locationId
+      let locationIds = []
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        })
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`)
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId)
         }
-      })
-      if (!location) {
-        throw new NotFoundException(`Location with ID ${locationId} not found`)
+
       }
-      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
       const farmers = await this.databaseService.farmer.findMany({
         where: {
           user: {
@@ -593,17 +613,22 @@ export class AnalyticsService {
     }
   }
 
-  async getTopCropFarmerRegistrations(locationId: number, limit: number) {
+  async getTopCropFarmerRegistrations(limit?: number, locationId?: number) {
     try {
-      const location = await this.databaseService.location.findUnique({
-        where: {
-          id: locationId
+      let locationIds = []
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        })
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`)
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId)
         }
-      })
-      if (!location) {
-        throw new NotFoundException(`Location with ID ${locationId} not found`)
+
       }
-      const locationIds = await this.locationService.getAllChildrenLocations(locationId)
       const rawSeasons = await this.databaseService.season.findMany({
         where: {
           farmer: {
@@ -663,7 +688,7 @@ export class AnalyticsService {
           cropTypes: undefined  // Remove the Set
         }))
         .sort((a, b) => b.totalProduce - a.totalProduce)
-        .slice(0, limit);
+        .slice(0, limit ?? 10);
 
       return sortedCrops;
     }
@@ -671,6 +696,26 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
+  async adminCards() {
+    try {
+      let totalFarmers = await this.databaseService.farmer.count({})
+      let totalCooperatives = await this.databaseService.cooperative.count({
+        where: {
+          type: CooperativeType.COOPERATIVE
+        }
+      })
+      let totalGroups = await this.databaseService.cooperative.count({
+        where: {
+          type: CooperativeType.ITSINDA
+        }
+      })
+      let totalAnimals = await this.databaseService.animal.count({})
+      let totalCrops = await this.databaseService.crop.count({})
+      return new AdminCardsDto(totalFarmers, totalCooperatives, totalGroups, totalAnimals, totalCrops);
 
+    } catch (error) {
+
+    }
+  }
 
 }

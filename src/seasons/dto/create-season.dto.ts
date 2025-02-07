@@ -32,7 +32,9 @@ export class CreateSeasonDto {
     @ApiProperty()
     @IsNotEmpty()
     endDate: Date
-    @ApiProperty()
+    @ApiProperty({
+        enum: SeasonStatus
+    })
     @IsEnum(SeasonStatus)
     status: SeasonStatus
     @ApiProperty()
