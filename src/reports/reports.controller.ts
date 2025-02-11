@@ -8,6 +8,7 @@ import { PaginationQueryDto } from 'src/pagination/pagination.dto';
 import { HarvestReportQueryDto } from 'src/pagination/HarvestReportQuery.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { ProduceReportQueryDto } from 'src/pagination/ProduceReportQuery.dto';
 
 @Controller('reports')
 @ApiBearerAuth()
@@ -16,32 +17,23 @@ import { AuthGuard } from 'src/guards/auth.guard';
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) { }
 
-  @Post()
-  create(@Body() createReportDto: CreateReportDto) {
-    // return this.reportsService.create(createReportDto);
-  }
 
   @Get('crop-harvest/location/:locationId')
   async getHarvestReport(@Query() query: HarvestReportQueryDto, @Param('locationId') locationId?: number) {
     try {
-      return new ApiResponse(true, "All Produce", await this.reportsService.harvestReport(query, locationId), 200);
+      return new ApiResponse(true, "Harvest Report", await this.reportsService.harvestReport(query, locationId), 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.reportsService.findOne(+id);
+  @Get('produce')
+  async getProduceReport(@Query() query: ProduceReportQueryDto) {
+    try {
+      return new ApiResponse(true, "All Produce", await this.reportsService.produceReport(query), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReportDto: UpdateReportDto) {
-    return this.reportsService.update(+id, updateReportDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.reportsService.remove(+id);
-  }
 }
