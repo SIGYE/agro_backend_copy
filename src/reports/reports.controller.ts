@@ -18,10 +18,10 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) { }
 
 
-  @Get('crop-harvest/location/:locationId')
-  async getHarvestReport(@Query() query: HarvestReportQueryDto, @Param('locationId') locationId?: number) {
+  @Get('crop-harvest')
+  async getHarvestReport(@Query() query: HarvestReportQueryDto) {
     try {
-      return new ApiResponse(true, "Harvest Report", await this.reportsService.harvestReport(query, locationId), 200);
+      return new ApiResponse(true, "Harvest Report", await this.reportsService.harvestReport(query), 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
