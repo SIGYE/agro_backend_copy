@@ -12,7 +12,7 @@ import { ProduceReportQueryDto } from 'src/pagination/ProduceReportQuery.dto';
 export class ReportsService {
   constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService) { }
 
-  async harvestReport(query: HarvestReportQueryDto, locationId?: number) {
+  async harvestReport(query: HarvestReportQueryDto) {
     try {
       const {
         page = 1,
@@ -21,7 +21,8 @@ export class ReportsService {
         sortOrder = 'desc',
         startDate,
         endDate,
-        cropTypeId
+        cropTypeId,
+        locationId
       } = query;
       const skip = (page - 1) * limit;
 
