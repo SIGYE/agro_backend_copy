@@ -690,21 +690,53 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
-  async adminCards() {
+
+  async adminCards(locationId?: number) {
     try {
+      let locationIds = []
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        })
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`)
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId)
+        }
+
+      }
+      let locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {}
       let totalFarmers = await this.databaseService.farmer.count({})
       let totalCooperatives = await this.databaseService.cooperative.count({
         where: {
-          type: CooperativeType.COOPERATIVE
+          type: CooperativeType.COOPERATIVE,
+          ...locationQuery
         }
       })
       let totalGroups = await this.databaseService.cooperative.count({
         where: {
-          type: CooperativeType.ITSINDA
+          type: CooperativeType.ITSINDA,
+          ...locationQuery
         }
       })
-      let totalAnimals = await this.databaseService.animal.count({})
-      let totalCrops = await this.databaseService.crop.count({})
+      let totalAnimals = await this.databaseService.animal.count({
+        where: {
+          creator: {
+            ...locationQuery
+          }
+
+        }
+      })
+      let totalCrops = await this.databaseService.crop.count({
+        where: {
+          creator: {
+            ...locationQuery
+          }
+        }
+
+      })
       return new AdminCardsDto(totalFarmers, totalCooperatives, totalGroups, totalAnimals, totalCrops);
 
     } catch (error) {
