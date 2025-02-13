@@ -224,7 +224,8 @@ export class FarmerService {
     try {
       return await this.databaseService.farmer.findMany({
         include: {
-          cropFarmerRegistrations: true
+          cropFarmerRegistrations: true,
+          user: true
         }
       });
     } catch (e) {
@@ -373,7 +374,10 @@ export class FarmerService {
     try {
       // Check if the farmer exists
       const farmer = await this.databaseService.farmer.findUnique({
-        where: { id: farmerId }
+        where: { id: farmerId },
+        include: {
+          user: true
+        }
       });
 
       if (!farmer) {
