@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MailerService } from '@nestjs-modules/mailer'; 
+import { MailerService } from '@nestjs-modules/mailer';
 import * as nodemailer from 'nodemailer';
+import * as path from 'path';
+import { promises as fs } from 'fs';
 
 @Injectable()
 export class MailService {
@@ -34,7 +36,7 @@ export class MailService {
       <h2>${resetCode}</h2>
       <p>If you didn't request this, please ignore this email.</p>
     `;
-    
+
     await this.sendMail({ to, subject, html });
   }
 
@@ -59,22 +61,21 @@ export class MailService {
    * @param to Recipient email address.
    * @param organizationName The name of the organization.
    */
-  async sendWelcomeEmail(to: string, organizationName: string) {
-    const subject = `Welcome to Our Service, ${organizationName}!`;
-    const html = `
-      <p>Dear ${organizationName},</p>
-      <p>Welcome to our service! We're thrilled to have you on board.</p>
-      <p>If you have any questions or need assistance, feel free to reach out to us.</p>
-      <p>Best Regards,<br/>The Team</p>
-    `;
+  async sendWelcomeEmail(to: string, userName: string) {
+    const subject = `Welcome to Eco Yield, ${userName}!`;
+    const filePath = path.resolve(__dirname, '../src/email-templates/welcome.html');
+    // Read the HTML template
+    let html = await fs.readFile(filePath, 'utf8');
+    html = html.replace('${useName}', userName);
+
 
     await this.sendMail({ to, subject, html });
   }
 
-    // email to the organisaiton admin after creation 
-    async sendOrganisationWelcomeEmail(to : string , organizationName: string , admin_password : string){
-      const subject = `Welcome to Our Service, ${organizationName}!`;
-      const html = `
+  // email to the organisaiton admin after creation 
+  async sendOrganisationWelcomeEmail(to: string, organizationName: string, admin_password: string) {
+    const subject = `Welcome to Our Service, ${organizationName}!`;
+    const html = `
       <p>Dear ${organizationName},</p>
       <p>Welcome to our service! We're thrilled to have you on board.</p>
       <p> You credentails are : </p>
@@ -86,7 +87,7 @@ export class MailService {
     `;
 
     await this.sendMail({ to, subject, html });
-    }
+  }
 
   /**
  * Send an email notifying the recipient that their demo request was accepted.
@@ -94,9 +95,9 @@ export class MailService {
  * @param organizationName The name of the organization.
  * @param zoomLink The Zoom meeting link for the demo.
  */
-async sendDemoRequestAcceptedEmail(to: string, organizationName: string, zoomLink: string) {
-  const subject = `Demo Request Accepted`;
-  const html = `
+  async sendDemoRequestAcceptedEmail(to: string, organizationName: string, zoomLink: string) {
+    const subject = `Demo Request Accepted`;
+    const html = `
     <p>Dear ${organizationName},</p>
     <p>We're pleased to inform you that your demo request has been accepted.</p>
     <p>We have scheduled a demo meeting for you. Please find the details below:</p>
@@ -106,8 +107,8 @@ async sendDemoRequestAcceptedEmail(to: string, organizationName: string, zoomLin
     <p>Best Regards,<br/>The Team</p>
   `;
 
-  await this.sendMail({ to, subject, html });
-}
+    await this.sendMail({ to, subject, html });
+  }
 
 
   /**
@@ -135,21 +136,21 @@ async sendDemoRequestAcceptedEmail(to: string, organizationName: string, zoomLin
    * @param options Object containing the email options (to, subject, html).
    */
   private async sendMail(options: { to: string; subject: string; html: string }) {
-      try{
-        console.log(
-          this.configService.get('EMAIL_USER'),
-          this.configService.get('EMAIL_PASSWORD')
-        )
-        
-        await this.transporter.sendMail({
-          from: `"No Reply" <${this.configService.get('EMAIL_USER')}>`, // sender address
-          to: options.to, // list of receivers
-          subject: options.subject, // Subject line
-          html: options.html, // html body
-        });
-      }catch(error){
-        console.log(error)
-      }
+    try {
+      console.log(
+        this.configService.get('EMAIL_USER'),
+        this.configService.get('EMAIL_PASSWORD')
+      )
+
+      await this.transporter.sendMail({
+        from: `"No Reply" <${this.configService.get('EMAIL_USER')}>`, // sender address
+        to: options.to, // list of receivers
+        subject: options.subject, // Subject line
+        html: options.html, // html body
+      });
+    } catch (error) {
+      console.log(error)
+    }
   }
 
 }

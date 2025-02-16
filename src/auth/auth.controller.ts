@@ -13,6 +13,7 @@ import { ResetPasswordDTO } from './dto/ResetPasswordDTO.dto';
 import { ValidateCodeDTO } from './dto/ValidateCodeDTO.dto';
 import { OtpLoginDto } from './dto/otp-login.dto';
 import { LoginPayload } from 'src/categories/dto/login-payload.dto';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -60,6 +61,26 @@ export class AuthController {
     try {
       const data = await this.authService.createDevAdmin(createDevAdminDto);
       return new ApiResponse(true, "Created Dev Admin Successfully", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Allow()
+  @Post('signup/admin')
+  async registerAdmin(@Body() createDevAdminDto: CreateUserDto) {
+    try {
+      const data = await this.authService.createAdmin(createDevAdminDto);
+      return new ApiResponse(true, "Created Admin Successfully", data, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Allow()
+  @Post('signup/buyer')
+  async registerBuyer(@Body() createBuyerDto: CreateUserDto) {
+    try {
+      const data = await this.authService.createBuyer(createBuyerDto);
+      return new ApiResponse(true, "Created Buyer Successfully", data, 201);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
