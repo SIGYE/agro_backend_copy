@@ -81,7 +81,7 @@ export class AnalyticsService {
 
       // Convert `plantedArea` values to numbers and calculate the sum
       const totalPlantedArea = records.reduce((sum, record) => {
-        const plantedAreaNumber = parseFloat(record.plantationArea) || 0; // Convert string to number, defaulting to 0 if NaN
+        const plantedAreaNumber = (record.plantationArea) || 0; // Convert string to number, defaulting to 0 if NaN
         return sum + plantedAreaNumber;
       }, 0);
 
@@ -356,8 +356,8 @@ export class AnalyticsService {
       const cropAggregation = rawSeasons.reduce((acc, season) => {
         const cropId = season.croType.crop.id;
         const cropTypeId = season.cropTypeId;
-        const produceHarvested = parseFloat(season.produceHarvested) || 0;
-        const plantationArea = parseFloat(season.plantationArea) || 0;
+        const produceHarvested = (season.produceHarvested) || 0;
+        const plantationArea = (season.plantationArea) || 0;
 
         if (!acc[cropId]) {
           acc[cropId] = {
@@ -482,7 +482,7 @@ export class AnalyticsService {
       const cropAggregation = rawSeasons.reduce((acc, season) => {
         const cropId = season.croType.crop.id;
         const cropTypeId = season.cropTypeId;
-        const produceHarvested = parseFloat(season.produceHarvested) || 0;
+        const produceHarvested = (season.produceHarvested) || 0;
 
         // Initialize crop if not exists
         if (!acc[cropId]) {
@@ -702,7 +702,7 @@ export class AnalyticsService {
       // First aggregate by crops
       const cropAggregation = rawSeasons.reduce((acc, season) => {
         const cropId = season.croType.crop.id;
-        const produceHarvested = parseFloat(season.produceHarvested) || 0;
+        const produceHarvested = (season.produceHarvested) || 0;
 
         if (!acc[cropId]) {
           acc[cropId] = {

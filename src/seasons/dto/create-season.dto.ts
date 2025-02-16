@@ -1,7 +1,7 @@
 import { ApiAmbiguousResponse, ApiProperty } from "@nestjs/swagger"
 import { SeasonStatus } from "@prisma/client"
 import { Type } from "class-transformer"
-import { IsEnum, IsNotEmpty, IsString } from "class-validator"
+import { IsEnum, IsNotEmpty, IsNumber, IsString } from "class-validator"
 
 export class CreateSeasonDto {
     @ApiProperty()
@@ -14,18 +14,18 @@ export class CreateSeasonDto {
     name: string
     @ApiProperty()
     @IsNotEmpty()
-    @IsString()
-    plantationArea: string
+    @IsNumber()
+    plantationArea: number
     @ApiProperty()
     @IsNotEmpty()
     @IsString()
     seeds: string
     @ApiProperty()
-    produceHarvested?: string
+    produceHarvested?: number
     @ApiProperty()
     @IsNotEmpty()
-    @IsString()
-    expectedYield: string
+    @IsNumber()
+    expectedYield: number
     @ApiProperty()
     @IsNotEmpty()
     startDate: Date

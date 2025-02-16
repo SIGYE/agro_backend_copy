@@ -75,7 +75,7 @@ export class ReportsService {
       const cropAggregation = rawSeasons.reduce((acc, season) => {
         const cropId = season.croType.crop.id;
         const cropTypeId = season.cropTypeId;
-        const produceHarvested = parseFloat(season.produceHarvested) || 0;
+        const produceHarvested = (season.produceHarvested) || 0;
 
         // Initialize crop if not exists
         if (!acc[cropId]) {
@@ -271,7 +271,7 @@ export class ReportsService {
       const cropAggregation = rawSeasons.reduce((acc, season) => {
         const cropId = season.croType.crop.id;
         const cropTypeId = season.cropTypeId;
-        const produceHarvested = parseFloat(season.produceHarvested) || 0;
+        const produceHarvested = (season.produceHarvested) || 0;
 
         // Initialize crop if not exists
         if (!acc[cropId]) {
