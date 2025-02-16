@@ -215,7 +215,7 @@ model Season{
   updatedAt DateTime @updatedAt
   name      String
   plantationArea                    Float
-  seeds                             String
+  seeds                             Float
   produceHarvested                  Float
   expectedYield                      Float
   startDate                         DateTime

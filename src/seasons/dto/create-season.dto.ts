@@ -18,8 +18,8 @@ export class CreateSeasonDto {
     plantationArea: number
     @ApiProperty()
     @IsNotEmpty()
-    @IsString()
-    seeds: string
+    @IsNumber()
+    seeds: number
     @ApiProperty()
     produceHarvested?: number
     @ApiProperty()
