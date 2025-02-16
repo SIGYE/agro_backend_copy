@@ -158,6 +158,11 @@ export class CooperativeService {
           },
         },
         select: {
+          crop: {
+            select: {
+              name: true
+            }
+          },
           name: true,
           seasons: {
             where: {
@@ -254,7 +259,8 @@ export class CooperativeService {
         }));
 
         return {
-          name: croptype.name,
+          cropName: croptype.crop.name,
+          cropTypeName: croptype.name,
           totalProduce: produce,
           plantationArea: area,
           totalFarmers: uniqueFarmers.size,
