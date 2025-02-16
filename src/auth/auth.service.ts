@@ -144,47 +144,52 @@ export class AuthService {
     return user;
   }
   async createBuyer(createBuyer: CreateUserDto): Promise<User> {
-    createBuyer.password = await bcrypt.hash(createBuyer.password, 10)
-    let usersnumber = await this.databaseService.user.count();
-    const username = createBuyer.firstName.toLowerCase() + usersnumber;
+    try {
+      createBuyer.password = await bcrypt.hash(createBuyer.password, 10)
+      let usersnumber = await this.databaseService.user.count();
+      const username = createBuyer.firstName.toLowerCase() + usersnumber;
 
-    let userPresent = await this.databaseService.user.findFirst({
-      where: {
-        OR: [
-          { email: createBuyer.email },
-          { telephone: createBuyer.telephone },
-          { nationalId: createBuyer.nationalId }
-        ]
+      let userPresent = await this.databaseService.user.findFirst({
+        where: {
+          OR: [
+            { email: createBuyer.email },
+            { telephone: createBuyer.telephone },
+            { nationalId: createBuyer.nationalId }
+          ]
+        }
+      });
+
+
+      if (userPresent) {
+        throw new BadRequestException("The user with email , natinal Id or telephone already exists")
       }
-    });
 
 
-    if (userPresent) {
-      throw new BadRequestException("The user with email , natinal Id or telephone already exists")
-    }
-
-
-    let user: User = await await this.databaseService.user.create({
-      data: {
-        firstName: createBuyer.firstName,
-        lastName: createBuyer.lastName,
-        email: createBuyer.email,
-        nationalId: createBuyer.nationalId,
-        password: createBuyer.password,
-        status: Status.ACTIVE,
-        username: username,
-        telephone: createBuyer.telephone,
-        role: {
-          connect:
-          {
-            name: 'BUYER'
+      let user: User = await await this.databaseService.user.create({
+        data: {
+          firstName: createBuyer.firstName,
+          lastName: createBuyer.lastName,
+          email: createBuyer.email,
+          nationalId: createBuyer.nationalId,
+          password: createBuyer.password,
+          status: Status.ACTIVE,
+          username: username,
+          telephone: createBuyer.telephone,
+          role: {
+            connect:
+            {
+              name: 'BUYER'
+            }
           }
         }
-      }
-    });
+      });
 
-    this.mailService.sendWelcomeEmail(createBuyer.email, 'Agro App')
-    return user;
+      this.mailService.sendWelcomeEmail(createBuyer.email, 'Agro App')
+      return user;
+    } catch (e) {
+      throw new BadRequestException(e.message)
+    }
+
   }
 
   async sendOtp(telephone: string): Promise<string> {
