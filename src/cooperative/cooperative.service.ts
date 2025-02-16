@@ -6,7 +6,7 @@ import { connect } from 'http2';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { LocationService } from 'src/location/location.service';
 import { UsersService } from 'src/users/users.service';
-import { CooperativeType } from '@prisma/client';
+import { CooperativeType, SeasonStatus } from '@prisma/client';
 import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
 import { FarmerService } from 'src/farmer/farmer.service';
 
@@ -146,7 +146,56 @@ export class CooperativeService {
   }
   async findAllCooperativeCropsProduceAndArea(cooperativeId: string) {
     try {
+      const croptypesData = await this.databaseService.cropType.findMany({
+        where: {
+          seasons: {
+            some: {
+              farmer: {
+                cooperativeId,
+              },
+              seasonStatus: SeasonStatus.ENDED
+            },
+          },
+        },
+        select: {
+          name: true,
+          seasons: {
+            where: {
+              farmer: {
+                cooperativeId,
+              },
+            },
+            select: {
+              produceHarvested: true,
+              plantationArea: true,
+              farmerId: true,
+            },
+          },
+        },
+      });
 
+      return croptypesData.map((croptype) => {
+        // Convert string values to numbers and handle potential invalid data
+        const produce = croptype.seasons.reduce((sum, season) => {
+          return sum + (Number(season.produceHarvested) || 0);
+        }, 0);
+
+        const area = croptype.seasons.reduce((sum, season) => {
+          return sum + (Number(season.plantationArea) || 0);
+        }, 0);
+
+        // Get unique farmers count
+        const uniqueFarmers = new Set(
+          croptype.seasons.map((season) => season.farmerId)
+        );
+
+        return {
+          name: croptype.name,
+          totalProduce: produce,
+          plantationArea: area,
+          totalFarmers: uniqueFarmers.size,
+        };
+      });
 
     } catch (error) {
       throw new BadRequestException('Error fetching cooperative crops produce and area');
