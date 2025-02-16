@@ -88,7 +88,7 @@ export class UsersController {
   }
 
   @Post('register-agronomist')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerAgronomist(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Agronomy>> {
     try {
@@ -98,7 +98,7 @@ export class UsersController {
     }
   }
   @Post('register-veterinary')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerVeterinary(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Veterinary>> {
     try {
@@ -109,7 +109,7 @@ export class UsersController {
 
   }
   @Post('register-farmer')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerFarmer(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Farmer>> {
     try {
@@ -119,7 +119,7 @@ export class UsersController {
     }
   }
   @Post('import-farmers')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleVets(@UploadedFile() file: Express.Multer.File) {
     try {
@@ -133,7 +133,7 @@ export class UsersController {
     }
   }
   @Post('import-veterinarians')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleFarmers(@UploadedFile() file: Express.Multer.File) {
     try {
@@ -147,7 +147,7 @@ export class UsersController {
     }
   }
   @Post('import-agronomists')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleAgronomists(@UploadedFile() file: Express.Multer.File) {
     try {
@@ -161,7 +161,7 @@ export class UsersController {
     }
   }
   @Post('register-umufasha-myumvire')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @ApiBody({ type: CreateUserDto })
   async registerUmufashaMyumvire(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<Umufashamyumvire>> {
     try {
@@ -171,7 +171,7 @@ export class UsersController {
     }
   }
   @Post('import-abafasha-myumvire')
-  @Roles(Role_Enum.ADMIN)
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleUmufashaMyumvire(@UploadedFile() file: Express.Multer.File) {
     try {

@@ -144,6 +144,14 @@ export class CooperativeService {
       throw new BadRequestException('Error fetching cooperative animals');
     }
   }
+  async findAllCooperativeCropsProduceAndArea(cooperativeId: string) {
+    try {
+
+
+    } catch (error) {
+      throw new BadRequestException('Error fetching cooperative crops produce and area');
+    }
+  }
 
 
   async findOne(id: string) {
