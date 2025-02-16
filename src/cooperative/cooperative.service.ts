@@ -172,11 +172,33 @@ export class CooperativeService {
               seeds: true
             },
           },
+          cropFarmerRegistrations: {
+            where: {
+              farmer: {
+                cooperativeId,
+              },
+            },
+            select: {
+              farmerId: true,
+              cropFertilizerFarmerRegistrations: {
+                select: {
+                  amount: true,
+                  measurement: true,
+                  feterlizer: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
       return croptypesData.map((croptype) => {
-        // Convert string values to numbers and handle potential invalid data
+        // Calculate existing totals
         const produce = croptype.seasons.reduce((sum, season) => {
           return sum + (Number(season.produceHarvested) || 0);
         }, 0);
@@ -184,24 +206,62 @@ export class CooperativeService {
         const area = croptype.seasons.reduce((sum, season) => {
           return sum + (Number(season.plantationArea) || 0);
         }, 0);
+
         const seeds = croptype.seasons.reduce((sum, season) => {
           return sum + (Number(season.seeds) || 0);
-        }, 0)
+        }, 0);
 
         // Get unique farmers count
         const uniqueFarmers = new Set(
           croptype.seasons.map((season) => season.farmerId)
         );
 
+        // Calculate fertilizer usage
+        const fertilizerUsage = new Map(); // To store fertilizer totals
+        const fertilizerFarmers = new Map(); // To store farmers using each fertilizer
+
+        croptype.cropFarmerRegistrations.forEach((registration) => {
+          registration.cropFertilizerFarmerRegistrations.forEach((fertReg) => {
+            const fertilizerId = fertReg.feterlizer.id;
+            const fertilizerName = fertReg.feterlizer.name;
+            const amount = Number(fertReg.amount) || 0;
+
+            // Update total amount for this fertilizer
+            if (!fertilizerUsage.has(fertilizerId)) {
+              fertilizerUsage.set(fertilizerId, {
+                name: fertilizerName,
+                totalAmount: 0,
+                measurement: fertReg.measurement
+              });
+            }
+            fertilizerUsage.get(fertilizerId).totalAmount += amount;
+
+            // Update farmers using this fertilizer
+            if (!fertilizerFarmers.has(fertilizerId)) {
+              fertilizerFarmers.set(fertilizerId, new Set());
+            }
+            fertilizerFarmers.get(fertilizerId).add(registration.farmerId);
+          });
+        });
+
+        // Convert fertilizer usage maps to arrays for the response
+        const fertilizers = Array.from(fertilizerUsage.entries()).map(([id, data]) => ({
+          id,
+          name: data.name,
+          totalAmount: data.totalAmount,
+          measurement: data.measurement,
+          farmersCount: fertilizerFarmers.get(id).size
+        }));
+
         return {
           name: croptype.name,
           totalProduce: produce,
           plantationArea: area,
           totalFarmers: uniqueFarmers.size,
-          totalInputSeeds: seeds
+          totalInputSeeds: seeds,
+          fertilizers
         };
       });
-
     } catch (error) {
       throw new BadRequestException('Error fetching cooperative crops produce and area');
     }
