@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { CooperativeType } from '@prisma/client'
+import { CooperativeType, SeasonStatus } from '@prisma/client'
 import { DatabaseService } from 'src/database/database.service'
 import { LocationService } from 'src/location/location.service'
 import { UsersService } from 'src/users/users.service'
 import { getMonthsArray } from 'src/utils/data.util'
 import { AdminCardsDto } from './dto/adminCards.dto'
+import { PaginationQueryDto } from 'src/pagination/pagination.dto'
 export type CropAggregationType = {
   cropId: string;
   cropName: string;
@@ -285,39 +286,55 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
-  async cropHarvestAnalytics(locationId?: number) {
+  async cropHarvestAnalytics(queryDto: PaginationQueryDto, locationId?: number) {
+    const { page = 1, limit = 10, sortBy, sortOrder = 'desc' } = queryDto;
+    const skip = (page - 1) * limit;
+
     if (locationId) {
       const location = await this.databaseService.location.findUnique({
         where: { id: locationId },
         include: {
           childrenLocations: true,
         },
-      })
+      });
 
       if (!location) {
-        throw new NotFoundException(`Location with ID ${locationId} not found`)
+        throw new NotFoundException(`Location with ID ${locationId} not found`);
       }
     }
 
     try {
       const locationIds = locationId
         ? await this.locationService.getAllChildrenLocations(locationId)
-        : []
+        : [];
 
       const locationQuery = locationId
         ? { locationId: { in: locationIds } }
-        : {}
-      // First get all the data we need
+        : {};
+
+      // First get total count for pagination
+      const totalCount = await this.databaseService.season.count({
+        where: {
+          farmer: {
+            user: { ...locationQuery },
+          },
+          seasonStatus: SeasonStatus.ENDED,
+        },
+      });
+
+      // Get paginated data with sorting
       const rawSeasons = await this.databaseService.season.findMany({
         where: {
           farmer: {
             user: { ...locationQuery },
           },
+          seasonStatus: SeasonStatus.ENDED,
         },
         select: {
           cropTypeId: true,
           produceHarvested: true,
-          croType: {  // Note the typo in your schema 'croType'
+          plantationArea: true,
+          croType: {
             select: {
               id: true,
               name: true,
@@ -325,12 +342,19 @@ export class AnalyticsService {
               crop: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: sortBy
+          ? {
+            [sortBy]: sortOrder,
           }
-        }
+          : undefined,
       });
 
       // Process the data to create hierarchical aggregation
@@ -338,6 +362,7 @@ export class AnalyticsService {
         const cropId = season.croType.crop.id;
         const cropTypeId = season.cropTypeId;
         const produceHarvested = parseFloat(season.produceHarvested) || 0;
+        const plantationArea = parseFloat(season.plantationArea) || 0;
 
         // Initialize crop if not exists
         if (!acc[cropId]) {
@@ -345,8 +370,9 @@ export class AnalyticsService {
             cropId: cropId,
             cropName: season.croType.crop.name,
             totalProduce: 0,
+            totalPlantationArea: 0,
             cropTypes: {},
-            _count: 0
+            _count: 0,
           };
         }
 
@@ -356,14 +382,17 @@ export class AnalyticsService {
             cropTypeId: cropTypeId,
             cropTypeName: season.croType.name,
             totalProduce: 0,
-            _count: 0
+            totalPlantationArea: 0,
+            _count: 0,
           };
         }
 
         // Update counts and totals
         acc[cropId].totalProduce += produceHarvested;
+        acc[cropId].totalPlantationArea += plantationArea;
         acc[cropId]._count++;
         acc[cropId].cropTypes[cropTypeId].totalProduce += produceHarvested;
+        acc[cropId].cropTypes[cropTypeId].totalPlantationArea += plantationArea;
         acc[cropId].cropTypes[cropTypeId]._count++;
 
         return acc;
@@ -372,14 +401,22 @@ export class AnalyticsService {
       // Transform to final format
       const result = Object.values(cropAggregation).map((crop: any) => ({
         ...crop,
-        cropTypes: Object.values(crop.cropTypes)
+        cropTypes: Object.values(crop.cropTypes),
       }));
 
-      return result;
-
+      // Return paginated response
+      return {
+        data: result,
+        metadata: {
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
     } catch (error) {
-      console.log('error : ' + error)
-      throw new Error(error)
+      console.error('Error in cropHarvestAnalytics:', error);
+      throw new Error(`Failed to fetch crop harvest analytics: ${error.message}`);
     }
   }
   async getHarvestByYearAndLocation(year: number, locationId?: number) {

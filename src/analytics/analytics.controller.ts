@@ -3,6 +3,7 @@ import { AnalyticsService } from './analytics.service';
 import { ApiTags, ApiQuery, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { ApiResponse } from 'src/responses/api.response';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { PaginationQueryDto } from 'src/pagination/pagination.dto';
 
 @Controller('analytics')
 @ApiBearerAuth()
@@ -60,9 +61,9 @@ export class AnalyticsController {
 
   @Get('/dashboard/crop-harvest')
   @ApiQuery({ name: 'locationId', required: false, type: Number })
-  async getCropHarvest(@Query('locationId') locationId?: number) {
+  async getCropHarvest(@Query() queryDto: PaginationQueryDto, @Query('locationId') locationId?: number) {
     try {
-      const data = await this.analyticsService.cropHarvestAnalytics(locationId);
+      const data = await this.analyticsService.cropHarvestAnalytics(queryDto, locationId);
       return new ApiResponse(true, "Crop Harvest", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
