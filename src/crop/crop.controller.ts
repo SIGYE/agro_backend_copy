@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, BadRequestException, UseInterceptors, Query } from '@nestjs/common';
 import { Crop, User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -36,6 +36,18 @@ export class CropController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('crops-card-data')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'cooperativeId', required: false, type: String })
+  async getCropsCardData(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string) {
+    try {
+      const data = await this.cropService.cropsCardData(locationId, cooperativeId);
+      return new ApiResponse(true, "Crops Card Data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+
+  }
 
   @Get('farmer-crops-by-location/:locationId')
   async findAllCropFarmerRegistration(@Param('locationId') locationId: string) {
@@ -56,6 +68,7 @@ export class CropController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateCropDto: UpdateCropDto) {

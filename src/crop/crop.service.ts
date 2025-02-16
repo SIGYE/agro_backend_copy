@@ -103,6 +103,101 @@ export class CropService {
       throw new BadRequestException(error.message);
     }
   }
+  async cropsCardData(locationId?: number, cooperativeId?: string) {
+    try {
+      // Handle location query
+      let locationIds = [];
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.dataBaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        });
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`);
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId);
+        }
+      }
+
+      // Build location and cooperative queries
+      const locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {};
+      const cooperativeQuery = cooperativeId
+        ? {
+          cropType: {
+            some: {
+              cropFarmerRegistrations: {
+                some: {
+                  farmer: {
+                    cooperativeId
+                  }
+                }
+              }
+            }
+          }
+        }
+        : {};
+
+      // Get total crops with optional filters
+      const totalCrops = await this.dataBaseService.crop.count({
+        where: {
+          creator: {
+            ...locationQuery
+          },
+          ...cooperativeQuery
+        }
+      });
+
+      // Get total crop types with optional filters
+      const totalCropTypes = await this.dataBaseService.cropType.count({
+        where: {
+          crop: {
+            creator: {
+              ...locationQuery
+            }
+          },
+          ...(cooperativeId ? {
+            cropFarmerRegistrations: {
+              some: {
+                farmer: {
+                  cooperativeId
+                }
+              }
+            }
+          } : {})
+        }
+      });
+
+      // Get seasons with optional filters
+      const seasons = await this.dataBaseService.season.findMany({
+        where: {
+          farmer: {
+            user: {
+              ...locationQuery
+            },
+            ...(cooperativeId ? { cooperativeId } : {})
+          }
+        },
+        select: {
+          plantationArea: true
+        }
+      });
+
+      // Calculate total area
+      const totalArea = seasons.reduce((sum, season) => {
+        return sum + Number(season.plantationArea);
+      }, 0);
+
+      return {
+        totalCrops,
+        totalCropTypes,
+        totalArea
+      };
+
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
 
   async update(id: string, updateCropDto: UpdateCropDto) {
     try {
