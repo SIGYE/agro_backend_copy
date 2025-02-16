@@ -143,7 +143,8 @@ export class UsersService {
                 id: true,
                 name: true,
                 registrationNumber: true,
-                telephone: true
+                telephone: true,
+                type: true
               }
             }
           }
@@ -152,6 +153,7 @@ export class UsersService {
           select: {
             name: true,
             id: true,
+            type: true
 
           }
         }
@@ -180,7 +182,8 @@ export class UsersService {
                 id: true,
                 name: true,
                 registrationNumber: true,
-                telephone: true
+                telephone: true,
+                type: true
               }
             }
 
@@ -190,6 +193,7 @@ export class UsersService {
           select: {
             name: true,
             id: true,
+            type: true
 
           }
         }
@@ -217,7 +221,8 @@ export class UsersService {
                 id: true,
                 name: true,
                 registrationNumber: true,
-                telephone: true
+                telephone: true,
+                type: true
               }
             }
           }
@@ -226,6 +231,7 @@ export class UsersService {
           select: {
             name: true,
             id: true,
+            type: true
 
           }
         }

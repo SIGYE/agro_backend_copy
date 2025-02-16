@@ -18,4 +18,5 @@ export class LoginPayload {
     cooperativeName?: string
     cooperativePhoneNumber?: string
     registrationNumber?: string
+    cooperativeType?: string
 }
