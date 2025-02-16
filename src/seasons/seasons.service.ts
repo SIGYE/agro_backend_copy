@@ -14,7 +14,7 @@ export class SeasonsService {
           plantationArea: createSeasonDto.plantationArea,
           seeds: createSeasonDto.seeds,
           produceHarvested: createSeasonDto.produceHarvested,
-          expectedYield: "0",
+          expectedYield: createSeasonDto.expectedYield,
           startDate: createSeasonDto.startDate,
           endDate: createSeasonDto.endDate,
           farmer: {
