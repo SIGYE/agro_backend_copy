@@ -12,6 +12,7 @@ import { log } from 'console';
 import { MailService } from 'src/mail/mail.service';
 import { OtpLoginDto } from './dto/otp-login.dto';
 import { Message, sendSms } from 'src/utils/sms.util';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 
 
 
@@ -70,7 +71,7 @@ export class AuthService {
 
 
       if (userPresent) {
-        throw new BadRequestException("The user with email , natinal Id or telephone already exists")
+        throw new BadRequestException("The user with email , nationalId or telephone already exists")
       }
 
 
@@ -87,7 +88,7 @@ export class AuthService {
           role: {
             connect:
             {
-              name: 'ADMIN'
+              name: 'DEV_ADMIN'
             }
           }
         }
@@ -98,6 +99,92 @@ export class AuthService {
     } else {
       throw new BadRequestException("Invalid Registration Key")
     }
+  }
+  async createAdmin(createDevAdmin: CreateUserDto): Promise<User> {
+    createDevAdmin.password = await bcrypt.hash(createDevAdmin.password, 10)
+    let usersnumber = await this.databaseService.user.count();
+    const username = createDevAdmin.firstName.toLowerCase() + usersnumber;
+
+    let userPresent = await this.databaseService.user.findFirst({
+      where: {
+        OR: [
+          { email: createDevAdmin.email },
+          { telephone: createDevAdmin.telephone },
+          { nationalId: createDevAdmin.nationalId }
+        ]
+      }
+    });
+
+
+    if (userPresent) {
+      throw new BadRequestException("The user with email , natinal Id or telephone already exists")
+    }
+
+
+    let user: User = await await this.databaseService.user.create({
+      data: {
+        firstName: createDevAdmin.firstName,
+        lastName: createDevAdmin.lastName,
+        email: createDevAdmin.email,
+        nationalId: createDevAdmin.nationalId,
+        password: createDevAdmin.password,
+        status: Status.ACTIVE,
+        username: username,
+        telephone: createDevAdmin.telephone,
+        role: {
+          connect:
+          {
+            name: 'ADMIN'
+          }
+        }
+      }
+    });
+
+    this.mailService.sendWelcomeEmail(createDevAdmin.email, 'Agro App')
+    return user;
+  }
+  async createBuyer(createBuyer: CreateUserDto): Promise<User> {
+    createBuyer.password = await bcrypt.hash(createBuyer.password, 10)
+    let usersnumber = await this.databaseService.user.count();
+    const username = createBuyer.firstName.toLowerCase() + usersnumber;
+
+    let userPresent = await this.databaseService.user.findFirst({
+      where: {
+        OR: [
+          { email: createBuyer.email },
+          { telephone: createBuyer.telephone },
+          { nationalId: createBuyer.nationalId }
+        ]
+      }
+    });
+
+
+    if (userPresent) {
+      throw new BadRequestException("The user with email , natinal Id or telephone already exists")
+    }
+
+
+    let user: User = await await this.databaseService.user.create({
+      data: {
+        firstName: createBuyer.firstName,
+        lastName: createBuyer.lastName,
+        email: createBuyer.email,
+        nationalId: createBuyer.nationalId,
+        password: createBuyer.password,
+        status: Status.ACTIVE,
+        username: username,
+        telephone: createBuyer.telephone,
+        role: {
+          connect:
+          {
+            name: 'BUYER'
+          }
+        }
+      }
+    });
+
+    this.mailService.sendWelcomeEmail(createBuyer.email, 'Agro App')
+    return user;
   }
 
   async sendOtp(telephone: string): Promise<string> {

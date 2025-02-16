@@ -14,37 +14,41 @@ export class RolesService {
 
   async initiateRoles(): Promise<boolean> {
     try {
-        const sampleRoles: string[] = [
-            "UMUFASHAMYUMVIRE",
-            "AGRONOMIST",
-            "VETERINARIAN",
-            "FARMER"
-        ];
+      const sampleRoles: string[] = [
+        "UMUFASHAMYUMVIRE",
+        "AGRONOMIST",
+        "VETERINARIAN",
+        "FARMER",
+        "ADMIN",
+        "BUYER",
+        "DEV_ADMIN",
+        "COOPERATIVE_MANAGER"
+      ];
 
-        // Create an array of promises for role creation
-        const rolePromises = sampleRoles.map(async (role: string) => {
-            const persistedRole: Role | null = await this.findByName(role);
-            if (persistedRole == null) {
-                await this.dataBaseService.role.create({
-                    data: {
-                        name: role
-                    }
-                });
+      // Create an array of promises for role creation
+      const rolePromises = sampleRoles.map(async (role: string) => {
+        const persistedRole: Role | null = await this.findByName(role);
+        if (persistedRole == null) {
+          await this.dataBaseService.role.create({
+            data: {
+              name: role
             }
-        });
+          });
+        }
+      });
 
-        // Wait for all promises to complete
-        await Promise.all(rolePromises);
+      // Wait for all promises to complete
+      await Promise.all(rolePromises);
 
-        return true;
+      return true;
     } catch (error) {
-        console.error('Error initiating roles:', error);
-        return false;
+      console.error('Error initiating roles:', error);
+      return false;
     }
-}
+  }
 
 
-  async create(createRoleDto: CreateRoleDto) : Promise<Role>{
+  async create(createRoleDto: CreateRoleDto): Promise<Role> {
     return this.dataBaseService.role.create({
       data: {
         name: createRoleDto.name
@@ -52,19 +56,19 @@ export class RolesService {
     })
   }
 
-  async findByName(name : string) : Promise<Role | null> {
+  async findByName(name: string): Promise<Role | null> {
     return this.dataBaseService.role.findUnique({
-      where : {
-        name : name
+      where: {
+        name: name
       }
     })
   }
 
-  async findAll() :  Promise<Role[]> {
+  async findAll(): Promise<Role[]> {
     return this.dataBaseService.role.findMany({})
   }
 
-  async findOne(id: string) : Promise<Role> {
+  async findOne(id: string): Promise<Role> {
     return this.dataBaseService.role.findUnique({
       where: {
         id
@@ -72,7 +76,7 @@ export class RolesService {
     })
   }
 
-  async update(id: string, updateRoleDto: UpdateRoleDto) : Promise<Role> {
+  async update(id: string, updateRoleDto: UpdateRoleDto): Promise<Role> {
     return this.dataBaseService.role.update({
       where: { id },
       data: {
@@ -81,7 +85,7 @@ export class RolesService {
     })
   }
 
-  async remove(id: string) : Promise<Role> {
+  async remove(id: string): Promise<Role> {
     return this.dataBaseService.role.delete({
       where: { id }
     })

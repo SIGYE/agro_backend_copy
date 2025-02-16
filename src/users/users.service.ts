@@ -28,7 +28,7 @@ export class UsersService {
       if (createUserDto.password) {
         createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
       } else {
-        let password = generatePassword()
+        let password = "Test@12345"
         console.log("password: ", password)
         createUserDto.password = await bcrypt.hash(password, 10)
       }

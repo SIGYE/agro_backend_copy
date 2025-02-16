@@ -10,9 +10,10 @@ import { AuthGuard } from 'src/guards/auth.guard';
 @ApiTags('Analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) { }
-  @Get('/dashboard/admin-card-data/location/:locationId')
+  @Get('/dashboard/admin-card-data')
   @ApiOperation({ summary: 'Get admin Card Analytics' })
-  async getAdminCardAnalytics(@Param('locationId') locationId?: number) {
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async getAdminCardAnalytics(@Query('locationId') locationId?: number) {
     try {
       const data = await this.analyticsService.adminCards(locationId);
       return new ApiResponse(true, "Admin Card Analytics", data, 200);
