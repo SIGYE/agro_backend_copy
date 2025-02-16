@@ -286,9 +286,8 @@ export class AnalyticsService {
       throw new Error(error)
     }
   }
-  async cropHarvestAnalytics(queryDto: PaginationQueryDto, locationId?: number) {
+  async cropHarvestAnalytics(queryDto: PaginationQueryDto, locationId?: number, cooperativeId?: string) {
     const { page = 1, limit = 10, sortBy, sortOrder = 'desc' } = queryDto;
-    const skip = (page - 1) * limit;
 
     if (locationId) {
       const location = await this.databaseService.location.findUnique({
@@ -303,6 +302,15 @@ export class AnalyticsService {
       }
     }
 
+    if (cooperativeId) {
+      const cooperative = await this.databaseService.cooperative.findUnique({
+        where: { id: cooperativeId }
+      });
+      if (!cooperative) {
+        throw new NotFoundException(`Cooperative with ID ${cooperativeId} not found`);
+      }
+    }
+
     try {
       const locationIds = locationId
         ? await this.locationService.getAllChildrenLocations(locationId)
@@ -311,22 +319,16 @@ export class AnalyticsService {
       const locationQuery = locationId
         ? { locationId: { in: locationIds } }
         : {};
+      const cooperativeQuery = cooperativeId
+        ? { cooperative: { id: cooperativeId } }
+        : {};
 
-      // First get total count for pagination
-      const totalCount = await this.databaseService.season.count({
-        where: {
-          farmer: {
-            user: { ...locationQuery },
-          },
-          seasonStatus: SeasonStatus.ENDED,
-        },
-      });
-
-      // Get paginated data with sorting
+      // Get all seasons without pagination
       const rawSeasons = await this.databaseService.season.findMany({
         where: {
           farmer: {
             user: { ...locationQuery },
+            ...cooperativeQuery
           },
           seasonStatus: SeasonStatus.ENDED,
         },
@@ -348,13 +350,6 @@ export class AnalyticsService {
             },
           },
         },
-        skip,
-        take: limit,
-        orderBy: sortBy
-          ? {
-            [sortBy]: sortOrder,
-          }
-          : undefined,
       });
 
       // Process the data to create hierarchical aggregation
@@ -364,7 +359,6 @@ export class AnalyticsService {
         const produceHarvested = parseFloat(season.produceHarvested) || 0;
         const plantationArea = parseFloat(season.plantationArea) || 0;
 
-        // Initialize crop if not exists
         if (!acc[cropId]) {
           acc[cropId] = {
             cropId: cropId,
@@ -376,7 +370,6 @@ export class AnalyticsService {
           };
         }
 
-        // Initialize cropType if not exists
         if (!acc[cropId].cropTypes[cropTypeId]) {
           acc[cropId].cropTypes[cropTypeId] = {
             cropTypeId: cropTypeId,
@@ -387,7 +380,6 @@ export class AnalyticsService {
           };
         }
 
-        // Update counts and totals
         acc[cropId].totalProduce += produceHarvested;
         acc[cropId].totalPlantationArea += plantationArea;
         acc[cropId]._count++;
@@ -398,16 +390,34 @@ export class AnalyticsService {
         return acc;
       }, {});
 
-      // Transform to final format
-      const result = Object.values(cropAggregation).map((crop: any) => ({
+      // Transform to array and apply sorting if needed
+      let result = Object.values(cropAggregation).map((crop: any) => ({
         ...crop,
         cropTypes: Object.values(crop.cropTypes),
       }));
 
-      // Return paginated response
+      // Apply sorting to the aggregated crops
+      if (sortBy) {
+        result.sort((a, b) => {
+          const aValue = a[sortBy];
+          const bValue = b[sortBy];
+          return sortOrder === 'desc'
+            ? (bValue > aValue ? 1 : -1)
+            : (aValue > bValue ? 1 : -1);
+        });
+      }
+
+      // Get total count of unique crops
+      const totalCount = result.length;
+
+      // Apply pagination to the processed results
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedResult = result.slice(startIndex, endIndex);
+
       return {
-        data: result,
-        metadata: {
+        data: paginatedResult,
+        meta: {
           total: totalCount,
           page,
           limit,

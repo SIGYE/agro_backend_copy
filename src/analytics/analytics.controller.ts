@@ -61,9 +61,9 @@ export class AnalyticsController {
 
   @Get('/dashboard/crop-harvest')
   @ApiQuery({ name: 'locationId', required: false, type: Number })
-  async getCropHarvest(@Query() queryDto: PaginationQueryDto, @Query('locationId') locationId?: number) {
+  async getCropHarvest(@Query() queryDto: PaginationQueryDto, @Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string) {
     try {
-      const data = await this.analyticsService.cropHarvestAnalytics(queryDto, locationId);
+      const data = await this.analyticsService.cropHarvestAnalytics(queryDto, locationId, cooperativeId);
       return new ApiResponse(true, "Crop Harvest", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
