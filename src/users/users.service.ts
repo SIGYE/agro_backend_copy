@@ -147,6 +147,13 @@ export class UsersService {
               }
             }
           }
+        },
+        cooperativeManager: {
+          select: {
+            name: true,
+            id: true,
+
+          }
         }
       }
     });
@@ -176,6 +183,14 @@ export class UsersService {
                 telephone: true
               }
             }
+
+          }
+        },
+        cooperativeManager: {
+          select: {
+            name: true,
+            id: true,
+
           }
         }
       }
@@ -205,6 +220,13 @@ export class UsersService {
                 telephone: true
               }
             }
+          }
+        },
+        cooperativeManager: {
+          select: {
+            name: true,
+            id: true,
+
           }
         }
       }
