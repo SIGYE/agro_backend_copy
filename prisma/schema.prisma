@@ -225,8 +225,6 @@ model Season{
   croType    CropType @relation(fields: [cropTypeId], references: [id])
   farmerId      String
   farmer Farmer @relation(fields: [farmerId], references: [id])
-
-
 }
 
 model Animal {

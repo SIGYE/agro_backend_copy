@@ -48,7 +48,15 @@ export class CooperativeController {
   }
   @Get('crops-by-cooperative/:id')
   async findAllCropsByCooperative(@Param('id') id: string) {
-    return new ApiResponse(true, "All Crops By Cooperative", await this.cooperativeService.findAllCooperativeCrops(id), null);
+    return new ApiResponse(true, "All Crops By Cooperative", await this.cooperativeService.findAllCooperativeCrops(id), 200);
+  }
+  @Get('cooperative-crop-data/:id')
+  async getCooperativeCropData(@Param('id') id: string) {
+    try {
+      return new ApiResponse(true, "All Cooperative Crop Data", await this.cooperativeService.findAllCooperativeCropsProduceAndArea(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
   @Get('animals-by-cooperative/:id')
   async findAllAnimalsByCooperative(@Param('id') id: string) {
