@@ -169,6 +169,7 @@ export class CooperativeService {
               produceHarvested: true,
               plantationArea: true,
               farmerId: true,
+              seeds: true
             },
           },
         },
@@ -183,6 +184,9 @@ export class CooperativeService {
         const area = croptype.seasons.reduce((sum, season) => {
           return sum + (Number(season.plantationArea) || 0);
         }, 0);
+        const seeds = croptype.seasons.reduce((sum, season) => {
+          return sum + (Number(season.seeds) || 0);
+        }, 0)
 
         // Get unique farmers count
         const uniqueFarmers = new Set(
@@ -194,6 +198,7 @@ export class CooperativeService {
           totalProduce: produce,
           plantationArea: area,
           totalFarmers: uniqueFarmers.size,
+          totalInputSeeds: seeds
         };
       });
 
