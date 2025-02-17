@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { ProduceService } from './produce.service';
 import { CreateProduceDto } from './dto/create-produce.dto';
 import { UpdateProduceDto } from './dto/update-produce.dto';
 import { ApiResponse } from 'src/responses/api.response';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('produce')
@@ -46,6 +46,17 @@ export class ProduceController {
   async findAllByFarmer(@Param('id') id: string) {
     try {
       return new ApiResponse(true, "All Produce", await this.produceService.findAllByFarmer(id), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('animal-produce-statistics')
+  @ApiQuery({ name: 'locationId', required: false })
+  @ApiQuery({ name: 'cooperativeId', required: false })
+  @ApiQuery({ name: 'animalProductId', required: false })
+  async getAnimalProduceStatistics(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string, @Query('animalProductId') animalProductId?: string) {
+    try {
+      return new ApiResponse(true, "Animal Produce Statistics", await this.produceService.getAnimalProduceStatistics(animalProductId, locationId, cooperativeId), 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }

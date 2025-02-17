@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put, Query } from '@nestjs/common';
 import { FarmerService } from './farmer.service';
 import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
@@ -123,6 +123,27 @@ export class FarmerController {
     try {
       const data = await this.farmerService.getAnimalFarmerRegistrationLivestock(id);
       return new ApiResponse(true, "All Live Stocks By Farmer Registration", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('farmer-card-data')
+  @ApiQuery({ name: 'locationId', required: false })
+  async getFarmerCardData(@Query('locationId') locationId?: number) {
+    try {
+      const data = await this.farmerService.getFarmerCooperativeStatistics(locationId);
+      return new ApiResponse(true, "Farmer Card Data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('farmer-overview')
+  @ApiQuery({ name: 'locationId', required: false })
+  @ApiQuery({ name: 'cooperativeId', required: false })
+  async getFarmerOverView(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string) {
+    try {
+      const data = await this.farmerService.getFarmerDetailedInformation(locationId, cooperativeId);
+      return new ApiResponse(true, "Farmer OverView", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
