@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 import { DatabaseService } from 'src/database/database.service';
@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx';
 import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
 import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
+import e from 'express';
 
 @Injectable()
 export class FarmerService {
@@ -486,6 +487,274 @@ export class FarmerService {
       return animalFarmerRegistrations;
     } catch (error) {
       throw new BadRequestException('Error fetching all animal farmer registrations');
+    }
+  }
+  async getFarmerCooperativeStatistics(locationId?: number) {
+    try {
+      // Handle location filtering
+      let locationIds = [];
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        });
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`);
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId);
+        }
+      }
+
+      // Build location query
+      const locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {};
+
+      // Fetch cooperatives with their farmers
+      const cooperatives = await this.databaseService.cooperative.findMany({
+        where: locationQuery,
+        include: {
+          farmers: true
+        }
+      });
+
+      // Get total independent farmers (farmers without cooperatives)
+      const independentFarmers = await this.databaseService.farmer.count({
+        where: {
+          cooperativeId: null,
+          cooperative: locationQuery
+        }
+      });
+
+      // Calculate statistics
+      const totalCooperatives = cooperatives.length;
+      const totalFarmersInCooperatives = cooperatives.reduce((sum, coop) =>
+        sum + coop.farmers.length, 0);
+      const totalFarmers = totalFarmersInCooperatives + independentFarmers;
+
+      // Group cooperatives by type
+      const cooperativesByType = cooperatives.reduce((acc, coop) => {
+        if (!acc[coop.type]) {
+          acc[coop.type] = {
+            totalCooperatives: 0,
+            totalFarmers: 0,
+            avgFarmersPerCooperative: 0,
+            totalMembersNumber: 0 // From cooperative.membersNumber
+          };
+        }
+
+        acc[coop.type].totalCooperatives++;
+        acc[coop.type].totalFarmers += coop.farmers.length;
+        acc[coop.type].totalMembersNumber += coop.membersNumber;
+
+        return acc;
+      }, {});
+
+      // Calculate averages for each type
+      Object.values(cooperativesByType).forEach((stats: any) => {
+        stats.avgFarmersPerCooperative = stats.totalCooperatives > 0
+          ? Math.round(stats.totalFarmers / stats.totalCooperatives)
+          : 0;
+      });
+
+      return {
+        overview: {
+          totalFarmers,
+          totalCooperatives,
+          totalFarmersInCooperatives,
+          independentFarmers,
+          cooperativeMembershipRate: totalFarmers > 0
+            ? Math.round((totalFarmersInCooperatives / totalFarmers) * 100)
+            : 0
+        },
+        cooperativeTypeStatistics: Object.entries(cooperativesByType).map(([type, stats]: any) => ({
+          type,
+          ...stats,
+          membershipFillRate: stats.totalMembersNumber > 0
+            ? Math.round((stats.totalFarmers / stats.totalMembersNumber) * 100)
+            : 0
+        }))
+      };
+
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(error.message);
+    }
+  } async getFarmerDetailedInformation(locationId?: number, cooperativeId?: string) {
+    try {
+      // Handle location filtering
+      let locationIds = [];
+      if (locationId != null && locationId != undefined && locationId >= 0 && !(Number.isNaN(locationId))) {
+        const location = await this.databaseService.location.findUnique({
+          where: {
+            id: locationId
+          }
+        });
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`);
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId);
+        }
+      }
+
+      // Build query conditions
+      const locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {};
+      const cooperativeQuery = cooperativeId ? { cooperativeId } : {};
+
+      // Fetch farmers with all related data
+      const farmers = await this.databaseService.farmer.findMany({
+        where: {
+          cooperative: {
+            ...locationQuery
+          },
+          ...cooperativeQuery
+        },
+        include: {
+          user: true,
+          cooperative: true,
+          // Animal related data
+          animalFarmerRegistrations: {
+            include: {
+              animal: true,
+              liveStockRegistrations: {
+                include: {
+                  breed: true,
+                  farmerAnimalRegistrationProduce: {
+                    include: {
+                      animalProduct: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          // Crop related data
+          cropFarmerRegistrations: {
+            include: {
+              cropType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          },
+          // Seasons for harvest data
+          seasons: {
+            include: {
+              croType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Transform and aggregate the data
+      const result = farmers.map((farmer: any) => {
+        // Aggregate animal data
+        const animalStats = farmer.animalFarmerRegistrations.map(registration => {
+          const productStats = registration.liveStockRegistrations
+            .flatMap(livestock => livestock.farmerAnimalRegistrationProduce)
+            .reduce((acc, produce) => {
+              const key = produce.animalProduct.name;
+              if (!acc[key]) {
+                acc[key] = {
+                  productName: key,
+                  amounts: {}
+                };
+              }
+              const measurement = produce.measurements;
+              if (!acc[key].amounts[measurement]) {
+                acc[key].amounts[measurement] = 0;
+              }
+              acc[key].amounts[measurement] += produce.amount;
+              return acc;
+            }, {});
+
+          return {
+            animalName: registration.animal.name,
+            totalAnimals: registration.totalNumber,
+            maleCount: registration.maleNumber,
+            femaleCount: registration.femaleNumber,
+            breeds: [...new Set(registration.liveStockRegistrations.map(ls => ls.breed.breedName))],
+            products: Object.values(productStats).map((product: any) => ({
+              productName: product.productName,
+              amounts: Object.entries(product.amounts).map(([measurement, amount]) => ({
+                measurement,
+                amount
+              }))
+            }))
+          };
+        });
+
+        // Aggregate crop data
+        const cropStats = farmer.cropFarmerRegistrations.map(registration => ({
+          cropName: registration.cropType.crop.name,
+          cropType: registration.cropType.name
+        }));
+
+        // Aggregate harvest data by crop type
+        const harvestStats = farmer.seasons.reduce((acc, season) => {
+          const key = `${season.croType.crop.name}-${season.croType.name}`;
+          if (!acc[key]) {
+            acc[key] = {
+              cropName: season.croType.crop.name,
+              cropType: season.croType.name,
+              totalHarvested: 0,
+              totalArea: 0,
+              totalSeeds: 0,
+              seasons: []
+            };
+          }
+
+          acc[key].totalHarvested += season.produceHarvested;
+          acc[key].totalArea += season.plantationArea;
+          acc[key].totalSeeds += season.seeds;
+          acc[key].seasons.push({
+            seasonName: season.name,
+            startDate: season.startDate,
+            endDate: season.endDate,
+            status: season.seasonStatus,
+            harvested: season.produceHarvested,
+            area: season.plantationArea,
+            seeds: season.seeds,
+            expectedYield: season.expectedYield
+          });
+
+          return acc;
+        }, {});
+
+        return {
+          personalInfo: {
+            id: farmer.id,
+            name: farmer.user.firstName + ' ' + farmer.user.lastName,
+            phoneNumber: farmer.user.telephone,
+            cooperative: farmer.cooperative ? {
+              name: farmer.cooperative.name,
+              type: farmer.cooperative.type
+            } : null
+          },
+          statistics: {
+            totalAnimals: animalStats.reduce((sum, stat) => sum + stat.totalAnimals, 0),
+            totalCrops: cropStats.length,
+            totalSeasons: farmer.seasons.length
+          },
+          animals: animalStats,
+          crops: cropStats,
+          harvests: Object.values(harvestStats)
+        };
+      });
+
+      return result;
+
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(error.message);
     }
   }
   async findOne(id: string) {

@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, BadRequestException, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, BadRequestException, UseInterceptors, Query } from '@nestjs/common';
 import { AnimalService } from './animal.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { Animal, User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -40,6 +40,36 @@ export class AnimalController {
   async findAllAnimalProducts(@Param('id') id: string) {
     try {
       return new ApiResponse(true, "All Animal Products", await this.animalService.findAllAnimalProducts(id), null);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
+  }
+  @Get('card-data')
+  @ApiQuery({ name: 'locationId', required: false })
+  @ApiQuery({ name: 'cooperativeId', required: false })
+  async getCropsCardData(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string) {
+    try {
+      return new ApiResponse<any>(true, "All Animals", await this.animalService.getAnimalCardData(locationId, cooperativeId), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
+  }
+  @Get('animal-farmer-data')
+  @ApiQuery({ name: 'locationId', required: false })
+  @ApiQuery({ name: 'cooperativeId', required: false })
+  async getAnimalFarmerData(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string) {
+    try {
+      return new ApiResponse<any>(true, "All Animals", await this.animalService.getAnimalFarmersData(locationId, cooperativeId), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
+  }
+  @Get('animal-stats')
+  @ApiQuery({ name: 'locationId', required: false })
+  @ApiQuery({ name: 'cooperativeId', required: false })
+  async getAnimalStats(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string) {
+    try {
+      return new ApiResponse<any>(true, "All Animals", await this.animalService.getAnimalCompleteStatistics(locationId, cooperativeId), 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400)
     }

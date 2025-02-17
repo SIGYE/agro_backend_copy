@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { CooperativeType, SeasonStatus } from '@prisma/client'
 import { DatabaseService } from 'src/database/database.service'
 import { LocationService } from 'src/location/location.service'
@@ -790,5 +790,342 @@ export class AnalyticsService {
 
     }
   }
+  async getCooperativeFarmerStatistics(
+    locationId?: number,
+    cooperativeId?: string,
+    viewType: 'cooperative' | 'farmer' = 'cooperative'
+  ) {
+    try {
+      // Handle location filtering
+      let locationIds = [];
+      if (locationId != null && locationId !== undefined && locationId >= 0 && !Number.isNaN(locationId)) {
+        const location = await this.databaseService.location.findUnique({
+          where: { id: locationId }
+        });
+        if (!location) {
+          throw new NotFoundException(`Location with ID ${locationId} not found`);
+        } else {
+          locationIds = await this.locationService.getAllChildrenLocations(locationId);
+        }
+      }
 
+      // Build query conditions
+      const locationQuery = locationIds.length > 0 ? { locationId: { in: locationIds } } : {};
+      const cooperativeQuery = cooperativeId ? { cooperativeId } : {};
+
+      // Fetch farmers with all related data
+      const farmers = await this.databaseService.farmer.findMany({
+        where: {
+          cooperative: {
+            ...locationQuery
+          },
+          ...cooperativeQuery
+        },
+        include: {
+          user: true,
+          cooperative: true,
+          animalFarmerRegistrations: {
+            include: {
+              animal: true,
+              liveStockRegistrations: {
+                include: {
+                  breed: true,
+                  farmerAnimalRegistrationProduce: {
+                    include: {
+                      animalProduct: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          cropFarmerRegistrations: {
+            include: {
+              cropType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          },
+          seasons: {
+            include: {
+              croType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Process individual farmer data
+      const processedFarmers = farmers.map(farmer => {
+        // Process animal statistics
+        const animalStats = farmer.animalFarmerRegistrations.map(registration => {
+          const productStats = registration.liveStockRegistrations
+            .flatMap(livestock => livestock.farmerAnimalRegistrationProduce)
+            .reduce((acc, produce) => {
+              const key = produce.animalProduct.name;
+              if (!acc[key]) {
+                acc[key] = {
+                  productName: key,
+                  amounts: {}
+                };
+              }
+              const measurement = produce.measurements;
+              if (!acc[key].amounts[measurement]) {
+                acc[key].amounts[measurement] = 0;
+              }
+              acc[key].amounts[measurement] += produce.amount;
+              return acc;
+            }, {});
+
+          return {
+            animalName: registration.animal.name,
+            totalAnimals: registration.totalNumber,
+            maleCount: registration.maleNumber,
+            femaleCount: registration.femaleNumber,
+            breeds: [...new Set(registration.liveStockRegistrations.map(ls => ls.breed.breedName))],
+            products: Object.values(productStats).map((product: any) => ({
+              productName: product.productName,
+              amounts: Object.entries(product.amounts).map(([measurement, amount]) => ({
+                measurement,
+                amount
+              }))
+            }))
+          };
+        });
+
+        // Process crop statistics
+        const cropStats = farmer.cropFarmerRegistrations.map(registration => ({
+          cropName: registration.cropType.crop.name,
+          cropType: registration.cropType.name
+        }));
+
+        // Process harvest statistics
+        const harvestStats = farmer.seasons.reduce((acc, season) => {
+          const key = `${season.croType.crop.name}-${season.croType.name}`;
+          if (!acc[key]) {
+            acc[key] = {
+              cropName: season.croType.crop.name,
+              cropType: season.croType.name,
+              totalHarvested: 0,
+              totalArea: 0,
+              totalSeeds: 0,
+              seasons: []
+            };
+          }
+
+          acc[key].totalHarvested += season.produceHarvested;
+          acc[key].totalArea += season.plantationArea;
+          acc[key].totalSeeds += season.seeds;
+          acc[key].seasons.push({
+            seasonName: season.name,
+            startDate: season.startDate,
+            endDate: season.endDate,
+            status: season.seasonStatus,
+            harvested: season.produceHarvested,
+            area: season.plantationArea,
+            seeds: season.seeds,
+            expectedYield: season.expectedYield
+          });
+
+          return acc;
+        }, {});
+
+        return {
+          personalInfo: {
+            id: farmer.id,
+            name: farmer.user.firstName + ' ' + farmer.user.lastName,
+            phoneNumber: farmer.user.telephone,
+            cooperative: farmer.cooperative ? {
+              id: farmer.cooperative.id,
+              name: farmer.cooperative.name,
+              type: farmer.cooperative.type
+            } : null
+          },
+          statistics: {
+            totalAnimals: animalStats.reduce((sum, stat) => sum + stat.totalAnimals, 0),
+            totalCrops: cropStats.length,
+            totalSeasons: farmer.seasons.length
+          },
+          animals: animalStats,
+          crops: cropStats,
+          harvests: Object.values(harvestStats)
+        };
+      });
+
+      // Return data based on view type
+      if (viewType === 'farmer') {
+        return processedFarmers;
+      }
+
+      // Group by cooperative for cooperative view
+      const cooperativeStats = processedFarmers.reduce((acc, farmer) => {
+        if (!farmer.personalInfo.cooperative) {
+          if (!acc['unaffiliated']) {
+            acc['unaffiliated'] = {
+              id: 'unaffiliated',
+              name: 'Unaffiliated Farmers',
+              type: null,
+              farmers: [],
+              statistics: {
+                totalFarmers: 0,
+                totalAnimals: 0,
+                totalCrops: 0,
+                totalSeasons: 0
+              },
+              aggregatedAnimals: {},
+              aggregatedCrops: new Set(),
+              aggregatedHarvests: {}
+            };
+          }
+          acc['unaffiliated'].farmers.push(farmer);
+        } else {
+          const coopId = farmer.personalInfo.cooperative.id;
+          if (!acc[coopId]) {
+            acc[coopId] = {
+              id: farmer.personalInfo.cooperative.id,
+              name: farmer.personalInfo.cooperative.name,
+              type: farmer.personalInfo.cooperative.type,
+              farmers: [],
+              statistics: {
+                totalFarmers: 0,
+                totalAnimals: 0,
+                totalCrops: 0,
+                totalSeasons: 0
+              },
+              aggregatedAnimals: {},
+              aggregatedCrops: new Set(),
+              aggregatedHarvests: {}
+            };
+          }
+          acc[coopId].farmers.push(farmer);
+        }
+
+        const coopKey = farmer.personalInfo.cooperative?.id || 'unaffiliated';
+        const coop = acc[coopKey];
+
+        // Update cooperative statistics
+        coop.statistics.totalFarmers++;
+        coop.statistics.totalAnimals += farmer.statistics.totalAnimals;
+        coop.statistics.totalCrops += farmer.statistics.totalCrops;
+        coop.statistics.totalSeasons += farmer.statistics.totalSeasons;
+
+        // Aggregate animal data
+        farmer.animals.forEach(animal => {
+          if (!coop.aggregatedAnimals[animal.animalName]) {
+            coop.aggregatedAnimals[animal.animalName] = {
+              totalAnimals: 0,
+              maleCount: 0,
+              femaleCount: 0,
+              breeds: new Set(),
+              products: {}
+            };
+          }
+          const animalStat = coop.aggregatedAnimals[animal.animalName];
+          animalStat.totalAnimals += animal.totalAnimals;
+          animalStat.maleCount += animal.maleCount;
+          animalStat.femaleCount += animal.femaleCount;
+          animal.breeds.forEach(breed => animalStat.breeds.add(breed));
+
+          animal.products.forEach(product => {
+            if (!animalStat.products[product.productName]) {
+              animalStat.products[product.productName] = {};
+            }
+            product.amounts.forEach(({ measurement, amount }) => {
+              if (!animalStat.products[product.productName][measurement]) {
+                animalStat.products[product.productName][measurement] = 0;
+              }
+              animalStat.products[product.productName][measurement] += amount;
+            });
+          });
+        });
+
+        // Aggregate crop data
+        farmer.crops.forEach(crop => {
+          coop.aggregatedCrops.add(`${crop.cropName}-${crop.cropType}`);
+        });
+
+        // Aggregate harvest data
+        farmer.harvests.forEach((harvest: any) => {
+          const key = `${harvest.cropName}-${harvest.cropType}`;
+          if (!coop.aggregatedHarvests[key]) {
+            coop.aggregatedHarvests[key] = {
+              cropName: harvest.cropName,
+              cropType: harvest.cropType,
+              totalHarvested: 0,
+              totalArea: 0,
+              totalSeeds: 0,
+              seasonStats: {}
+            };
+          }
+
+          const harvestStat = coop.aggregatedHarvests[key];
+          harvestStat.totalHarvested += harvest.totalHarvested;
+          harvestStat.totalArea += harvest.totalArea;
+          harvestStat.totalSeeds += harvest.totalSeeds;
+
+          harvest.seasons.forEach(season => {
+            if (!harvestStat.seasonStats[season.seasonName]) {
+              harvestStat.seasonStats[season.seasonName] = {
+                startDate: season.startDate,
+                endDate: season.endDate,
+                status: season.status,
+                harvested: 0,
+                area: 0,
+                seeds: 0,
+                expectedYield: 0
+              };
+            }
+            const seasonStat = harvestStat.seasonStats[season.seasonName];
+            seasonStat.harvested += season.harvested;
+            seasonStat.area += season.area;
+            seasonStat.seeds += season.seeds;
+            seasonStat.expectedYield += season.expectedYield;
+          });
+        });
+
+        return acc;
+      }, {});
+
+      // Transform cooperative stats for final output
+      return Object.values(cooperativeStats).map((coop: any) => ({
+        ...coop,
+        aggregatedAnimals: Object.entries(coop.aggregatedAnimals).map(([animalName, stats]: any) => ({
+          animalName,
+          totalAnimals: stats.totalAnimals,
+          maleCount: stats.maleCount,
+          femaleCount: stats.femaleCount,
+          breeds: Array.from(stats.breeds),
+          products: Object.entries(stats.products).map(([productName, amounts]) => ({
+            productName,
+            amounts: Object.entries(amounts).map(([measurement, amount]) => ({
+              measurement,
+              amount
+            }))
+          }))
+        })),
+        aggregatedCrops: Array.from(coop.aggregatedCrops).map((cropKey: any) => {
+          const [cropName, cropType] = cropKey.split('-');
+          return { cropName, cropType };
+        }),
+        aggregatedHarvests: Object.values(coop.aggregatedHarvests).map((harvest: any) => ({
+          ...harvest,
+          seasonStats: Object.entries(harvest.seasonStats).map(([seasonName, stats]: any) => ({
+            seasonName,
+            ...stats
+          }))
+        }))
+      }));
+
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(error.message);
+    }
+  }
 }

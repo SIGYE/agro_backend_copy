@@ -116,4 +116,18 @@ export class AnalyticsController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('buyer-data')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'cooperativeId', required: false, type: String })
+  @ApiQuery({ name: 'viewType', required: true, type: String })
+  async getBuyerData(@Query('locationId') locationId?: number, @Query('cooperativeId') cooperativeId?: string, @Query('viewType') viewType: 'cooperative' | 'farmer' = 'cooperative') {
+
+    try {
+      const data = await this.analyticsService.getCooperativeFarmerStatistics(locationId, cooperativeId, viewType);
+      return new ApiResponse(true, "Buyer Data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
 }
