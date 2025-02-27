@@ -36,6 +36,14 @@ export class CropController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('crop-types/:cropId')
+  async findAllCropTypes(@Param('cropId') cropId: string) {
+    try {
+      return new ApiResponse(true, "Crop Types", await this.cropService.getCropTypesByCrop(cropId), 200)
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
   @Get('crops-card-data')
   @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'cooperativeId', required: false, type: String })

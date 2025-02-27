@@ -550,4 +550,15 @@ export class CropService {
       throw new BadRequestException(error.message);
     }
   }
+  async getCropTypesByCrop(cropId) {
+    try {
+      return this.dataBaseService.cropType.findMany({
+        where: {
+          cropId: cropId
+        }
+      })
+    } catch (e) {
+      throw e
+    }
+  }
 }
