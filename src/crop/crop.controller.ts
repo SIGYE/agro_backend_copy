@@ -48,7 +48,18 @@ export class CropController {
     }
 
   }
+  @Get('crop-type-data')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'cropTypeId', required: false, type: String })
+  async getCropTypeCardData(@Query('locationId') locationId?: number, @Query('cropTypeId') cropTypeId?: string) {
+    try {
+      const data = await this.cropService.getCropTypeStatistics(cropTypeId, locationId);
+      return new ApiResponse(true, "Crop Type Data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
 
+  }
   @Get('farmer-crops-by-location/:locationId')
   async findAllCropFarmerRegistration(@Param('locationId') locationId: string) {
     try {
