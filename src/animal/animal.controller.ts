@@ -4,7 +4,7 @@ import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { Animal, User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
-import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -74,7 +74,25 @@ export class AnimalController {
       return new ApiResponse(false, e.message, null, 400)
     }
   }
-
+  @Get('animal-product-stat')
+  async getAnimalProductStat() {
+    try {
+      const data = await this.animalService.getAnimalsWithProductStats();
+      return new ApiResponse(true, "Animal with their product data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('animal-production/:id')
+  @ApiParam({ name: 'id', required: true })
+  async getAnimalFarmers(@Param('id') id: string) {
+    try {
+      const data = await this.animalService.getFarmersByProduct(id);
+      return new ApiResponse(true, "Animal Farmers", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return new ApiResponse<Animal>(true, "Animal Retrieved", await this.animalService.findOne(id), null);
