@@ -489,4 +489,115 @@ export class AnimalService {
   //     throw new BadRequestException(error.message);
   //   }
   // }
+  async getAnimalsWithProductStats() {
+    const animals = await this.dataBaseService.animal.findMany({
+      include: {
+        animalProducts: {
+          include: {
+            farmerAnimalRegistrationProduces: {
+              select: {
+                amount: true,
+                measurements: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Process and aggregate production stats
+    return animals.map((animal) => ({
+      id: animal.id,
+      name: animal.name,
+      animalProducts: animal.animalProducts.map((product) => {
+        const totalAmount = product.farmerAnimalRegistrationProduces.reduce(
+          (sum, produce) => sum + produce.amount,
+          0
+        );
+
+        return {
+          id: product.id,
+          name: product.name,
+          totalAmount,
+          measurements:
+            product.farmerAnimalRegistrationProduces.length > 0
+              ? product.farmerAnimalRegistrationProduces[0].measurements
+              : null, // Assuming all measurements are the same for a product
+        };
+      }),
+    }));
+  }
+  async getFarmersByProduct(productId: string) {
+    // Fetch farmers who have registered animals producing this product
+    const farmers = await this.dataBaseService.farmer.findMany({
+      include: {
+        user: {
+          select: { firstName: true, lastName: true, telephone: true },
+        },
+        cooperative: {
+          select: { id: true, name: true, type: true },
+        },
+        animalFarmerRegistrations: {
+          include: {
+            liveStockRegistrations: {
+              include: {
+                farmerAnimalRegistrationProduce: {
+                  where: { animalProductId: productId },
+                  select: { amount: true, measurements: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Organize farmers into two groups
+    const farmersWithoutCoop = [];
+    const cooperativesMap = new Map();
+
+    farmers.forEach((farmer) => {
+      const produceRecords = farmer.animalFarmerRegistrations.flatMap((afr) =>
+        afr.liveStockRegistrations.flatMap((lsr) =>
+          lsr.farmerAnimalRegistrationProduce,
+        ),
+      );
+
+      if (produceRecords.length === 0) return; // Skip farmers without relevant products
+
+      // Aggregate total amount and get measurement (assuming same measurement for a product)
+      const totalAmount = produceRecords.reduce((sum, record) => sum + record.amount, 0);
+      const measurement = produceRecords[0].measurements; // Taking measurement from the first record
+
+      if (!farmer.cooperative) {
+        // Farmers without a cooperative
+        farmersWithoutCoop.push({
+          name: farmer.user.firstName + " " + farmer.user.lastName,
+          phoneNumber: farmer.user.telephone,
+          totalAmount,
+          measurement,
+        });
+      } else {
+        // Grouping by cooperative
+        if (!cooperativesMap.has(farmer.cooperative.id)) {
+          cooperativesMap.set(farmer.cooperative.id, {
+            name: farmer.cooperative.name,
+            type: farmer.cooperative.type,
+            farmers: [],
+          });
+        }
+        cooperativesMap.get(farmer.cooperative.id).farmers.push({
+          name: farmer.user.firstName + " " + farmer.user.lastName,
+          phoneNumber: farmer.user.telephone,
+          totalAmount,
+          measurement,
+        });
+      }
+    });
+
+    return {
+      farmersWithoutCooperative: farmersWithoutCoop,
+      cooperatives: Array.from(cooperativesMap.values()),
+    };
+  }
 }
