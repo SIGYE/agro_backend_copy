@@ -139,7 +139,8 @@ model Disease {
   createdBy         String
   creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id])
   animals        LiveStockRegistration[]
-  crops             CropFarmerRegistration[]
+  crops             Crop[]
+  seasons           Season[]
   type              DiseaseType
   medication        String
   createdAt         DateTime           @default(now())
@@ -151,7 +152,8 @@ model Pest{
   createdBy         String
   creator           User               @relation("PestCreatedBy", fields: [createdBy], references: [id])
   animals         LiveStockRegistration[]
-  crops             CropFarmerRegistration[]
+  crops             Crop[]
+  seasons           Season[]
   type              PestType
   medication        String
   createdAt         DateTime           @default(now())
@@ -195,6 +197,8 @@ model Crop {
   createdBy                    String
   creator                      User                          @relation("CropCreatedBy", fields: [createdBy], references: [id])
   cropType                     CropType[]
+  diseases                     Disease[]
+  pests                        Pest[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
 }
@@ -206,6 +210,7 @@ model CropType{
   cropId   String   @unique
   crop      Crop @relation(fields: [cropId], references: [id])
   seasons   Season[]
+  seedStrains SeedStrain[]
   cropFarmerRegistrations      CropFarmerRegistration[]
 }
 
@@ -223,8 +228,20 @@ model Season{
   seasonStatus                      SeasonStatus @default(ON_GOING)
   cropTypeId    String
   croType    CropType @relation(fields: [cropTypeId], references: [id])
+  seedStrainId  String
+  seedStrain    SeedStrain @relation(fields: [seedStrainId], references: [id])
   farmerId      String
   farmer Farmer @relation(fields: [farmerId], references: [id])
+  harvestSeasonId String
+  harvestSeason HarvestSeason @relation(fields: [harvestSeasonId], references: [id])
+  cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
+  diseases                           Disease[]
+  pests                              Pest[]
+  harvests                           Harvest[]
+  metricId                           String
+  metric                             Metric @relation(fields: [metricId], references: [id])
+  farmingActivities                  FarmingActivity[]
+  
 }
 
 model Animal {
@@ -296,9 +313,6 @@ model CropFarmerRegistration {
   cropTypeId                            String
   farmer                            Farmer                             @relation(fields: [farmerId], references: [id])
   cropType                              CropType                               @relation(fields: [cropTypeId], references: [id])
-  cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
-  diseases                           Disease[]
-  pests                              Pest[]
   createdAt                         DateTime                           @default(now())
   updatedAt                         DateTime                           @updatedAt
 }
@@ -306,11 +320,12 @@ model CropFarmerRegistration {
 model CropFertilizerFarmerRegistration {
   id                       String                 @id @default(uuid())
   fertilizerId             String
-  cropFarmerRegistrationId String
-  amount                   Int
-  measurement              String
+  seasonId String
+  amount                   Float
+  measurementId            String
+  measurement              Metric            @relation(fields: [measurementId], references: [id])              
   feterlizer               Feterlizer             @relation(fields: [fertilizerId], references: [id])
-  cropFarmerRegistration   CropFarmerRegistration @relation(fields: [cropFarmerRegistrationId], references: [id])
+  season                   Season @relation(fields: [seasonId], references: [id])
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
 }
@@ -527,4 +542,67 @@ model Umufashamyumvire {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model HarvestSeason{
+  id        String   @id @default(uuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  seasons   Season[]
+  seasonStatus SeasonStatus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SeedStrain{
+  id        String   @id @default(uuid())
+  name      String
+  cropTypeId String
+  cropType   CropType @relation(fields: [cropTypeId], references: [id])
+  seasons   Season[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Harvest{
+  id        String   @id @default(uuid())
+  name      String
+  amount    Float
+  harvestDate DateTime
+  seasonId  String
+  season    Season @relation(fields: [seasonId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+
+}
+
+model Metric{
+  id        String   @id @default(uuid())
+  name      String
+  unit      String
+  seasons   Season[]
+  cropFertilizerFarmerRegistration CropFertilizerFarmerRegistration[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model FarmingActivity{
+  id        String   @id @default(uuid())
+  date      DateTime
+  activity  Activities
+  seasonId  String
+  season    Season @relation(fields: [seasonId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+enum Activities{
+  VACCINATION
+  VITAMIN
+  MEDICINE
+  FERTILIZATION
+  MEDICATION
+
 }

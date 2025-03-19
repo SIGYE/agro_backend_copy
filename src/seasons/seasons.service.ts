@@ -26,6 +26,21 @@ export class SeasonsService {
             connect: {
               id: createSeasonDto.cropTypeId
             }
+          },
+          metric: {
+            connect: {
+              id: createSeasonDto.metricId
+            }
+          },
+          seedStrain: {
+            connect: {
+              id: createSeasonDto.seedStrainId
+            }
+          },
+          harvestSeason: {
+            connect: {
+              id: createSeasonDto.harvestSeason
+            }
           }
 
 

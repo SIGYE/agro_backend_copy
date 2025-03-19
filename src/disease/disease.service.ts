@@ -54,7 +54,7 @@ export class DiseaseService {
         // Update each crop registration individually to handle the relation
         await Promise.all(
           assignDiseaseDto.crops.map(cropRegId =>
-            this.databaseService.cropFarmerRegistration.update({
+            this.databaseService.season.update({
               where: { id: cropRegId },
               data: {
                 diseases: {

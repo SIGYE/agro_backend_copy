@@ -30,10 +30,15 @@ import { PestsModule } from './pests/pests.module';
 import { SeasonsModule } from './seasons/seasons.module';
 import { ProduceModule } from './produce/produce.module';
 import { ReportsModule } from './reports/reports.module';
+import { HarvestSeasonModule } from './harvest-season/harvest-season.module';
+import { SeedStrainModule } from './seed-strain/seed-strain.module';
+import { MetricModule } from './metric/metric.module';
+import { FarmingActivityModule } from './farming-activity/farming-activity.module';
+import { HarvestModule } from './harvest/harvest.module';
 
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule, FertiliserModule, DiseaseModule, PestsModule, SeasonsModule, ProduceModule, ReportsModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule, FertiliserModule, DiseaseModule, PestsModule, SeasonsModule, ProduceModule, ReportsModule, HarvestSeasonModule, SeedStrainModule, MetricModule, FarmingActivityModule, HarvestModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,

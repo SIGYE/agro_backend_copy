@@ -7,7 +7,18 @@ export class FertiliserDto {
     @IsNotEmpty()
     fertiliserId: string
     @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    seasonId: string
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    metricId: string
+    @ApiProperty()
     @IsNotEmpty()
     @IsNumber()
     amountOfFertilizer: number
+
+
+
 }

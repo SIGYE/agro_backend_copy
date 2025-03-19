@@ -55,7 +55,7 @@ export class PestsService {
         // Update each crop registration individually to handle the relation
         await Promise.all(
           assignPestsDto.crops.map(cropRegId =>
-            this.databaseService.cropFarmerRegistration.update({
+            this.databaseService.season.update({
               where: { id: cropRegId },
               data: {
                 pests: {

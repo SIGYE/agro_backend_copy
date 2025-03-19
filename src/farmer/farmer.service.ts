@@ -56,9 +56,9 @@ export class FarmerService {
             await this.databaseService.cropFertilizerFarmerRegistration.create({
               data: {
                 fertilizerId: fertilizer.fertiliserId,
-                cropFarmerRegistrationId: cropFarmer.id,
+                seasonId: fertilizer.seasonId,
                 amount: fertilizer.amountOfFertilizer,
-                measurement: crop.measurementUnit
+                measurementId: fertilizer.metricId
               }
             })
           }
@@ -123,9 +123,9 @@ export class FarmerService {
           await this.databaseService.cropFertilizerFarmerRegistration.create({
             data: {
               fertilizerId: fertilizer.fertiliserId,
-              cropFarmerRegistrationId: cropFarmer.id,
+              seasonId: fertilizer.seasonId,
               amount: fertilizer.amountOfFertilizer,
-              measurement: crop.measurementUnit
+              measurementId: fertilizer.metricId
             }
           })
         }
