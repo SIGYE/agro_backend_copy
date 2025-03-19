@@ -42,6 +42,23 @@ export class CreateSeasonDto {
     @IsString()
     @Type(() => String)
     farmerId: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    @Type(() => String)
+    metricId: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    @Type(() => String)
+    seedStrainId: string
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    @Type(() => String)
+    harvestSeason: string
+
+
 
 
 }

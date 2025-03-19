@@ -174,17 +174,7 @@ export class CooperativeService {
               produceHarvested: true,
               plantationArea: true,
               farmerId: true,
-              seeds: true
-            },
-          },
-          cropFarmerRegistrations: {
-            where: {
-              farmer: {
-                cooperativeId,
-              },
-            },
-            select: {
-              farmerId: true,
+              seeds: true,
               cropFertilizerFarmerRegistrations: {
                 select: {
                   amount: true,
@@ -195,8 +185,19 @@ export class CooperativeService {
                       name: true,
                     },
                   },
-                },
+                }
+              }
+
+            },
+          },
+          cropFarmerRegistrations: {
+            where: {
+              farmer: {
+                cooperativeId,
               },
+            },
+            select: {
+              farmerId: true,
             },
           },
         },
@@ -225,7 +226,7 @@ export class CooperativeService {
         const fertilizerUsage = new Map(); // To store fertilizer totals
         const fertilizerFarmers = new Map(); // To store farmers using each fertilizer
 
-        croptype.cropFarmerRegistrations.forEach((registration) => {
+        croptype.seasons.forEach((registration) => {
           registration.cropFertilizerFarmerRegistrations.forEach((fertReg) => {
             const fertilizerId = fertReg.feterlizer.id;
             const fertilizerName = fertReg.feterlizer.name;
