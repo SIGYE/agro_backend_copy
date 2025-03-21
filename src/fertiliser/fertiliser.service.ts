@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateFertiliserDto } from './dto/create-fertiliser.dto';
 import { UpdateFertiliserDto } from './dto/update-fertiliser.dto';
 import { DatabaseService } from 'src/database/database.service';
+import { FertiliserDto } from 'src/farmer/dto/fertiliser.dto';
 
 @Injectable()
 export class FertiliserService {
@@ -60,7 +61,20 @@ export class FertiliserService {
       throw e;
     }
   }
-
+  async assignFertiliserToSeason(fertiliserDto: FertiliserDto) {
+    try {
+      await this.databaseService.cropFertilizerFarmerRegistration.create({
+        data: {
+          fertilizerId: fertiliserDto.fertiliserId,
+          seasonId: fertiliserDto.seasonId,
+          amount: fertiliserDto.amountOfFertilizer,
+          measurementId: fertiliserDto.metricId
+        }
+      })
+    } catch (e) {
+      throw e
+    }
+  }
   async remove(id: string) {
     try {
       return await this.databaseService.feterlizer.delete({

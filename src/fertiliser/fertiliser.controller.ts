@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put } from '@nestjs/common';
 import { FertiliserService } from './fertiliser.service';
 import { CreateFertiliserDto } from './dto/create-fertiliser.dto';
 import { UpdateFertiliserDto } from './dto/update-fertiliser.dto';
@@ -7,6 +7,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
+import { FertiliserDto } from 'src/farmer/dto/fertiliser.dto';
 
 @Controller('fertiliser')
 @ApiBearerAuth()
@@ -47,6 +48,14 @@ export class FertiliserController {
   async update(@Param('id') id: string, @Body() updateFertiliserDto: UpdateFertiliserDto) {
     try {
       return new ApiResponse(true, "Fertiliser Updated", await this.fertiliserService.update(id, updateFertiliserDto), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Put('assign-fertiliser-to-harvest')
+  async assignFertiliserToSeason(@Body() fertiliserDto: FertiliserDto) {
+    try {
+      return new ApiResponse(true, "Fertiliser Assigned to Harvest", await this.fertiliserService.assignFertiliserToSeason(fertiliserDto), 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
