@@ -9,6 +9,7 @@ import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
 import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
 import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
+import { Allow } from 'src/decorators/allow.decorator';
 
 @Controller('farmer')
 @ApiBearerAuth()
@@ -19,6 +20,7 @@ export class FarmerController {
 
   @Post('register-farmer')
   @ApiBody({ type: CreateFarmerDto })
+  @Allow()
   async create(@Body() createFarmerDto: CreateFarmerDto) {
     try {
       const data = await this.farmerService.registerFarmer(createFarmerDto);
