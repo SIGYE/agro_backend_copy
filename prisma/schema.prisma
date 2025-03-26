@@ -582,11 +582,16 @@ model Harvest{
 
 }
 
-model Metric{
+model Metric {
   id        String   @id @default(uuid())
   name      String
   unit      String
   seasons   Season[]
+  metricType MetricType?
+  baseMetricId String?
+  baseMetric   Metric?  @relation("MetricToBaseMetric", fields: [baseMetricId], references: [id])
+  derivedMetrics Metric[] @relation("MetricToBaseMetric")
+  coefficient   Float?
   cropFertilizerFarmerRegistration CropFertilizerFarmerRegistration[]
   FarmingActivity FarmingActivity[]
   createdAt DateTime @default(now())
@@ -662,4 +667,8 @@ enum Activities{
   FERTILIZATION
   MEDICATION
 
+}
+enum MetricType{
+  STANDARD
+  DERIVED
 }

@@ -12,7 +12,10 @@ export class MetricService {
       return await this.databaseService.metric.create({
         data: {
           name: createMetricDto.name,
-          unit: createMetricDto.unit
+          unit: createMetricDto.unit,
+          metricType: createMetricDto.metricType,
+          baseMetricId: createMetricDto.baseMetricId,
+          coefficient: createMetricDto.coefficient
         }
       });
     } catch (e) {
@@ -24,7 +27,9 @@ export class MetricService {
     try {
       return await this.databaseService.metric.findMany({
         include: {
-          seasons: true
+          seasons: true,
+          baseMetric: true,
+          derivedMetrics: true
         }
       });
     } catch (e) {
@@ -39,7 +44,9 @@ export class MetricService {
           id: id
         },
         include: {
-          seasons: true
+          seasons: true,
+          baseMetric: true,
+          derivedMetrics: true
         }
       });
     } catch (e) {
@@ -55,7 +62,10 @@ export class MetricService {
         },
         data: {
           ...(updateMetricDto.name && { name: updateMetricDto.name }),
-          ...(updateMetricDto.unit && { unit: updateMetricDto.unit })
+          ...(updateMetricDto.unit && { unit: updateMetricDto.unit }),
+          ...(updateMetricDto.metricType !== undefined && { metricType: updateMetricDto.metricType }),
+          ...(updateMetricDto.baseMetricId !== undefined && { baseMetricId: updateMetricDto.baseMetricId }),
+          ...(updateMetricDto.coefficient !== undefined && { coefficient: updateMetricDto.coefficient })
         }
       });
     } catch (e) {

@@ -132,7 +132,7 @@ export class UsersController {
       return new ApiResponse(false, e.message, null, 400)
     }
   }
-  @Post('import-farmers/:cooperativeId')
+  @Post('import-farmers/cooperative/:cooperativeId')
   @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   async registerMultipleFarmersInCooperative(@UploadedFile() file: Express.Multer.File, @Param('cooperativeId') cooperativeId: string) {
