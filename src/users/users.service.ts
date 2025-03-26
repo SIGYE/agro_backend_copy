@@ -11,7 +11,6 @@ import { LocationService } from 'src/location/location.service';
 import { generatePassword } from 'src/utils/data.util';
 import { sendSms } from 'src/utils/sms.util';
 import { randomUUID } from 'crypto';
-import { Farmer } from 'src/farmer/entities/farmer.entity';
 
 export type UserWithRoles = Prisma.UserGetPayload<{
   include: {
@@ -402,6 +401,7 @@ export class UsersService {
           },
         });
       }
+      return farmer;
 
     } catch (e) {
       throw new BadRequestException(e.message)
