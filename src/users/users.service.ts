@@ -11,6 +11,7 @@ import { LocationService } from 'src/location/location.service';
 import { generatePassword } from 'src/utils/data.util';
 import { sendSms } from 'src/utils/sms.util';
 import { randomUUID } from 'crypto';
+import { Farmer } from 'src/farmer/entities/farmer.entity';
 
 export type UserWithRoles = Prisma.UserGetPayload<{
   include: {
@@ -361,7 +362,7 @@ export class UsersService {
 
   }
 
-  async registerFarmer(createUserDto: CreateUserDto): Promise<Farmer> {
+  async registerFarmer(createUserDto: CreateUserDto, cooperativeId?: string): Promise<Farmer> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
@@ -370,7 +371,7 @@ export class UsersService {
       })
       let user = await this.create({ roleId: role.id, ...createUserDto });
 
-      return await this.databaseService.farmer.create({
+      let farmer = await this.databaseService.farmer.create({
         data: {
           user: {
             connect: {
@@ -381,6 +382,27 @@ export class UsersService {
         }
 
       })
+      if (cooperativeId) {
+        let cooperative = this.databaseService.cooperative.findUnique({
+          where: {
+            id: cooperativeId
+          }
+        })
+        if (!cooperative) {
+          throw new NotFoundException(`Cooperative with ID ${cooperativeId} not found`)
+        }
+        await this.databaseService.cooperative.update({
+          where: { id: cooperativeId },
+          data: {
+            farmers: {
+              connect: {
+                id: farmer.id
+              },
+            },
+          },
+        });
+      }
+
     } catch (e) {
       throw new BadRequestException(e.message)
     }
@@ -609,6 +631,59 @@ export class UsersService {
         })
 
         await this.registerFarmer({ roleId: role.id, ...userDto }); // Register vet with the custom object
+        success++;
+      } catch (error) {
+        failed++;
+        errors.push({
+          row: row,
+          error: error.message || 'Unknown error occurred',
+        });
+      }
+    }
+
+    return { success, failed, errors };
+  }
+  async registerMultipleFarmersIntoCooperative(file: Express.Multer.File, cooperativeId: string): Promise<{ success: number; failed: number; errors: any[] }> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    // Skip the first row (assuming it's the header row)
+    const rowsToProcess = data.slice(1);
+
+    let success = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const row of rowsToProcess) {
+      try {
+        // Map the row to a userDto-like object based on the cell index
+        let userDto = {
+          firstName: row[0],
+          lastName: row[1],
+          nationalId: row[2],
+          telephone: row[3],
+          email: row[4],
+          locationId: 0,
+          gender: row[5],
+          dob: row[6],
+
+
+        };
+        let location = await this.locationService.getLocationByName(row[9]);
+        userDto.locationId = location.id;
+        let role = await this.databaseService.role.findFirst({
+          where: {
+            name: "FARMER"
+          }
+        })
+
+        await this.registerFarmer({ roleId: role.id, ...userDto }, cooperativeId); // Register vet with the custom object
         success++;
       } catch (error) {
         failed++;
