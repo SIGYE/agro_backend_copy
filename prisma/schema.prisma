@@ -187,6 +187,7 @@ model Feterlizer {
   createdBy                              String
   creator                                User                                    @relation("FeterlizerCreatedBy", fields: [createdBy], references: [id])
   cropFertilizerFarmerRegistrations      CropFertilizerFarmerRegistration[]
+  farmingActivities                      FarmingActivity[]
   createdAt                              DateTime                                @default(now())
   updatedAt                              DateTime                                @updatedAt
 }
@@ -199,6 +200,7 @@ model Crop {
   cropType                     CropType[]
   diseases                     Disease[]
   pests                        Pest[]
+  cropMedicines                CropMedicine[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
 }
@@ -253,6 +255,8 @@ model Animal {
   animalFarmerRegistrations      AnimalFarmerRegistration[]
   slaughterAnimalRegistrations   SlaughterAnimalRegistration[]
   breeds                         Breed[]
+  animalMedicines                AnimalMedicine[]
+  animalVaccinations             AnimalVaccine[]
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
 }
@@ -584,6 +588,7 @@ model Metric{
   unit      String
   seasons   Season[]
   cropFertilizerFarmerRegistration CropFertilizerFarmerRegistration[]
+  FarmingActivity FarmingActivity[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -593,10 +598,62 @@ model FarmingActivity{
   activity  Activities
   seasonId  String
   season    Season @relation(fields: [seasonId], references: [id])
+  medicines Medicine[]
+  vaccines Vaccine[]
+  fertilizers Feterlizer[]
+  metrics Metric[]
+  amount     Float?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+model Medicine{
+  id        String   @id @default(uuid())
+  name      String
+  cropMedicines     CropMedicine[]
+  animalMedicines   AnimalMedicine[]
+  farmingActivities FarmingActivity[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+}
+
+model Vaccine{
+  id        String   @id @default(uuid())
+  name      String
+  animalVaccines AnimalVaccine[]
+  farmingActivities FarmingActivity[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model CropMedicine{
+  id        String   @id @default(uuid())
+  cropId    String
+  crop      Crop @relation(fields: [cropId], references: [id])
+  medicineId String
+  medicine  Medicine @relation(fields: [medicineId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model AnimalMedicine{
+  id        String   @id @default(uuid())
+  animalId  String
+  animal    Animal @relation(fields: [animalId], references: [id])
+  medicineId String
+  medicine  Medicine @relation(fields: [medicineId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+}
+model AnimalVaccine{
+  id        String   @id @default(uuid())
+  animalId  String
+  animal    Animal @relation(fields: [animalId], references: [id])
+  vaccineId String
+  vaccine   Vaccine @relation(fields: [vaccineId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+}
 
 enum Activities{
   VACCINATION
