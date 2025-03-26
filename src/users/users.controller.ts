@@ -132,6 +132,20 @@ export class UsersController {
       return new ApiResponse(false, e.message, null, 400)
     }
   }
+  @Post('import-farmers/:cooperativeId')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
+  @UseInterceptors(FileInterceptor('file'))
+  async registerMultipleFarmersInCooperative(@UploadedFile() file: Express.Multer.File, @Param('cooperativeId') cooperativeId: string) {
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
+
+      return this.usersService.registerMultipleFarmersIntoCooperative(file, cooperativeId);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400)
+    }
+  }
   @Post('import-veterinarians')
   @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))

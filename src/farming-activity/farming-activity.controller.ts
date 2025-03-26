@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { FarmingActivityService } from './farming-activity.service';
-import { CreateFarmingActivityDto } from './dto/create-farming-activity.dto';
-import { UpdateFarmingActivityDto } from './dto/update-farming-activity.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
+import { CreateFarmingActivityDto } from './dto/create-farming-activity.dto';
+import { UpdateFarmingActivityDto } from './dto/update-farming-activity.dto';
 
 @Controller('farming-activity')
 @ApiBearerAuth()
@@ -14,6 +14,7 @@ export class FarmingActivityController {
   constructor(private readonly farmingActivityService: FarmingActivityService) { }
 
   @Post()
+  @ApiOperation({ summary: 'Create a new farming activity with optional medicines, vaccines, fertilizers and metrics' })
   async create(@Body() createFarmingActivityDto: CreateFarmingActivityDto) {
     try {
       return new ApiResponse(
@@ -28,6 +29,7 @@ export class FarmingActivityController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all farming activities with related entities' })
   async findAll() {
     try {
       return new ApiResponse(
@@ -42,6 +44,8 @@ export class FarmingActivityController {
   }
 
   @Get('season/:seasonId')
+  @ApiOperation({ summary: 'Get all farming activities for a specific season' })
+  @ApiParam({ name: 'seasonId', description: 'ID of the season' })
   async findAllBySeason(@Param('seasonId') seasonId: string) {
     try {
       return new ApiResponse(
@@ -56,6 +60,8 @@ export class FarmingActivityController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a specific farming activity by ID' })
+  @ApiParam({ name: 'id', description: 'ID of the farming activity' })
   async findOne(@Param('id') id: string) {
     try {
       return new ApiResponse(
@@ -70,7 +76,9 @@ export class FarmingActivityController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateFarmingActivityDto: UpdateFarmingActivityDto) {
+  @ApiOperation({ summary: 'Update a farming activity with optional medicines, vaccines, fertilizers and metrics' })
+  @ApiParam({ name: 'id', description: 'ID of the farming activity to update' })
+  async update(@Param('id') id: string, @Body() updateFarmingActivityDto: CreateFarmingActivityDto) {
     try {
       return new ApiResponse(
         true,
@@ -84,6 +92,8 @@ export class FarmingActivityController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a farming activity' })
+  @ApiParam({ name: 'id', description: 'ID of the farming activity to delete' })
   async remove(@Param('id') id: string) {
     try {
       return new ApiResponse(
