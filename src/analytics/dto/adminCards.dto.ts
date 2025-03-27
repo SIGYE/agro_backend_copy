@@ -4,12 +4,15 @@ export class AdminCardsDto {
     totalGroups: number
     totalCrops: number
     totalAnimals: number
+    totalPlantedArea: number
 
-    constructor(totalFarmers, totalCooperatives, totalGroups, totalCrops, totalAnimals) {
+    constructor(totalFarmers, totalCooperatives, totalGroups, totalCrops, totalAnimals, totalPlantedArea) {
         this.totalFarmers = totalFarmers
         this.totalCooperatives = totalCooperatives
         this.totalGroups = totalGroups
         this.totalCrops = totalCrops
         this.totalAnimals = totalAnimals
+        this.totalPlantedArea = totalPlantedArea
+
     }
 }
