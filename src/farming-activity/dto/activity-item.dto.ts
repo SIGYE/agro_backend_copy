@@ -11,6 +11,5 @@ export class ActivityItemDto {
     @IsOptional()
     amount?: number;
     @ApiProperty({ description: 'ID of the Disease' })
-    @IsUUID()
     diseaseId?: string;
 }
