@@ -69,6 +69,18 @@ export class FarmerController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('individual-farmers')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  async findAllIndividualFarmers(@Query('locationId') locationId?: number, @Query('page') page?: number, @Query('limit') limit?: number) {
+    try {
+      const data = await this.farmerService.getFarmersWithoutCooperative(locationId, page, limit);
+      return new ApiResponse(true, "All Individual Farmers", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 
   @Get('farmers-by-location/:id')
   async findAllFarmersByLocation(@Param('id') id: number) {

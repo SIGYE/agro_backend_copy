@@ -839,4 +839,85 @@ export class FarmerService {
 
     return { success, failed, errors };
   }
+  async getFarmersWithoutCooperative(locationId?: number, page: number = 1, limit: number = 10) {
+    try {
+      // Build the where clause
+      const whereClause: any = {
+        // Farmer is not part of any cooperative
+        cooperativeId: null
+      };
+
+      // If location is provided, filter by location
+      if (locationId) {
+        whereClause.user = {
+          locationId: locationId
+        };
+      }
+
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+
+      // Get total count for pagination info
+      const totalCount = await this.databaseService.farmer.count({
+        where: whereClause
+      });
+
+      // Get the farmers without cooperatives with pagination
+      const farmers = await this.databaseService.farmer.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              telephone: true,
+              email: true,
+              gender: true,
+              location: true
+            }
+          },
+          cropFarmerRegistrations: {
+            include: {
+              cropType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          },
+          animalFarmerRegistrations: {
+            include: {
+              animal: true
+            }
+          },
+          seasons: {
+            take: 5,
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      // Format the response with pagination info
+      return {
+        data: farmers,
+        meta: {
+          totalItems: totalCount,
+          itemCount: farmers.length,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(totalCount / limit),
+          currentPage: page
+        }
+      };
+    } catch (e) {
+      throw e;
+    }
+  }
 }

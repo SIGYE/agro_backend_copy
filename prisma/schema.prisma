@@ -167,6 +167,7 @@ model Pest{
   animals         LiveStockRegistration[]
   crops             Crop[]
   seasons           Season[]
+  farmingActivities FarmingActivity[]
   type              PestType
   medication        String
   createdAt         DateTime           @default(now())
@@ -227,6 +228,7 @@ model CropType{
   seasons   Season[]
   seedStrains SeedStrain[]
   cropFarmerRegistrations      CropFarmerRegistration[]
+  cooperativeCropRegistrations CooperativeCropRegistration[]
 }
 
 model Season{
@@ -306,6 +308,7 @@ model Cooperative {
   Location                       Location                       @relation(fields: [locationId], references: [id])
   locationId                       Int
   farmers                        Farmer[]
+  cooperativeCropRegistrations   CooperativeCropRegistration[]
   type                           CooperativeType
   cooperativeManager             User                          @relation(fields: [cooperativeManagerId], references: [id])
   cooperativeManagerId           String
@@ -333,6 +336,16 @@ model CropFarmerRegistration {
   createdAt                         DateTime                           @default(now())
   updatedAt                         DateTime                           @updatedAt
 }
+model CooperativeCropRegistration {
+  id                                String                             @id @default(uuid())
+  cooperativeId                          String
+  cropTypeId                            String
+  cooperative                            Cooperative                             @relation(fields: [cooperativeId], references: [id])
+  cropType                              CropType                               @relation(fields: [cropTypeId], references: [id])
+  createdAt                         DateTime                           @default(now())
+  updatedAt                         DateTime                           @updatedAt
+}
+
 
 model CropFertilizerFarmerRegistration {
   id                       String                 @id @default(uuid())
@@ -620,6 +633,7 @@ model FarmingActivity{
   vaccines Vaccine[]
   fertilizers Feterlizer[]
   diseases     Disease[]
+  pests        Pest[]
   metrics Metric[]
   amount     Float?
   createdAt DateTime @default(now())

@@ -38,6 +38,9 @@ export class FarmingActivityService {
             },
             diseases: {
               connect: medicines.map(medicine => ({ id: medicine.diseaseId }))
+            },
+            pests: {
+              connect: medicines.map(medicine => ({ id: medicine.pestId }))
             }
           }
         });
@@ -87,7 +90,9 @@ export class FarmingActivityService {
           medicines: true,
           vaccines: true,
           fertilizers: true,
-          metrics: true
+          metrics: true,
+          pests: true,
+          diseases: true
         }
       });
     } catch (e) {
@@ -104,7 +109,8 @@ export class FarmingActivityService {
           vaccines: true,
           fertilizers: true,
           metrics: true,
-          diseases: true
+          diseases: true,
+          pests: true
         },
         orderBy: {
           date: 'desc'
@@ -127,7 +133,8 @@ export class FarmingActivityService {
           vaccines: true,
           fertilizers: true,
           metrics: true,
-          diseases: true
+          diseases: true,
+          pests: true
         },
         orderBy: {
           date: 'desc'
@@ -150,7 +157,8 @@ export class FarmingActivityService {
           vaccines: true,
           fertilizers: true,
           metrics: true,
-          diseases: true
+          diseases: true,
+          pests: true
         }
       });
     } catch (e) {
@@ -195,7 +203,8 @@ export class FarmingActivityService {
           vaccines: true,
           fertilizers: true,
           metrics: true,
-          diseases: true
+          diseases: true,
+          pests: true
         }
       });
 
@@ -220,8 +229,11 @@ export class FarmingActivityService {
               medicines: {
                 connect: medicines.map(medicine => ({ id: medicine.id }))
               },
-              diseases:{
-                connect:medicines.map(medicine => ({ id: medicine.diseaseId }))
+              diseases: {
+                connect: medicines.map(medicine => ({ id: medicine.diseaseId }))
+              },
+              pests: {
+                connect: medicines.map(medicine => ({ id: medicine.pestId }))
               }
             }
           });
@@ -312,7 +324,8 @@ export class FarmingActivityService {
           vaccines: true,
           fertilizers: true,
           metrics: true,
-          diseases: true
+          diseases: true,
+          pests: true
         }
       });
     } catch (e) {
