@@ -142,6 +142,7 @@ model Disease {
   crops             Crop[]
   seasons           Season[]
   type              DiseaseType
+  farmingActivities FarmingActivity[]
   medication        String
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -606,6 +607,7 @@ model FarmingActivity{
   medicines Medicine[]
   vaccines Vaccine[]
   fertilizers Feterlizer[]
+  diseases     Disease[]
   metrics Metric[]
   amount     Float?
   createdAt DateTime @default(now())
