@@ -50,4 +50,8 @@ export class CreateUserDto {
     @ApiProperty()
     @IsOptional()
     locationId: number
+    @ApiProperty()
+    @IsOptional()
+    country?: number
+    
 }
