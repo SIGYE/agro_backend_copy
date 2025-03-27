@@ -768,14 +768,18 @@ export class AnalyticsService {
           ...locationQuery
         }
       })
-      let totalAnimals = await this.databaseService.animal.count({
+      let totalPlantationArea = await this.databaseService.season.aggregate({
+        _sum: {
+          plantationArea: true,
+        },
         where: {
-          creator: {
-            ...locationQuery
+          farmer: {
+            user: {
+              ...locationQuery
+            }
           }
-
         }
-      })
+      });
       let totalCrops = await this.databaseService.crop.count({
         where: {
           creator: {
@@ -784,7 +788,15 @@ export class AnalyticsService {
         }
 
       })
-      return new AdminCardsDto(totalFarmers, totalCooperatives, totalGroups, totalAnimals, totalCrops);
+      let totalAnimals = await this.databaseService.animal.count({
+        where: {
+          creator: {
+            ...locationQuery
+          }
+        }
+
+      })
+      return new AdminCardsDto(totalFarmers, totalCooperatives, totalGroups, totalAnimals, totalCrops, totalPlantationArea._sum.plantationArea);
 
     } catch (error) {
 

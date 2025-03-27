@@ -76,6 +76,7 @@ model User {
   resetCodeExpires  DateTime?
   location          Location?           @relation(fields: [locationId], references: [id])
   locationId        Int?
+  country           Int?
   farmer            Farmer[]
   agronomies        Agronomy[]
   veterinaries      Veterinary[]
@@ -129,8 +130,19 @@ model Location {
   locationLevelId   Int
   users             User[]
   cooperatives      Cooperative[]
+  locationLevelName  Location_Level_Name[]
 
   @@map("location")
+}
+model Location_Level_Name{
+  id           Int        @id @default(autoincrement())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  order_number Int
+  countryId    Int
+  country Location @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  name         String     @unique
+  code         String     @unique
 }
 
 model Disease {
