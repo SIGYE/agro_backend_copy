@@ -42,7 +42,7 @@ export class AuthService {
     }
 
     // Check if the credential matches the pattern for a Rwandan phone number
-    const phoneNumberPattern = /^250\d{9}$/;
+    const phoneNumberPattern = /^\d+$/;
     if (phoneNumberPattern.test(credential)) {
       return 2;
     }
