@@ -17,6 +17,6 @@ export class CreateLocationLevelNameDto {
 
     @ApiProperty()
     @IsInt()
-    @Min(1)
+    @Min(0)
     countryId: number;
 }

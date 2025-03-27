@@ -12,4 +12,7 @@ export class ActivityItemDto {
     amount?: number;
     @ApiProperty({ description: 'ID of the Disease' })
     diseaseId?: string;
+    @ApiProperty({ description: 'ID of the Pest' })
+    pestId?: string;
+
 }

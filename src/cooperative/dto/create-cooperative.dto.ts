@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsInt, IsOptional, ValidateNested, IsEnum } from 'class-validator';
 import { CooperativeType } from '@prisma/client';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { cooperativeCropDto } from './cooperative-crop.dto';
 
 export class CreateCooperativeDto {
     @ApiProperty()
@@ -35,6 +36,15 @@ export class CreateCooperativeDto {
     @ApiProperty()
     @Type(() => CreateUserDto)
     managerDto: CreateUserDto
+
+    @ApiProperty({
+        isArray: true,
+        type: cooperativeCropDto
+    })
+    @ValidateNested({ each: true })
+    @Type(() => cooperativeCropDto)
+    @IsOptional()
+    crops?: cooperativeCropDto[]
 
 
 }

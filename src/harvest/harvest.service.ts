@@ -9,7 +9,7 @@ export class HarvestService {
 
   async create(createHarvestDto: CreateHarvestDto) {
     try {
-      return await this.databaseService.harvest.create({
+      let harvest = await this.databaseService.harvest.create({
         data: {
           name: createHarvestDto.name,
           amount: createHarvestDto.amount,
@@ -24,6 +24,23 @@ export class HarvestService {
           season: true
         }
       });
+      let currentProduce = await this.databaseService.season.findUnique({
+        where: {
+          id: createHarvestDto.seasonId
+        },
+        select: {
+          produceHarvested: true
+        }
+      })
+      await this.databaseService.season.update({
+        where: {
+          id: createHarvestDto.seasonId
+        },
+        data: {
+          produceHarvested: createHarvestDto.amount + currentProduce.produceHarvested
+        }
+      })
+      return harvest;
     } catch (e) {
       throw e;
     }
