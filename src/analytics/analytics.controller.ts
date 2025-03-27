@@ -129,16 +129,18 @@ export class AnalyticsController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
-  @Get('dashboard/crop-farmer-relation')
+  @Get('dashboard/crop-land-relation')
   @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getCropFarmerRelation(@Query('locationId') locationId?: number, @Query('limit') limit?: number) {
+  @ApiQuery({ name: 'harvestSeason', required: false, type: String })
+  async cropLandDistributionRelation(@Query('locationId') locationId?: number, @Query('harvestSeasonId') harvestSeasonId?: string, @Query('limit') limit?: number) {
     try {
-      const data = await this.analyticsService.farmerCropsRelation(locationId, limit);
-      return new ApiResponse(true, "Crop Farmer relation", data, 200);
+      const data = await this.analyticsService.cropLandDistributionRelation(locationId, harvestSeasonId, limit);
+      return new ApiResponse(true, "Crop Land relation", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
-
 }
+
+

@@ -1205,4 +1205,83 @@ export class AnalyticsService {
       throw e;
     }
   }
+  async cropLandDistributionRelation(locationId?: number, harvestSeasonId?: string, limit: number = 0) {
+    try {
+      // Build the where clause for seasons query
+      const whereClause: any = {};
+
+      // Filter by harvest season if provided
+      if (harvestSeasonId) {
+        whereClause.harvestSeasonId = harvestSeasonId;
+      }
+
+      // If location is provided, filter farmers by location
+      if (locationId) {
+        whereClause.farmer = {
+          user: {
+            locationId: locationId
+          }
+        };
+      }
+
+      // Query all seasons with the specified filters
+      const seasons = await this.databaseService.season.findMany({
+        where: whereClause,
+        include: {
+          croType: {
+            include: {
+              crop: true
+            }
+          }
+        }
+      });
+
+      // Group and aggregate land distribution by crop
+      const cropLandMap = new Map();
+
+      // Process each season
+      seasons.forEach(season => {
+        const cropId = season.croType.crop.id;
+        const cropName = season.croType.crop.name;
+        const plantationArea = season.plantationArea || 0;
+
+        if (!cropLandMap.has(cropId)) {
+          cropLandMap.set(cropId, {
+            id: cropId,
+            name: cropName,
+            totalArea: 0,
+            percentage: 0,
+            seasons: []
+          });
+        }
+
+        // Add this season's area to the crop's total
+        cropLandMap.get(cropId).totalArea += plantationArea;
+        cropLandMap.get(cropId).seasons.push(season.id);
+      });
+
+      // Calculate total area across all crops
+      const totalAreaAllCrops = Array.from(cropLandMap.values())
+        .reduce((sum, crop) => sum + crop.totalArea, 0);
+
+      // Convert map to array and calculate percentages
+      const result = Array.from(cropLandMap.values()).map(item => ({
+        id: item.id,
+        name: item.name,
+        totalArea: item.totalArea,
+        percentage: totalAreaAllCrops > 0
+          ? Number(((item.totalArea / totalAreaAllCrops) * 100).toFixed(2))
+          : 0,
+        seasonCount: item.seasons.length
+      }));
+
+      // Sort by total area in descending order
+      result.sort((a, b) => b.totalArea - a.totalArea);
+
+      // Apply limit if provided
+      return limit > 0 ? result.slice(0, limit) : result;
+    } catch (e) {
+      throw e;
+    }
+  }
 }
