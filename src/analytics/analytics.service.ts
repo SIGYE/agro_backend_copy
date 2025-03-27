@@ -1140,4 +1140,69 @@ export class AnalyticsService {
       throw new BadRequestException(error.message);
     }
   }
+  async farmerCropsRelation(locationId?: number, limit: number = 0) {
+    try {
+      const whereClause: any = {};
+
+      // Only add location filter if locationId is provided
+      if (locationId) {
+        whereClause.user = {
+          locationId: locationId
+        };
+      }
+
+      const farmers = await this.databaseService.farmer.findMany({
+        where: whereClause,
+        include: {
+          cropFarmerRegistrations: {
+            include: {
+              cropType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Group farmers by crop
+      const cropFarmerMap = new Map();
+
+      // Process each farmer
+      farmers.forEach(farmer => {
+        farmer.cropFarmerRegistrations.forEach(registration => {
+          const cropName = registration.cropType.crop.name;
+          const cropId = registration.cropType.crop.id;
+
+          if (!cropFarmerMap.has(cropId)) {
+            cropFarmerMap.set(cropId, {
+              id: cropId,
+              name: cropName,
+              farmerCount: 0,
+              farmers: new Set() // Using Set to avoid duplicate farmers
+            });
+          }
+
+          // Add farmer to the set for this crop
+          cropFarmerMap.get(cropId).farmers.add(farmer.id);
+        });
+      });
+
+      // Convert the map to array and calculate counts
+      const result = Array.from(cropFarmerMap.values()).map(item => ({
+        id: item.id,
+        name: item.name,
+        farmerCount: item.farmers.size
+      }));
+
+      // Sort by farmer count in descending order
+      result.sort((a, b) => b.farmerCount - a.farmerCount);
+
+      // Apply the limit if provided
+      return limit > 0 ? result.slice(0, limit) : result;
+    } catch (e) {
+      throw e;
+    }
+  }
 }
