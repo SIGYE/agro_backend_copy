@@ -83,6 +83,7 @@ export class UsersService {
           gender: createUserDto.gender,
           dob: createUserDto.dob ? new Date(createUserDto.dob) : null,
           locationChildrenIds: JSON.stringify(childrenLocationsIds),
+          country: createUserDto.country,
           role: {
             connect: {
               id: role.id
@@ -512,11 +513,13 @@ export class UsersService {
           locationId: 0,
           gender: row[5],
           dob: row[6],
+          country: row[7],
 
 
         };
-        let location = await this.locationService.getLocationByName(row[9]);
+        let location = await this.locationService.getLocationByName(row[7]);
         userDto.locationId = location.id;
+        userDto.country = location.id
         let role = await this.databaseService.role.findFirst({
           where: {
             name: "VETERINARIAN"
@@ -565,10 +568,12 @@ export class UsersService {
           locationId: 0,
           gender: row[5],
           dob: row[6],
+          country: row[7],
 
 
         };
-        let location = await this.locationService.getLocationByName(row[9]);
+        let location = await this.locationService.getLocationByName(row[7]);
+        userDto.country = location.id;
         userDto.locationId = location.id;
         let role = await this.databaseService.role.findFirst({
           where: {
@@ -619,11 +624,13 @@ export class UsersService {
           locationId: 0,
           gender: row[5],
           dob: row[6],
+          country: row[7],
 
 
         };
-        let location = await this.locationService.getLocationByName(row[9]);
+        let location = await this.locationService.getLocationByName(row[7]);
         userDto.locationId = location.id;
+        userDto.country = location.id
         let role = await this.databaseService.role.findFirst({
           where: {
             name: "FARMER"
