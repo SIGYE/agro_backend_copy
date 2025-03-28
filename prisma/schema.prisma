@@ -664,7 +664,6 @@ model CropMedicine{
   crop      Crop @relation(fields: [cropId], references: [id])
   medicineId String
   medicine  Medicine @relation(fields: [medicineId], references: [id])
-  amount    Float?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -674,7 +673,6 @@ model AnimalMedicine{
   animal    Animal @relation(fields: [animalId], references: [id])
   medicineId String
   medicine  Medicine @relation(fields: [medicineId], references: [id])
-  amount    Float?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -685,7 +683,6 @@ model AnimalVaccine{
   animal    Animal @relation(fields: [animalId], references: [id])
   vaccineId String
   vaccine   Vaccine @relation(fields: [vaccineId], references: [id])
-  amount    Float?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
