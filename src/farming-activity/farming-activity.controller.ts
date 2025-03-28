@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { FarmingActivityService } from './farming-activity.service';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ApiResponse } from 'src/responses/api.response';
 import { CreateFarmingActivityDto } from './dto/create-farming-activity.dto';
@@ -58,6 +58,17 @@ export class FarmingActivityController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'cropId', required: false, type: String })
+  @ApiQuery({ name: 'harvestSeasonId', required: false, type: String })
+  async cropFarmerRelation(@Query('cropId') cropId: string, @Query('harvestSeasonId') harvestSeasonId: string, @Query('locationId') locationId?: number) {
+    try {
+      const data = await this.farmingActivityService.getFarmingActivitiesByCropAndHarvestSeason(cropId, harvestSeasonId, locationId);
+      return new ApiResponse(true, "Crop Land relation", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific farming activity by ID' })
@@ -106,4 +117,5 @@ export class FarmingActivityController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+
 }
