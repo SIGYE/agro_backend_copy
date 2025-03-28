@@ -86,4 +86,90 @@ export class FertiliserService {
       throw e;
     }
   }
+  async getTopFertilizers(limit?: number, locationId?: number) {
+    try {
+      // Prepare the where clause for filtering
+      let whereClause = {};
+
+      // Add location filter if locationId is provided
+      if (locationId) {
+        whereClause = {
+          farmingActivities: {
+            some: {
+              season: {
+                farmer: {
+                  locationId: locationId,
+                },
+              },
+            },
+          },
+        };
+      }
+
+      // Get fertilizers with their farming activities
+      const fertilizers = await this.databaseService.feterlizer.findMany({
+        where: whereClause,
+        include: {
+          farmingActivities: {
+            include: {
+              season: {
+                include: {
+                  farmer: true, // Include farmer to access location data
+                  croType: {
+                    include: {
+                      crop: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Process fertilizers to calculate statistics
+      const fertilizerStats = fertilizers.map((fertilizer) => {
+        // Calculate total amount used
+        const totalAmount = fertilizer.farmingActivities.reduce((sum, activity) => {
+          return sum + (activity.amount || 0);
+        }, 0);
+
+        // Get unique crops and count them
+        const cropMap = new Map();
+        fertilizer.farmingActivities.forEach((activity) => {
+          const crop = activity.season.croType.crop;
+          if (crop) {
+            if (!cropMap.has(crop.id)) {
+              cropMap.set(crop.id, {
+                id: crop.id,
+                name: crop.name,
+                count: 0,
+              });
+            }
+            cropMap.get(crop.id).count += 1;
+          }
+        });
+
+        const cropsUsedOn = Array.from(cropMap.values());
+        const totalCrops = cropsUsedOn.length;
+
+        return {
+          id: fertilizer.id,
+          name: fertilizer.name,
+          totalAmount,
+          totalCrops,
+          cropsUsedOn,
+          usageCount: fertilizer.farmingActivities.length,
+        };
+      });
+
+      // Sort by usage count (or could sort by totalAmount if preferred)
+      const sortedFertilizers = fertilizerStats.sort((a, b) => b.usageCount - a.usageCount);
+
+      // Return the top N fertilizers or all if no limit is provided
+      return limit ? sortedFertilizers.slice(0, limit) : sortedFertilizers;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
