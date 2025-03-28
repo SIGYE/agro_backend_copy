@@ -61,6 +61,7 @@ export class FarmingActivityController {
   @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'cropId', required: false, type: String })
   @ApiQuery({ name: 'harvestSeasonId', required: false, type: String })
+  @Get('get-activities-by-season-crop')
   async cropFarmerRelation(@Query('cropId') cropId: string, @Query('harvestSeasonId') harvestSeasonId: string, @Query('locationId') locationId?: number) {
     try {
       const data = await this.farmingActivityService.getFarmingActivitiesByCropAndHarvestSeason(cropId, harvestSeasonId, locationId);
