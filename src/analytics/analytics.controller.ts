@@ -141,6 +141,17 @@ export class AnalyticsController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('dashboard/crop-farmer-relation')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async cropFarmerRelation(@Query('locationId') locationId?: number, @Query('limit') limit?: number) {
+    try {
+      const data = await this.analyticsService.farmerCropsRelation(locationId, limit);
+      return new ApiResponse(true, "Crop Land relation", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 }
 
 
