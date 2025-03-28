@@ -329,8 +329,7 @@ export class AnalyticsService {
           farmer: {
             user: { ...locationQuery },
             ...cooperativeQuery
-          },
-          seasonStatus: SeasonStatus.ENDED,
+          }
         },
         select: {
           cropTypeId: true,

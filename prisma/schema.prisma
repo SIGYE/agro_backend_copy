@@ -141,8 +141,8 @@ model Location_Level_Name{
   order_number Int
   countryId    Int
   country Location @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  name         String     @unique
-  code         String     @unique
+  name         String     
+  code         String     
 }
 
 model Disease {

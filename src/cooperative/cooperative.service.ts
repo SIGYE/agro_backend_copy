@@ -241,8 +241,7 @@ export class CooperativeService {
             some: {
               farmer: {
                 cooperativeId,
-              },
-              seasonStatus: SeasonStatus.ENDED
+              }
             },
           },
         },
