@@ -920,4 +920,179 @@ export class FarmerService {
       throw e;
     }
   }
+  async getFarmerData(locationId?: number) {
+    try {
+      // Build the location filter
+      const whereClause: any = {};
+
+      if (locationId) {
+        whereClause.user = {
+          locationId: locationId
+        };
+      }
+
+      // Get all individual farmers (not in any cooperative)
+      const individualFarmers = await this.databaseService.farmer.findMany({
+        where: {
+          ...whereClause,
+          cooperativeId: null
+        },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              telephone: true,
+              nationalId: true,
+              gender: true,
+              dob: true,
+              email: true
+            }
+          },
+          cropFarmerRegistrations: {
+            include: {
+              cropType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Prepare individual farmers data with age calculations and crop details
+      const processedIndividualFarmers = individualFarmers.map(farmer => {
+        // Calculate age if DOB is available
+        let age = null;
+        let ageGroup = "Unknown";
+
+        if (farmer.user.dob) {
+          const today = new Date();
+          const birthDate = new Date(farmer.user.dob);
+          age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+
+          // Determine age group based on specified ranges
+          if (age < 18) ageGroup = "Under 18";
+          else if (age <= 25) ageGroup = "18-25";
+          else if (age <= 35) ageGroup = "26-35";
+          else if (age <= 45) ageGroup = "36-45";
+          else if (age <= 55) ageGroup = "46-55";
+          else if (age <= 65) ageGroup = "56-65";
+          else ageGroup = "66+";
+        }
+
+        // Extract crop data
+        const crops = farmer.cropFarmerRegistrations.map(registration => ({
+          cropId: registration.cropType.crop.id,
+          cropName: registration.cropType.crop.name,
+          cropTypeId: registration.cropType.id,
+          cropTypeName: registration.cropType.name
+        }));
+
+        return {
+          id: farmer.id,
+          name: `${farmer.user.firstName} ${farmer.user.lastName}`,
+          phoneNumber: farmer.user.telephone || "N/A",
+          nationalId: farmer.user.nationalId || "N/A",
+          email: farmer.user.email || "N/A",
+          gender: farmer.user.gender || "UNKNOWN",
+          age,
+          ageGroup,
+          crops
+        };
+      });
+
+      // Get all cooperatives with their farmers
+      const cooperatives = await this.databaseService.cooperative.findMany({
+        where: locationId ? {
+          locationId: locationId
+        } : {},
+        include: {
+          cooperativeManager: {
+            select: {
+              firstName: true,
+              lastName: true,
+              telephone: true,
+              email: true
+            }
+          },
+          cooperativeCropRegistrations: {
+            include: {
+              cropType: {
+                include: {
+                  crop: true
+                }
+              }
+            }
+          },
+          farmers: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+
+      // Process cooperatives data
+      const processedCooperatives = cooperatives.map(cooperative => {
+        // Extract crop data
+        const crops = cooperative.cooperativeCropRegistrations.map(registration => ({
+          cropId: registration.cropType.crop.id,
+          cropName: registration.cropType.crop.name,
+          cropTypeId: registration.cropType.id,
+          cropTypeName: registration.cropType.name
+        }));
+
+        return {
+          id: cooperative.id,
+          name: cooperative.name,
+          registrationNumber: cooperative.registrationNumber || "N/A",
+          phoneNumber: cooperative.telephone || "N/A",
+          totalFarmers: cooperative.farmers.length,
+          manager: {
+            name: `${cooperative.cooperativeManager.firstName} ${cooperative.cooperativeManager.lastName}`,
+            phoneNumber: cooperative.cooperativeManager.telephone || "N/A",
+            email: cooperative.cooperativeManager.email || "N/A"
+          },
+          crops
+        };
+      });
+
+      // Get location name if provided
+      let locationName = "All Locations";
+      if (locationId) {
+        const location = await this.databaseService.location.findUnique({
+          where: { id: locationId }
+        });
+        if (location) {
+          locationName = location.name;
+        }
+      }
+
+      // Return the grouped data
+      return {
+        location: {
+          id: locationId || null,
+          name: locationName
+        },
+        summary: {
+          totalIndividualFarmers: processedIndividualFarmers.length,
+          totalCooperatives: processedCooperatives.length,
+          totalFarmersInCooperatives: processedCooperatives.reduce(
+            (sum, coop) => sum + coop.totalFarmers, 0
+          )
+        },
+        individualFarmers: processedIndividualFarmers,
+        cooperatives: processedCooperatives
+      };
+    } catch (e) {
+      throw e;
+    }
+  }
 }
