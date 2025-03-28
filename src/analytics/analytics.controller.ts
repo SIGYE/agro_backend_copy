@@ -177,7 +177,7 @@ export class AnalyticsController {
   @ApiQuery({ name: 'locationId', required: false, type: Number })
   async farmerCardData(@Query('locationId') locationId?: number) {
     try {
-      const data = await this.analyticsService.farmerCardData(cropId, locationId);
+      const data = await this.analyticsService.farmerCardData(locationId);
       return new ApiResponse(true, "Farmer Card Data", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
