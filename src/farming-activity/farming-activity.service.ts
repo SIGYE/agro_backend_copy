@@ -11,7 +11,16 @@ export class FarmingActivityService {
   async create(createFarmingActivityDto: CreateFarmingActivityDto) {
     try {
       // Extract the main farming activity data
-      const { date, activity, seasonId, medicines, vaccines, fertilizers, metrics, amount } = createFarmingActivityDto;
+      const {
+        date,
+        activity,
+        seasonId,
+        medicines,
+        vaccines,
+        fertilizers,
+        metrics,
+        amount
+      } = createFarmingActivityDto;
 
       // Create the base farming activity
       const farmingActivity = await this.databaseService.farmingActivity.create({
@@ -27,24 +36,46 @@ export class FarmingActivityService {
         }
       });
 
-      // Process medicines if provided and the activity is relevant
-      if (medicines && medicines.length > 0 &&
-        (activity === Activities.MEDICINE || activity === Activities.MEDICATION)) {
+      // Process medicines if provided
+      if (medicines && medicines.length > 0) {
+        // Create arrays to hold unique disease and pest IDs from medicines
+        const medicineRelatedDiseaseIds = medicines
+          .filter(medicine => medicine.diseaseId)
+          .map(medicine => ({ id: medicine.diseaseId }));
+
+        const medicineRelatedPestIds = medicines
+          .filter(medicine => medicine.pestId)
+          .map(medicine => ({ id: medicine.pestId }));
+
+        // Update data object for the activity
+        const updateData: any = {
+          medicines: {
+            connect: medicines.map(medicine => ({ id: medicine.id }))
+          }
+        };
+
+        // Add disease connections if there are any
+        if (medicineRelatedDiseaseIds.length > 0) {
+          updateData.diseases = {
+            connect: medicineRelatedDiseaseIds
+          };
+        }
+
+        // Add pest connections if there are any
+        if (medicineRelatedPestIds.length > 0) {
+          updateData.pests = {
+            connect: medicineRelatedPestIds
+          };
+        }
+
         await this.databaseService.farmingActivity.update({
           where: { id: farmingActivity.id },
-          data: {
-            medicines: {
-              connect: medicines.map(medicine => ({ id: medicine.id }))
-            },
-            diseases: {
-              connect: medicines.map(medicine => ({ id: medicine.diseaseId }))
-            },
-            pests: {
-              connect: medicines.map(medicine => ({ id: medicine.pestId }))
-            }
-          }
+          data: updateData
         });
       }
+
+      // We'll handle pest and disease connections from medicines
+      // This is already handled in the medicines processing section
 
       // Process vaccines if provided and the activity is vaccination
       if (vaccines && vaccines.length > 0 && activity === Activities.VACCINATION) {
@@ -100,75 +131,18 @@ export class FarmingActivityService {
     }
   }
 
-  async findAll() {
-    try {
-      return await this.databaseService.farmingActivity.findMany({
-        include: {
-          season: true,
-          medicines: true,
-          vaccines: true,
-          fertilizers: true,
-          metrics: true,
-          diseases: true,
-          pests: true
-        },
-        orderBy: {
-          date: 'desc'
-        }
-      });
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  async findAllBySeason(seasonId: string) {
-    try {
-      return await this.databaseService.farmingActivity.findMany({
-        where: {
-          seasonId: seasonId
-        },
-        include: {
-          season: true,
-          medicines: true,
-          vaccines: true,
-          fertilizers: true,
-          metrics: true,
-          diseases: true,
-          pests: true
-        },
-        orderBy: {
-          date: 'desc'
-        }
-      });
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  async findOne(id: string) {
-    try {
-      return await this.databaseService.farmingActivity.findUnique({
-        where: {
-          id: id
-        },
-        include: {
-          season: true,
-          medicines: true,
-          vaccines: true,
-          fertilizers: true,
-          metrics: true,
-          diseases: true,
-          pests: true
-        }
-      });
-    } catch (e) {
-      throw e;
-    }
-  }
-
   async update(id: string, updateFarmingActivityDto: CreateFarmingActivityDto) {
     try {
-      const { date, activity, seasonId, medicines, vaccines, fertilizers, metrics, amount } = updateFarmingActivityDto;
+      const {
+        date,
+        activity,
+        seasonId,
+        medicines,
+        vaccines,
+        fertilizers,
+        metrics,
+        amount
+      } = updateFarmingActivityDto;
 
       // Prepare the base update data
       const data: any = {};
@@ -220,25 +194,57 @@ export class FarmingActivityService {
           }
         });
 
-        // Then connect the new ones
-        if (medicines.length > 0 &&
-          (updatedActivity.activity === Activities.MEDICINE || updatedActivity.activity === Activities.MEDICATION)) {
+        // When medicines list is changed, we also need to reset pests and diseases
+        await this.databaseService.farmingActivity.update({
+          where: { id },
+          data: {
+            diseases: { set: [] }, // Disconnect all existing diseases
+            pests: { set: [] }     // Disconnect all existing pests
+          }
+        });
+
+        // Then connect the new ones if there are any
+        if (medicines.length > 0) {
+
+          // Create arrays to hold unique disease and pest IDs from medicines
+          const medicineRelatedDiseaseIds = medicines
+            .filter(medicine => medicine.diseaseId)
+            .map(medicine => ({ id: medicine.diseaseId }));
+
+          const medicineRelatedPestIds = medicines
+            .filter(medicine => medicine.pestId)
+            .map(medicine => ({ id: medicine.pestId }));
+
+          // Build the update data
+          const updateData: any = {
+            medicines: {
+              connect: medicines.map(medicine => ({ id: medicine.id }))
+            }
+          };
+
+          // Add disease connections if there are any
+          if (medicineRelatedDiseaseIds.length > 0) {
+            updateData.diseases = {
+              connect: medicineRelatedDiseaseIds
+            };
+          }
+
+          // Add pest connections if there are any
+          if (medicineRelatedPestIds.length > 0) {
+            updateData.pests = {
+              connect: medicineRelatedPestIds
+            };
+          }
+
           await this.databaseService.farmingActivity.update({
             where: { id },
-            data: {
-              medicines: {
-                connect: medicines.map(medicine => ({ id: medicine.id }))
-              },
-              diseases: {
-                connect: medicines.map(medicine => ({ id: medicine.diseaseId }))
-              },
-              pests: {
-                connect: medicines.map(medicine => ({ id: medicine.pestId }))
-              }
-            }
+            data: updateData
           });
         }
       }
+
+      // When medicines are updated, we should also reset and update pests and diseases
+      // This is handled in the medicines section
 
       // Handle vaccines if provided
       if (vaccines !== undefined) {
@@ -333,6 +339,73 @@ export class FarmingActivityService {
     }
   }
 
+  // The findAll, findAllBySeason, findOne, and remove methods remain unchanged
+  async findAll() {
+    try {
+      return await this.databaseService.farmingActivity.findMany({
+        include: {
+          season: true,
+          medicines: true,
+          vaccines: true,
+          fertilizers: true,
+          metrics: true,
+          diseases: true,
+          pests: true
+        },
+        orderBy: {
+          date: 'desc'
+        }
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async findAllBySeason(seasonId: string) {
+    try {
+      return await this.databaseService.farmingActivity.findMany({
+        where: {
+          seasonId: seasonId
+        },
+        include: {
+          season: true,
+          medicines: true,
+          vaccines: true,
+          fertilizers: true,
+          metrics: true,
+          diseases: true,
+          pests: true
+        },
+        orderBy: {
+          date: 'desc'
+        }
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async findOne(id: string) {
+    try {
+      return await this.databaseService.farmingActivity.findUnique({
+        where: {
+          id: id
+        },
+        include: {
+          season: true,
+          medicines: true,
+          vaccines: true,
+          fertilizers: true,
+          metrics: true,
+          diseases: true,
+          pests: true
+        }
+      });
+    } catch (e) {
+      throw e;
+    }
+  }
+
   async remove(id: string) {
     try {
       // First disconnect all relations to prevent foreign key constraint errors
@@ -342,7 +415,9 @@ export class FarmingActivityService {
           medicines: { set: [] },
           vaccines: { set: [] },
           fertilizers: { set: [] },
-          metrics: { set: [] }
+          metrics: { set: [] },
+          diseases: { set: [] },  // Added disconnection for diseases
+          pests: { set: [] }      // Added disconnection for pests
         }
       });
 
