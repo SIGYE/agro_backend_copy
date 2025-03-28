@@ -131,7 +131,16 @@ export class FarmerController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
-
+  @Get('farmer-data')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async getFarmerData(@Query('locationId') locationId?: number) {
+    try {
+      const data = await this.farmerService.getFarmerData(locationId);
+      return new ApiResponse(true, "All farmer data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
   @Get('livestocks-by-farmerRegistration/:id')
   async findAllLiveStocksByFarmerRegistration(@Param('id') id: string) {
     try {
@@ -222,14 +231,5 @@ export class FarmerController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
-  @Get('farmer-data')
-  @ApiQuery({ name: 'locationId', required: false, type: Number })
-  async getFarmerData(@Query('locationId') locationId?: number) {
-    try {
-      const data = await this.farmerService.getFarmerData(locationId);
-      return new ApiResponse(true, "All farmer data", data, 200);
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400);
-    }
-  }
+
 }
