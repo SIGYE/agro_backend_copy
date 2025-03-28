@@ -34,6 +34,7 @@ export class FertiliserController {
     }
 
   }
+  @Get('top-fertilisers')
   @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getTopFertilizers(@Query('locationId') locationId?: number, @Query('limit') limit?: number) {
