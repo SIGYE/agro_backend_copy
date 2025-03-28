@@ -428,4 +428,133 @@ export class FarmingActivityService {
       throw e;
     }
   }
+  /**
+ * Get farming activities filtered by crop ID and harvest season ID
+ * @param cropId The ID of the crop
+ * @param harvestSeasonId The ID of the harvest season
+ * @param locationId Optional location ID to filter results by farmer location
+ * @returns Array of farming activities with related entities
+ */
+  async getFarmingActivitiesByCropAndHarvestSeason(
+    cropId: string,
+    harvestSeasonId: string,
+    locationId?: number
+  ) {
+    try {
+      // Prepare the where clause for filtering
+      const whereClause: any = {
+        season: {
+          harvestSeasonId: harvestSeasonId,
+          croType: {
+            crop: {
+              id: cropId
+            }
+          }
+        }
+      };
+
+      // Add location filter if locationId is provided
+      if (locationId) {
+        whereClause.season.farmer = {
+          locationId: locationId
+        };
+      }
+
+      // Get all farming activities that match the criteria
+      const farmingActivities = await this.databaseService.farmingActivity.findMany({
+        where: whereClause,
+        include: {
+          season: {
+            include: {
+              croType: {
+                include: {
+                  crop: true
+                }
+              },
+              harvestSeason: true,
+              farmer: true
+            }
+          },
+          medicines: true,
+          vaccines: true,
+          fertilizers: true,
+          metrics: true,
+          diseases: true,
+          pests: true
+        },
+        orderBy: {
+          date: 'desc'
+        }
+      });
+
+      // Process and calculate statistics
+      const result = {
+        activities: farmingActivities,
+        summary: {
+          totalActivities: farmingActivities.length,
+          activityTypes: this._getActivityTypeCounts(farmingActivities),
+          fertilizersUsed: this._getItemUsageCounts(farmingActivities, 'fertilizers'),
+          medicinesUsed: this._getItemUsageCounts(farmingActivities, 'medicines'),
+          vaccinesUsed: this._getItemUsageCounts(farmingActivities, 'vaccines'),
+          diseasesReported: this._getItemUsageCounts(farmingActivities, 'diseases'),
+          pestsReported: this._getItemUsageCounts(farmingActivities, 'pests')
+        }
+      };
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to count activity types
+   * @param activities Array of farming activities
+   * @returns Object with counts for each activity type
+   */
+  private _getActivityTypeCounts(activities: any[]) {
+    const counts: Record<string, number> = {};
+
+    activities.forEach(activity => {
+      const type = activity.activity;
+      counts[type] = (counts[type] || 0) + 1;
+    });
+
+    return counts;
+  }
+
+  /**
+   * Helper method to count item usage
+   * @param activities Array of farming activities
+   * @param itemType Type of item to count (fertilizers, medicines, etc.)
+   * @returns Array of items with usage counts
+   */
+  private _getItemUsageCounts(activities: any[], itemType: string) {
+    const itemCounts = new Map();
+
+    activities.forEach(activity => {
+      if (activity[itemType] && activity[itemType].length > 0) {
+        activity[itemType].forEach((item: any) => {
+          if (!itemCounts.has(item.id)) {
+            itemCounts.set(item.id, {
+              id: item.id,
+              name: item.name,
+              count: 0,
+              totalAmount: 0
+            });
+          }
+
+          const itemData = itemCounts.get(item.id);
+          itemData.count += 1;
+
+          // If this is a relation with an amount, add it
+          if (activity.amount) {
+            itemData.totalAmount += activity.amount;
+          }
+        });
+      }
+    });
+
+    return Array.from(itemCounts.values());
+  }
 }
