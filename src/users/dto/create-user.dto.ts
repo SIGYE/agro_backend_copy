@@ -22,9 +22,6 @@ export class CreateUserDto {
 
     @IsOptional()
     @ApiProperty()
-    @IsString()
-    @Length(12)
-    @Matches(/^250\d{9}$/)
     telephone: string
     @ApiProperty()
     @IsEnum(Gender)
@@ -53,5 +50,5 @@ export class CreateUserDto {
     @ApiProperty()
     @IsOptional()
     country?: number
-    
+
 }

@@ -223,7 +223,7 @@ model CropType{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   name      String   @unique
-  cropId   String   @unique
+  cropId   String   
   crop      Crop @relation(fields: [cropId], references: [id])
   seasons   Season[]
   seedStrains SeedStrain[]
