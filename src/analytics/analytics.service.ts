@@ -1283,4 +1283,399 @@ export class AnalyticsService {
       throw e;
     }
   }
+  async cropTrend(cropId: string, locationId?: number) {
+    try {
+      // Define the base query conditions for seasons
+      const whereClause: any = {
+        croType: {
+          crop: {
+            id: cropId
+          }
+        }
+      };
+
+      // Add location filter if provided
+      if (locationId) {
+        whereClause.farmer = {
+          user: {
+            locationId: locationId
+          }
+        };
+      }
+
+      // Get current date to determine seasons
+      const currentDate = new Date();
+
+      // Get the current harvest season
+      const currentHarvestSeason = await this.databaseService.harvestSeason.findFirst({
+        where: {
+          startDate: { lte: currentDate },
+          endDate: { gte: currentDate }
+        }
+      });
+
+      if (!currentHarvestSeason) {
+        throw new NotFoundException("No current harvest season found");
+      }
+
+      // Get the previous harvest season
+      const previousHarvestSeason = await this.databaseService.harvestSeason.findFirst({
+        where: {
+          endDate: { lt: currentHarvestSeason.startDate }
+        },
+        orderBy: {
+          endDate: 'desc'
+        }
+      });
+
+      if (!previousHarvestSeason) {
+        throw new NotFoundException("No previous harvest season found for comparison");
+      }
+
+      // Get seasons data from current harvest season
+      const currentSeasons = await this.databaseService.season.findMany({
+        where: {
+          ...whereClause,
+          harvestSeasonId: currentHarvestSeason.id
+        },
+        include: {
+          croType: {
+            include: {
+              crop: true
+            }
+          },
+          harvests: true,
+          metric: true
+        }
+      });
+
+      // Get seasons data from previous harvest season
+      const previousSeasons = await this.databaseService.season.findMany({
+        where: {
+          ...whereClause,
+          harvestSeasonId: previousHarvestSeason.id
+        },
+        include: {
+          croType: {
+            include: {
+              crop: true
+            }
+          },
+          harvests: true,
+          metric: true
+        }
+      });
+
+      // Calculate current harvest totals
+      let currentHarvestTotal = 0;
+      let currentPlantationArea = 0;
+      let currentYield = 0;
+      let currentMetric = null;
+
+      for (const season of currentSeasons) {
+        // Sum up harvest quantities
+        const harvestQuantity = season.harvests.reduce((sum, harvest) =>
+          sum + (Number(harvest.amount) || 0), 0);
+
+        currentHarvestTotal += harvestQuantity;
+        currentPlantationArea += Number(season.plantationArea) || 0;
+        currentMetric = season.metric;
+      }
+
+      if (currentPlantationArea > 0) {
+        currentYield = currentHarvestTotal / currentPlantationArea;
+      }
+
+      // Calculate previous harvest totals
+      let previousHarvestTotal = 0;
+      let previousPlantationArea = 0;
+      let previousYield = 0;
+      let previousMetric = null;
+
+      for (const season of previousSeasons) {
+        // Sum up harvest quantities
+        const harvestQuantity = season.harvests.reduce((sum, harvest) =>
+          sum + (Number(harvest.amount) || 0), 0);
+
+        previousHarvestTotal += harvestQuantity;
+        previousPlantationArea += Number(season.plantationArea) || 0;
+        previousMetric = season.metric;
+      }
+
+      if (previousPlantationArea > 0) {
+        previousYield = previousHarvestTotal / previousPlantationArea;
+      }
+
+      // Calculate percentage changes
+      const harvestPercentageChange = previousHarvestTotal > 0
+        ? ((currentHarvestTotal - previousHarvestTotal) / previousHarvestTotal) * 100
+        : null;
+
+      const yieldPercentageChange = previousYield > 0
+        ? ((currentYield - previousYield) / previousYield) * 100
+        : null;
+
+      const areaPercentageChange = previousPlantationArea > 0
+        ? ((currentPlantationArea - previousPlantationArea) / previousPlantationArea) * 100
+        : null;
+
+      // Get crop name from any season (they should all be the same crop)
+      const cropName = currentSeasons.length > 0
+        ? currentSeasons[0].croType.crop.name
+        : (previousSeasons.length > 0 ? previousSeasons[0].croType.crop.name : "Unknown");
+
+      // Construct and return result
+      return {
+        cropId,
+        cropName,
+        current: {
+          harvestSeasonId: currentHarvestSeason.id,
+          harvestSeasonName: currentHarvestSeason.name,
+          totalHarvest: currentHarvestTotal,
+          totalArea: currentPlantationArea,
+          yieldPerArea: currentYield,
+          metric: currentMetric?.name || "N/A",
+          seasonsCount: currentSeasons.length
+        },
+        previous: {
+          harvestSeasonId: previousHarvestSeason.id,
+          harvestSeasonName: previousHarvestSeason.name,
+          totalHarvest: previousHarvestTotal,
+          totalArea: previousPlantationArea,
+          yieldPerArea: previousYield,
+          metric: previousMetric?.name || "N/A",
+          seasonsCount: previousSeasons.length
+        },
+        comparison: {
+          harvestChange: harvestPercentageChange,
+          yieldChange: yieldPercentageChange,
+          areaChange: areaPercentageChange
+        }
+      };
+    } catch (e) {
+      throw e;
+    }
+  }
+  async genderDistribution(locationId?: number) {
+    try {
+      // Build the query conditions for farmers based on location
+      const whereClause: any = {};
+
+      // If location is provided, filter farmers by location
+      if (locationId) {
+        whereClause.user = {
+          locationId: locationId
+        };
+      }
+
+      // Get all farmers with their user data
+      const farmers = await this.databaseService.farmer.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          user: {
+            select: {
+              id: true,
+              gender: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          // Include cooperative data to allow analysis by cooperative membership
+          cooperative: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      });
+
+      // Initialize counters for each gender
+      const genderCounts = {
+        MALE: 0,
+        FEMALE: 0,
+        OTHER: 0,
+        UNKNOWN: 0, // For farmers with no specified gender
+        totalFarmers: 0
+      };
+
+      // Count farmers by gender
+      farmers.forEach(farmer => {
+        genderCounts.totalFarmers++;
+
+        if (!farmer.user.gender) {
+          genderCounts.UNKNOWN++;
+        } else {
+          // Increment the appropriate gender counter
+          genderCounts[farmer.user.gender]++;
+        }
+      });
+
+      // Calculate percentages
+      const percentages = {
+        MALE: genderCounts.totalFarmers > 0 ? (genderCounts.MALE / genderCounts.totalFarmers * 100).toFixed(2) : "0",
+        FEMALE: genderCounts.totalFarmers > 0 ? (genderCounts.FEMALE / genderCounts.totalFarmers * 100).toFixed(2) : "0",
+        OTHER: genderCounts.totalFarmers > 0 ? (genderCounts.OTHER / genderCounts.totalFarmers * 100).toFixed(2) : "0",
+        UNKNOWN: genderCounts.totalFarmers > 0 ? (genderCounts.UNKNOWN / genderCounts.totalFarmers * 100).toFixed(2) : "0"
+      };
+
+      // Additional analysis: cooperative membership by gender
+      const cooperativeMembership = {
+        MALE: { inCooperative: 0, individual: 0 },
+        FEMALE: { inCooperative: 0, individual: 0 },
+        OTHER: { inCooperative: 0, individual: 0 },
+        UNKNOWN: { inCooperative: 0, individual: 0 }
+      };
+
+      farmers.forEach(farmer => {
+        const gender = farmer.user.gender || 'UNKNOWN';
+        if (farmer.cooperative) {
+          cooperativeMembership[gender].inCooperative++;
+        } else {
+          cooperativeMembership[gender].individual++;
+        }
+      });
+
+      // Get location name if locationId was provided
+      let locationName = "All Locations";
+      if (locationId) {
+        const location = await this.databaseService.location.findUnique({
+          where: { id: locationId }
+        });
+        if (location) {
+          locationName = location.name;
+        }
+      }
+
+      // Return comprehensive gender distribution data
+      return {
+        location: {
+          id: locationId || null,
+          name: locationName
+        },
+        totalFarmers: genderCounts.totalFarmers,
+        distribution: {
+          counts: genderCounts,
+          percentages: percentages
+        },
+        cooperativeMembership: cooperativeMembership,
+        // Return arrays formatted for easy chart visualization
+        chartData: {
+          labels: ['Male', 'Female', 'Other', 'Unknown'],
+          counts: [genderCounts.MALE, genderCounts.FEMALE, genderCounts.OTHER, genderCounts.UNKNOWN],
+          percentages: [
+            parseFloat(percentages.MALE),
+            parseFloat(percentages.FEMALE),
+            parseFloat(percentages.OTHER),
+            parseFloat(percentages.UNKNOWN)
+          ]
+        }
+      };
+    } catch (e) {
+      throw e;
+    }
+  }
+  async farmerCardData(locationId?: number) {
+    try {
+      // Build location filter for queries
+      const locationFilter = locationId ?
+        { locationId: { in: await this.locationService.getAllChildrenLocations(locationId) } } :
+        {};
+
+      // Get total farmers count with location filter if provided
+      const totalFarmers = await this.databaseService.farmer.count({
+        where: locationId ? {
+          user: {
+            locationId: locationId
+          }
+        } : {}
+      });
+
+      // Get farmers in cooperatives count
+      const farmersInCooperatives = await this.databaseService.farmer.count({
+        where: {
+          cooperativeId: {
+            not: null
+          },
+          ...(locationId && {
+            user: {
+              locationId: locationId
+            }
+          })
+        }
+      });
+
+      // Calculate individual farmers count
+      const individualFarmers = totalFarmers - farmersInCooperatives;
+
+      // Get total cooperatives count
+      const totalCooperatives = await this.databaseService.cooperative.count({
+        where: locationFilter
+      });
+
+      // Calculate percentage of farmers in cooperatives
+      const cooperativePercentage = totalFarmers > 0 ?
+        (farmersInCooperatives / totalFarmers * 100).toFixed(2) :
+        "0";
+
+      // Get location name if locationId provided
+      let locationName = "All Locations";
+      if (locationId) {
+        const location = await this.databaseService.location.findUnique({
+          where: { id: locationId }
+        });
+        if (location) {
+          locationName = location.name;
+        }
+      }
+
+      // Get recent farmer registrations (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentRegistrations = await this.databaseService.farmer.count({
+        where: {
+          createdAt: {
+            gte: thirtyDaysAgo
+          },
+          ...(locationId && {
+            user: {
+              locationId: locationId
+            }
+          })
+        }
+      });
+
+      return {
+        location: {
+          id: locationId || null,
+          name: locationName
+        },
+        totalFarmers,
+        farmersInCooperatives,
+        individualFarmers,
+        totalCooperatives,
+        statistics: {
+          cooperativePercentage: parseFloat(cooperativePercentage),
+          individualPercentage: totalFarmers > 0 ?
+            (individualFarmers / totalFarmers * 100).toFixed(2) :
+            "0",
+          averageFarmersPerCooperative: totalCooperatives > 0 ?
+            (farmersInCooperatives / totalCooperatives).toFixed(2) :
+            "0",
+          recentRegistrations
+        },
+        // Format data for chart visualization
+        chartData: {
+          farmerDistribution: [
+            { name: 'In Cooperatives', value: farmersInCooperatives },
+            { name: 'Individual', value: individualFarmers }
+          ]
+        }
+      };
+    } catch (e) {
+      throw e;
+    }
+  }
 }

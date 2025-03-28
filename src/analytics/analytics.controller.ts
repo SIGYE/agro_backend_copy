@@ -152,6 +152,38 @@ export class AnalyticsController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
+  @Get('dashboard/crop-trend')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'cropId', required: false, type: String })
+  async cropTrend(@Query('locationId') locationId?: number, @Query('cropId') cropId?: string) {
+    try {
+      const data = await this.analyticsService.cropTrend(cropId, locationId);
+      return new ApiResponse(true, "Crop Trend", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('dashboard/gender-distribution')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async genderDistribution(@Query('locationId') locationId?: number) {
+    try {
+      const data = await this.analyticsService.genderDistribution(locationId);
+      return new ApiResponse(true, "Gender Distribution", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('dashboard/farmer-card-data')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async farmerCardData(@Query('locationId') locationId?: number) {
+    try {
+      const data = await this.analyticsService.farmerCardData(cropId, locationId);
+      return new ApiResponse(true, "Farmer Card Data", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
 }
 
 
