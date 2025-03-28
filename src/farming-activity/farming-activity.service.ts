@@ -21,7 +21,6 @@ export class FarmingActivityService {
         metrics,
         amount
       } = createFarmingActivityDto;
-
       // Create the base farming activity
       const farmingActivity = await this.databaseService.farmingActivity.create({
         data: {

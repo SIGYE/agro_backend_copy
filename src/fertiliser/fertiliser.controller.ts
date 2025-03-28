@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Put, Query } from '@nestjs/common';
 import { FertiliserService } from './fertiliser.service';
 import { CreateFertiliserDto } from './dto/create-fertiliser.dto';
 import { UpdateFertiliserDto } from './dto/update-fertiliser.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
@@ -33,6 +33,16 @@ export class FertiliserController {
       return new ApiResponse(false, e.message, null, 400);
     }
 
+  }
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getTopFertilizers(@Query('locationId') locationId?: number, @Query('limit') limit?: number) {
+    try {
+      const data = await this.fertiliserService.getTopFertilizers(limit, locationId);
+      return new ApiResponse(true, "Top Fertilizers", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id')
