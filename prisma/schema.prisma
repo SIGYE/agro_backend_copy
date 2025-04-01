@@ -71,10 +71,10 @@ model User {
   code              String?
   isDefaultPassword Boolean            @default(false)
   roleId            String
-  role              Role               @relation(fields: [roleId], references: [id])
+  role              Role               @relation(fields: [roleId], references: [id], onDelete: Cascade)
   status            Status             @default(ACTIVE)
   resetCodeExpires  DateTime?
-  location          Location?           @relation(fields: [locationId], references: [id])
+  location          Location?           @relation(fields: [locationId], references: [id], onDelete: Cascade)
   locationId        Int?
   country           Int?
   farmer            Farmer[]
@@ -149,7 +149,7 @@ model Disease {
   id                String             @id @default(uuid())
   name              String
   createdBy         String
-  creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id])
+  creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   animals        LiveStockRegistration[]
   crops             Crop[]
   seasons           Season[]
@@ -163,7 +163,7 @@ model Pest{
   id                String             @id @default(uuid())
   name              String
   createdBy         String
-  creator           User               @relation("PestCreatedBy", fields: [createdBy], references: [id])
+  creator           User               @relation("PestCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   animals         LiveStockRegistration[]
   crops             Crop[]
   seasons           Season[]
@@ -179,7 +179,7 @@ model Vaccination {
   id                    String                 @id @default(uuid())
   name                  String
   createdBy             String
-  creator               User                   @relation("VaccinationCreatedBy", fields: [createdBy], references: [id])
+  creator               User                   @relation("VaccinationCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   liveStockVaccinations LiveStockVaccination[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
@@ -189,7 +189,7 @@ model Vitamin {
   id                String              @id @default(uuid())
   name              String
   createdBy         String
-  creator           User                @relation("VitaminCreatedBy", fields: [createdBy], references: [id])
+  creator           User                @relation("VitaminCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   liveStockVitamins LiveStockVitamins[]
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -199,7 +199,7 @@ model Feterlizer {
   id                                     String                                  @id @default(uuid())
   name                                   String
   createdBy                              String
-  creator                                User                                    @relation("FeterlizerCreatedBy", fields: [createdBy], references: [id])
+  creator                                User                                    @relation("FeterlizerCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   cropFertilizerFarmerRegistrations      CropFertilizerFarmerRegistration[]
   farmingActivities                      FarmingActivity[]
   createdAt                              DateTime                                @default(now())
@@ -210,7 +210,7 @@ model Crop {
   id                           String                        @id @default(uuid())
   name                         String                        @unique
   createdBy                    String
-  creator                      User                          @relation("CropCreatedBy", fields: [createdBy], references: [id])
+  creator                      User                          @relation("CropCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   cropType                     CropType[]
   diseases                     Disease[]
   pests                        Pest[]
@@ -224,7 +224,7 @@ model CropType{
   updatedAt DateTime @updatedAt
   name      String   @unique
   cropId   String   
-  crop      Crop @relation(fields: [cropId], references: [id])
+  crop      Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
   seasons   Season[]
   seedStrains SeedStrain[]
   cropFarmerRegistrations      CropFarmerRegistration[]
@@ -244,19 +244,19 @@ model Season{
   endDate                           DateTime
   seasonStatus                      SeasonStatus @default(ON_GOING)
   cropTypeId    String
-  croType    CropType @relation(fields: [cropTypeId], references: [id])
+  croType    CropType @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
   seedStrainId  String
-  seedStrain    SeedStrain @relation(fields: [seedStrainId], references: [id])
+  seedStrain    SeedStrain @relation(fields: [seedStrainId], references: [id], onDelete: Cascade)
   farmerId      String
-  farmer Farmer @relation(fields: [farmerId], references: [id])
+  farmer Farmer @relation(fields: [farmerId], references: [id], onDelete: Cascade)
   harvestSeasonId String
-  harvestSeason HarvestSeason @relation(fields: [harvestSeasonId], references: [id])
+  harvestSeason HarvestSeason @relation(fields: [harvestSeasonId], references: [id], onDelete: Cascade)
   cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
   diseases                           Disease[]
   pests                              Pest[]
   harvests                           Harvest[]
   metricId                           String
-  metric                             Metric @relation(fields: [metricId], references: [id])
+  metric                             Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
   farmingActivities                  FarmingActivity[]
   
 }
@@ -265,7 +265,7 @@ model Animal {
   id                             String                          @id @default(uuid())
   name                           String
   createdBy                      String
-  creator                        User                            @relation("AnimalCreatedBy", fields: [createdBy], references: [id])
+  creator                        User                            @relation("AnimalCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   animalProducts                 AnimalProduct[]
   animalFarmerRegistrations      AnimalFarmerRegistration[]
   slaughterAnimalRegistrations   SlaughterAnimalRegistration[]
@@ -280,7 +280,7 @@ model AnimalProduct {
   id                                    String                                 @id @default(uuid())
   name                                  String
   animalId                              String
-  animal                                Animal                                 @relation(fields: [animalId], references: [id])
+  animal                                Animal                                 @relation(fields: [animalId], references: [id], onDelete: Cascade)
   farmerAnimalRegistrationProduces      FarmerAnimalRegistrationProduce[]
   createdAt                             DateTime                               @default(now())
   updatedAt                             DateTime                               @updatedAt
@@ -289,11 +289,11 @@ model AnimalProduct {
 model Farmer {
   id                        String                     @id @default(uuid())
   userId                    String                     @unique
-  user                      User                       @relation(fields: [userId], references: [id])
+  user                      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   cropFarmerRegistrations   CropFarmerRegistration[]
   animalFarmerRegistrations AnimalFarmerRegistration[]
   seasons                   Season[]
-  cooperative              Cooperative? @relation(fields: [cooperativeId], references: [id])
+  cooperative              Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   cooperativeId            String?
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
@@ -305,12 +305,12 @@ model Cooperative {
   telephone                      String
   registrationNumber              String
   membersNumber                  Int
-  Location                       Location                       @relation(fields: [locationId], references: [id])
+  Location                       Location                       @relation(fields: [locationId], references: [id], onDelete: Cascade)
   locationId                       Int
   farmers                        Farmer[]
   cooperativeCropRegistrations   CooperativeCropRegistration[]
   type                           CooperativeType
-  cooperativeManager             User                          @relation(fields: [cooperativeManagerId], references: [id])
+  cooperativeManager             User                          @relation(fields: [cooperativeManagerId], references: [id], onDelete: Cascade)
   cooperativeManagerId           String
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
@@ -321,7 +321,7 @@ model SlaughterHouse {
   name                         String
   telephone                    String
   userId                       String?
-  user                         User?                          @relation(fields: [userId], references: [id])
+  user                         User?                          @relation(fields: [userId], references: [id], onDelete: Cascade)
   slaughterAnimalRegistrations SlaughterAnimalRegistration[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
@@ -331,8 +331,8 @@ model CropFarmerRegistration {
   id                                String                             @id @default(uuid())
   farmerId                          String
   cropTypeId                            String
-  farmer                            Farmer                             @relation(fields: [farmerId], references: [id])
-  cropType                              CropType                               @relation(fields: [cropTypeId], references: [id])
+  farmer                            Farmer                             @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cropType                              CropType                               @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
   createdAt                         DateTime                           @default(now())
   updatedAt                         DateTime                           @updatedAt
 }
@@ -340,8 +340,8 @@ model CooperativeCropRegistration {
   id                                String                             @id @default(uuid())
   cooperativeId                          String
   cropTypeId                            String
-  cooperative                            Cooperative                             @relation(fields: [cooperativeId], references: [id])
-  cropType                              CropType                               @relation(fields: [cropTypeId], references: [id])
+  cooperative                            Cooperative                             @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cropType                              CropType                               @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
   createdAt                         DateTime                           @default(now())
   updatedAt                         DateTime                           @updatedAt
 }
@@ -353,8 +353,8 @@ model CropFertilizerFarmerRegistration {
   seasonId String
   amount                   Float
   measurementId            String
-  measurement              Metric            @relation(fields: [measurementId], references: [id])              
-  feterlizer               Feterlizer             @relation(fields: [fertilizerId], references: [id])
+  measurement              Metric            @relation(fields: [measurementId], references: [id], onDelete: Cascade)              
+  feterlizer               Feterlizer             @relation(fields: [fertilizerId], references: [id], onDelete: Cascade)
   season                   Season @relation(fields: [seasonId], references: [id])
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
@@ -393,8 +393,8 @@ model AnimalFarmerRegistration {
   totalNumber                     Int
   maleNumber                      Int
   femaleNumber                    Int
-  farmer                          Farmer                            @relation(fields: [farmerId], references: [id])
-  animal                          Animal                            @relation(fields: [animalId], references: [id])
+  farmer                          Farmer                            @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  animal                          Animal                            @relation(fields: [animalId], references: [id], onDelete: Cascade)
   liveStockRegistrations          LiveStockRegistration[]
   createdAt                       DateTime                          @default(now())
   updatedAt                       DateTime                          @updatedAt
@@ -408,8 +408,8 @@ model LiveStockRegistration {
   weightMeasurement           String
   animalState                 AnimalState
   dob                         DateTime
-  animalFarmerRegistration    AnimalFarmerRegistration     @relation(fields: [animalFarmerRegistrationId], references: [id])
-  breed                       Breed                        @relation(fields: [breedId], references: [id])
+  animalFarmerRegistration    AnimalFarmerRegistration     @relation(fields: [animalFarmerRegistrationId], references: [id], onDelete: Cascade)
+  breed                       Breed                        @relation(fields: [breedId], references: [id], onDelete: Cascade)
   liveStockVaccinations       LiveStockVaccination[]
   liveStockVitamins           LiveStockVitamins[]
   diseases                        Disease[]
@@ -435,8 +435,8 @@ model LiveStockVaccination {
   id                      String                @id @default(uuid())
   liveStockRegistrationId String
   vaccinationId           String
-  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
-  vaccination             Vaccination           @relation(fields: [vaccinationId], references: [id])
+  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id], onDelete: Cascade)
+  vaccination             Vaccination           @relation(fields: [vaccinationId], references: [id], onDelete: Cascade)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 }
@@ -445,8 +445,8 @@ model LiveStockVitamins {
   id                      String                @id @default(uuid())
   liveStockRegistrationId String
   vitaminsId              String
-  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id])
-  vitamins                Vitamin               @relation(fields: [vitaminsId], references: [id])
+  liveStockRegistration   LiveStockRegistration @relation(fields: [liveStockRegistrationId], references: [id], onDelete: Cascade)
+  vitamins                Vitamin               @relation(fields: [vitaminsId], references: [id], onDelete: Cascade)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 }
@@ -483,8 +483,8 @@ model FarmerAnimalRegistrationProduce {
   animalProductId            String
   amount                     Int
   measurements               String
-  animalFarmerRegistration   LiveStockRegistration @relation(fields: [LivestockRegistrationId], references: [id])
-  animalProduct              AnimalProduct            @relation(fields: [animalProductId], references: [id])
+  animalFarmerRegistration   LiveStockRegistration @relation(fields: [LivestockRegistrationId], references: [id], onDelete: Cascade)
+  animalProduct              AnimalProduct            @relation(fields: [animalProductId], references: [id], onDelete: Cascade)
   createdAt                  DateTime                 @default(now())
   updatedAt                  DateTime                 @updatedAt
 }
@@ -493,7 +493,7 @@ model Breed {
   id                           String                        @id @default(uuid())
   animalId                     String
   breedName                    String
-  animal                       Animal                        @relation(fields: [animalId], references: [id])
+  animal                       Animal                        @relation(fields: [animalId], references: [id], onDelete: Cascade)
   liveStockRegistrations       LiveStockRegistration[]
   slaughterAnimalRegistrations SlaughterAnimalRegistration[]
   createdAt                    DateTime                      @default(now())
@@ -509,10 +509,10 @@ model SlaughterAnimalRegistration {
   age                    Int
   weight                 Int
   healthStatus           HealthStatus
-  animal                 Animal                  @relation(fields: [animalId], references: [id])
-  liveStock              LiveStockRegistration   @relation(fields: [liveStockId], references: [id])
-  breed                  Breed                   @relation(fields: [breedId], references: [id])
-  slaughterHouseRelation SlaughterHouse          @relation(fields: [slaughterHouse], references: [id])
+  animal                 Animal                  @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  liveStock              LiveStockRegistration   @relation(fields: [liveStockId], references: [id], onDelete: Cascade)
+  breed                  Breed                   @relation(fields: [breedId], references: [id], onDelete: Cascade)
+  slaughterHouseRelation SlaughterHouse          @relation(fields: [slaughterHouse], references: [id], onDelete: Cascade)
   slaughterRegistrations SlaughterRegistration[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -524,7 +524,7 @@ model SlaughterRegistration {
   slaughterDate                 DateTime
   preSlaughterWeight            Int
   postSlaughterWeight           Int
-  slaughterAnimalRegistration   SlaughterAnimalRegistration @relation(fields: [slaughterAnimalRegistrationId], references: [id])
+  slaughterAnimalRegistration   SlaughterAnimalRegistration @relation(fields: [slaughterAnimalRegistrationId], references: [id], onDelete: Cascade)
   animalSlaughterProducts       AnimalSlaughterProduct[]
   createdAt                     DateTime                    @default(now())
   updatedAt                     DateTime                    @updatedAt
@@ -542,8 +542,8 @@ model AnimalSlaughterProduct {
   id                      String                @id @default(uuid())
   slaughterRegistrationId String
   productId               String
-  slaughterRegistration   SlaughterRegistration @relation(fields: [slaughterRegistrationId], references: [id])
-  product                 SlaughterProducts     @relation(fields: [productId], references: [id])
+  slaughterRegistration   SlaughterRegistration @relation(fields: [slaughterRegistrationId], references: [id], onDelete: Cascade)
+  product                 SlaughterProducts     @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 }
@@ -553,7 +553,7 @@ model Agronomy {
   userId        String
   locationName  String
   locationLevel Int
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -561,7 +561,7 @@ model Agronomy {
 model Veterinary {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -569,7 +569,7 @@ model Veterinary {
 model Umufashamyumvire {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -589,7 +589,7 @@ model SeedStrain{
   id        String   @id @default(uuid())
   name      String
   cropTypeId String
-  cropType   CropType @relation(fields: [cropTypeId], references: [id])
+  cropType   CropType @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
   seasons   Season[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -601,7 +601,7 @@ model Harvest{
   amount    Float
   harvestDate DateTime
   seasonId  String
-  season    Season @relation(fields: [seasonId], references: [id])
+  season    Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -615,7 +615,7 @@ model Metric {
   seasons   Season[]
   metricType MetricType?
   baseMetricId String?
-  baseMetric   Metric?  @relation("MetricToBaseMetric", fields: [baseMetricId], references: [id])
+  baseMetric   Metric?  @relation("MetricToBaseMetric", fields: [baseMetricId], references: [id], onDelete: Cascade)
   derivedMetrics Metric[] @relation("MetricToBaseMetric")
   coefficient   Float?
   cropFertilizerFarmerRegistration CropFertilizerFarmerRegistration[]
@@ -628,7 +628,7 @@ model FarmingActivity{
   date      DateTime
   activity  Activities
   seasonId  String
-  season    Season @relation(fields: [seasonId], references: [id])
+  season    Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   medicines Medicine[]
   vaccines Vaccine[]
   fertilizers Feterlizer[]
@@ -661,18 +661,18 @@ model Vaccine{
 model CropMedicine{
   id        String   @id @default(uuid())
   cropId    String
-  crop      Crop @relation(fields: [cropId], references: [id])
+  crop      Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
   medicineId String
-  medicine  Medicine @relation(fields: [medicineId], references: [id])
+  medicine  Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 model AnimalMedicine{
   id        String   @id @default(uuid())
   animalId  String
-  animal    Animal @relation(fields: [animalId], references: [id])
+  animal    Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)
   medicineId String
-  medicine  Medicine @relation(fields: [medicineId], references: [id])
+  medicine  Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -680,9 +680,9 @@ model AnimalMedicine{
 model AnimalVaccine{
   id        String   @id @default(uuid())
   animalId  String
-  animal    Animal @relation(fields: [animalId], references: [id])
+  animal    Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)
   vaccineId String
-  vaccine   Vaccine @relation(fields: [vaccineId], references: [id])
+  vaccine   Vaccine @relation(fields: [vaccineId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
