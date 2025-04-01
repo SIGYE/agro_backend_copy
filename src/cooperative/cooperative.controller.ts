@@ -8,6 +8,7 @@ import { ApiResponse } from 'src/responses/api.response';
 import { AssignFarmersTOCooperative } from './dto/assign-farmers-to-cooperative';
 import { CooperativeType } from '@prisma/client';
 import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
+import { Allow } from 'src/decorators/allow.decorator';
 
 @Controller('cooperative')
 @ApiBearerAuth()
@@ -15,7 +16,7 @@ import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
 @ApiTags('Cooperative')
 export class CooperativeController {
   constructor(private readonly cooperativeService: CooperativeService) { }
-
+  @Allow()
   @Post()
   @ApiOperation({ summary: 'Create a new cooperative with manager and optional crops' })
   async create(@Body() createCooperativeDto: CreateCooperativeDto) {
