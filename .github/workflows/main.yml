@@ -57,9 +57,9 @@ jobs:
           docker rm agro-app-backend || true
           
           # No need to configure insecure registry as runner and registry are on the same machine
-      
-      # Pull the latest image
-      docker pull 164.92.112.235:6060/agro-app-backend:latest
+          
+          # Pull the latest image
+          docker pull 164.92.112.235:6060/agro-app-backend:latest
           
           # Run the new container with the env file
           docker run -d \
