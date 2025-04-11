@@ -14,6 +14,10 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: |
+            image=moby/buildkit:master
+            network=host
 
       - name: Configure Docker for insecure registry
         run: |
@@ -43,15 +47,15 @@ jobs:
         run: |
           echo "TAG=${BRANCH_NAME}-${GITHUB_SHA::8}" >> $GITHUB_ENV
 
+      # Use direct docker commands instead of buildx for insecure registry
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: 164.92.112.235:6060/agro-app-backend:${{ env.TAG }},164.92.112.235:6060/agro-app-backend:latest
-          cache-from: type=registry,ref=164.92.112.235:6060/agro-app-backend:latest
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
+        run: |
+          # Build the Docker image
+          docker build -t 164.92.112.235:6060/agro-app-backend:${{ env.TAG }} -t 164.92.112.235:6060/agro-app-backend:latest .
+          
+          # Push the Docker image
+          docker push 164.92.112.235:6060/agro-app-backend:${{ env.TAG }}
+          docker push 164.92.112.235:6060/agro-app-backend:latest
 
       - name: Deploy container
         run: |
