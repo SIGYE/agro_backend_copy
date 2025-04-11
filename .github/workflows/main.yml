@@ -26,9 +26,14 @@ jobs:
           # Wait for Docker to restart
           sleep 5
 
-      - name: Create .env file
+      - name: Create .env file with proper formatting
         run: |
-          echo "${{ secrets.ENV }}" > .env
+          # Create the .env file and ensure there are no spaces around the equals signs
+          cat > .env << 'EOL'
+$(echo "${{ secrets.ENV }}" | sed 's/ *= */=/g')
+EOL
+          # Verify the file is correct
+          cat .env
 
       - name: Login to Self-hosted Registry (if needed)
         uses: docker/login-action@v2
@@ -47,15 +52,29 @@ jobs:
         run: |
           echo "TAG=${BRANCH_NAME}-${GITHUB_SHA::8}" >> $GITHUB_ENV
 
-      # Use direct docker commands instead of buildx for insecure registry
+      # Test registry connectivity and use direct docker commands
       - name: Build and push Docker image
         run: |
-          # Build the Docker image
-          docker build -t 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} -t 143.198.225.193:6060/agro-app-backend:latest .
+          # Test registry connectivity
+          echo "Testing registry connectivity..."
+          curl -v http://143.198.225.193:6060/v2/ || echo "Registry connection warning, but continuing..."
           
-          # Push the Docker image
-          docker push 143.198.225.193:6060/agro-app-backend:${{ env.TAG }}
-          docker push 143.198.225.193:6060/agro-app-backend:latest
+          # Build the Docker image with smaller layers (may help with unreliable registry)
+          echo "Building Docker image..."
+          docker build --network=host -t 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} -t 143.198.225.193:6060/agro-app-backend:latest .
+          
+          # Push with retries
+          echo "Pushing Docker image with tag ${{ env.TAG }}..."
+          for i in 1 2 3 4 5; do
+            docker push 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} && break || echo "Push attempt $i failed, retrying after sleep"
+            sleep 10
+          done
+          
+          echo "Pushing Docker image with tag latest..."
+          for i in 1 2 3 4 5; do
+            docker push 143.198.225.193:6060/agro-app-backend:latest && break || echo "Push attempt $i failed, retrying after sleep"
+            sleep 10
+          done
 
       - name: Deploy container
         run: |
@@ -80,7 +99,7 @@ jobs:
             --restart unless-stopped \
             --network my-network \
             --env-file .env \
-            -p 8090:7070 \
+            -p 8080:8080 \
             143.198.225.193:6060/agro-app-backend:latest
           
           # Clean up old images
