@@ -84,7 +84,8 @@ jobs:
             # Wait for Docker to restart
             sleep 5
           fi
-          
+          # Create Docker network if it doesn't exist
+          docker network ls | grep my-network || docker network create my-network
           # Pull the latest image
           docker pull 143.198.225.193:6060/agro-app-backend:latest
           
