@@ -26,14 +26,9 @@ jobs:
           # Wait for Docker to restart
           sleep 5
 
-      - name: Create .env file with proper formatting
+      - name: Create .env file
         run: |
-          # Create the .env file and ensure there are no spaces around the equals signs
-          cat > .env << 'EOL'
-$(echo "${{ secrets.ENV }}" | sed 's/ *= */=/g')
-EOL
-          # Verify the file is correct
-          cat .env
+          echo "${{ secrets.ENV }}" > .env
 
       - name: Login to Self-hosted Registry (if needed)
         uses: docker/login-action@v2
@@ -99,7 +94,7 @@ EOL
             --restart unless-stopped \
             --network my-network \
             --env-file .env \
-            -p 8080:8080 \
+            -p 8090:7070 \
             143.198.225.193:6060/agro-app-backend:latest
           
           # Clean up old images
