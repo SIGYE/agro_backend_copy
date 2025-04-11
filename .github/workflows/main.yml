@@ -50,7 +50,6 @@ jobs:
           push: true
           tags: 164.92.112.235:6060/agro-app-backend:${{ env.TAG }},164.92.112.235:6060/agro-app-backend:latest
           cache-from: type=registry,ref=164.92.112.235:6060/agro-app-backend:latest
-          cache-to: type=inline
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
