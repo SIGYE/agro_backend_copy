@@ -21,7 +21,7 @@ jobs:
 
       - name: Configure Docker for insecure registry
         run: |
-          echo '{ "insecure-registries": ["164.92.112.235:6060"] }' | sudo tee /etc/docker/daemon.json
+          echo '{ "insecure-registries": ["143.198.225.193:6060"] }' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
           # Wait for Docker to restart
           sleep 5
@@ -33,7 +33,7 @@ jobs:
       - name: Login to Self-hosted Registry (if needed)
         uses: docker/login-action@v2
         with:
-          registry: 164.92.112.235:6060
+          registry: 143.198.225.193:6060
           username: ${{ secrets.REGISTRY_USERNAME || '' }}
           password: ${{ secrets.REGISTRY_PASSWORD || '' }}
         # This step might be optional if your registry doesn't require authentication locally
@@ -51,11 +51,11 @@ jobs:
       - name: Build and push Docker image
         run: |
           # Build the Docker image
-          docker build -t 164.92.112.235:6060/agro-app-backend:${{ env.TAG }} -t 164.92.112.235:6060/agro-app-backend:latest .
+          docker build -t 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} -t 143.198.225.193:6060/agro-app-backend:latest .
           
           # Push the Docker image
-          docker push 164.92.112.235:6060/agro-app-backend:${{ env.TAG }}
-          docker push 164.92.112.235:6060/agro-app-backend:latest
+          docker push 143.198.225.193:6060/agro-app-backend:${{ env.TAG }}
+          docker push 143.198.225.193:6060/agro-app-backend:latest
 
       - name: Deploy container
         run: |
@@ -64,15 +64,15 @@ jobs:
           docker rm agro-app-backend || true
           
           # Configure Docker to trust the insecure registry if not already done
-          if ! grep -q "164.92.112.235:6060" /etc/docker/daemon.json 2>/dev/null; then
-            echo '{ "insecure-registries": ["164.92.112.235:6060"] }' | sudo tee /etc/docker/daemon.json
+          if ! grep -q "143.198.225.193:6060" /etc/docker/daemon.json 2>/dev/null; then
+            echo '{ "insecure-registries": ["143.198.225.193:6060"] }' | sudo tee /etc/docker/daemon.json
             sudo systemctl restart docker
             # Wait for Docker to restart
             sleep 5
           fi
           
           # Pull the latest image
-          docker pull 164.92.112.235:6060/agro-app-backend:latest
+          docker pull 143.198.225.193:6060/agro-app-backend:latest
           
           # Run the new container with the env file
           docker run -d \
@@ -81,7 +81,7 @@ jobs:
             --network my-network \
             --env-file .env \
             -p 8090:7070 \
-            164.92.112.235:6060/agro-app-backend:latest
+            143.198.225.193:6060/agro-app-backend:latest
           
           # Clean up old images
           docker image prune -af
