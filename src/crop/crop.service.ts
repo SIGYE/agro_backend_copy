@@ -331,7 +331,11 @@ export class CropService {
         },
         include: {
           user: true,
-          cooperative: true,
+          cooperative: {
+            include: {
+              cooperativeManager: true
+            }
+          },
           cropFarmerRegistrations: {
             where: {
               cropTypeId: cropTypeId
@@ -393,7 +397,10 @@ export class CropService {
             cooperative: farmer.cooperative ? {
               id: farmer.cooperative.id,
               name: farmer.cooperative.name,
-              type: farmer.cooperative.type
+              type: farmer.cooperative.type,
+              cooperativeManagerNames: farmer.cooperative.cooperativeManager.firstName + ' ' + farmer.cooperative.cooperativeManager.lastName,
+              cooperativeManagerPhoneNumber: farmer.cooperative.cooperativeManager.telephone,
+              cooperativeManagerEmail: farmer.cooperative.cooperativeManager.email
             } : null
           },
           cropInfo: {
