@@ -431,7 +431,9 @@ export class FarmingActivityService {
   async getFarmingActivitiesByCropAndHarvestSeason(
     cropId: string,
     harvestSeasonId: string,
-    locationId?: number
+    locationId?: number,
+    cooperativeId?: string,
+    farmerId?: string,
   ) {
     try {
       // Prepare the where clause for filtering
@@ -449,7 +451,28 @@ export class FarmingActivityService {
       // Add location filter if locationId is provided
       if (locationId) {
         whereClause.season.farmer = {
-          locationId: locationId
+          ...(whereClause.season.farmer || {}),
+          user: {
+            location: {
+              id: locationId
+            }
+          }
+        };
+      }
+
+      // Add farmer filter if farmerId is provided
+      if (farmerId) {
+        whereClause.season.farmer = {
+          ...(whereClause.season.farmer || {}),
+          id: farmerId
+        };
+      }
+
+      // Add cooperative filter if cooperativeId is provided
+      if (cooperativeId) {
+        whereClause.season.farmer = {
+          ...(whereClause.season.farmer || {}),
+          cooperativeId: cooperativeId
         };
       }
 
@@ -465,7 +488,12 @@ export class FarmingActivityService {
                 }
               },
               harvestSeason: true,
-              farmer: true
+              farmer: {
+                include: {
+                  user: true,
+                  cooperative: true
+                }
+              }
             }
           },
           medicines: true,

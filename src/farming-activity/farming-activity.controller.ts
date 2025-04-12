@@ -61,10 +61,12 @@ export class FarmingActivityController {
   @ApiQuery({ name: 'locationId', required: false, type: Number })
   @ApiQuery({ name: 'cropId', required: false, type: String })
   @ApiQuery({ name: 'harvestSeasonId', required: false, type: String })
+  @ApiQuery({ name: 'farmerId', required: false, type: String })
+  @ApiQuery({ name: 'cooperativeId', required: false, type: String })
   @Get('get-activities-by-season-crop')
-  async getFarmingActivitiesByCropAndHarvestSeason(@Query('cropId') cropId: string, @Query('harvestSeasonId') harvestSeasonId: string, @Query('locationId') locationId?: number) {
+  async getFarmingActivitiesByCropAndHarvestSeason(@Query('cropId') cropId: string, @Query('harvestSeasonId') harvestSeasonId: string, @Query('locationId') locationId?: number, @Query('farmerId') farmerId?: string, @Query('cooperativeId') cooperativeId?: string) {
     try {
-      const data = await this.farmingActivityService.getFarmingActivitiesByCropAndHarvestSeason(cropId, harvestSeasonId, locationId);
+      const data = await this.farmingActivityService.getFarmingActivitiesByCropAndHarvestSeason(cropId, harvestSeasonId, locationId, farmerId, cooperativeId);
       return new ApiResponse(true, "Farming activities by season and crop", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
