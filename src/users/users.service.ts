@@ -23,7 +23,7 @@ export class UsersService {
   constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService) {
 
   }
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto, loggedInUser?: User): Promise<User> {
     try {
       if (createUserDto.password) {
         createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
@@ -67,7 +67,14 @@ export class UsersService {
       })
 
       if (!location) {
-        throw new NotFoundException("The location does not exist")
+        location = await this.databaseService.location.findUnique({
+          where: {
+            id: loggedInUser.locationId
+          }
+        })
+        if (location) {
+          throw new BadRequestException("The location does not exist")
+        }
       }
       let childrenLocationsIds = await this.locationService.getAllChildrenLocations(location.id)
 
@@ -362,14 +369,14 @@ export class UsersService {
 
   }
 
-  async registerFarmer(createUserDto: CreateUserDto, cooperativeId?: string): Promise<Farmer> {
+  async registerFarmer(createUserDto: CreateUserDto, cooperativeId?: string, loggedInUser?: User): Promise<Farmer> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "FARMER"
         }
       })
-      let user = await this.create({ roleId: role.id, ...createUserDto });
+      let user = await this.create({ roleId: role.id, ...createUserDto }, loggedInUser);
 
       let farmer = await this.databaseService.farmer.create({
         data: {
@@ -595,7 +602,7 @@ export class UsersService {
     return { success, failed, errors };
   }
 
-  async registerMultipleFarmers(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
+  async registerMultipleFarmers(file: Express.Multer.File, loggedInUser?: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -637,7 +644,7 @@ export class UsersService {
           }
         })
 
-        await this.registerFarmer({ roleId: role.id, ...userDto }); // Register vet with the custom object
+        await this.registerFarmer({ roleId: role.id, ...userDto }, null, loggedInUser); // Register vet with the custom object
         success++;
       } catch (error) {
         failed++;
@@ -650,7 +657,7 @@ export class UsersService {
 
     return { success, failed, errors };
   }
-  async registerMultipleFarmersIntoCooperative(file: Express.Multer.File, cooperativeId: string): Promise<{ success: number; failed: number; errors: any[] }> {
+  async registerMultipleFarmersIntoCooperative(file: Express.Multer.File, cooperativeId: string, loggedInUser?: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -690,7 +697,7 @@ export class UsersService {
           }
         })
 
-        await this.registerFarmer({ roleId: role.id, ...userDto }, cooperativeId); // Register vet with the custom object
+        await this.registerFarmer({ roleId: role.id, ...userDto }, cooperativeId, loggedInUser); // Register vet with the custom object
         success++;
       } catch (error) {
         failed++;

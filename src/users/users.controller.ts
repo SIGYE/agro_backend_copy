@@ -12,6 +12,7 @@ import { AuthRequest } from 'src/types/auth-request.type';
 import { Agronomy, Farmer, Status, Umufashamyumvire, User, Veterinary } from '@prisma/client';
 import { Allow } from 'src/decorators/allow.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @Controller('users')
 @UseGuards(AuthGuard)
@@ -121,13 +122,13 @@ export class UsersController {
   @Post('import-farmers')
   @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
-  async registerMultipleVets(@UploadedFile() file: Express.Multer.File) {
+  async registerMultipleVets(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: User) {
     try {
       if (!file) {
         throw new BadRequestException('No file uploaded');
       }
 
-      return this.usersService.registerMultipleFarmers(file);
+      return this.usersService.registerMultipleFarmers(file, user);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400)
     }
@@ -135,13 +136,13 @@ export class UsersController {
   @Post('import-farmers/cooperative/:cooperativeId')
   // @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @UseInterceptors(FileInterceptor('file'))
-  async registerMultipleFarmersInCooperative(@UploadedFile() file: Express.Multer.File, @Param('cooperativeId') cooperativeId: string) {
+  async registerMultipleFarmersInCooperative(@UploadedFile() file: Express.Multer.File, @Param('cooperativeId') cooperativeId: string, @CurrentUser() user: User) {
     try {
       if (!file) {
         throw new BadRequestException('No file uploaded');
       }
 
-      return this.usersService.registerMultipleFarmersIntoCooperative(file, cooperativeId);
+      return this.usersService.registerMultipleFarmersIntoCooperative(file, cooperativeId, user);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400)
     }
