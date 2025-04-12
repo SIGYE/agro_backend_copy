@@ -20,7 +20,7 @@ export class CropController {
   @ApiBody({ type: CreateCropDto })
   async create(@Body() createCropDto: CreateCropDto, @CurrentUser() user: User): Promise<ApiResponse<Crop>> {
     try {
-      const data = await this.cropService.create(createCropDto, user.id);
+      const data = await this.cropService.create(createCropDto, user);
       return new ApiResponse<Crop>(true, "Crop Created", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
@@ -28,9 +28,9 @@ export class CropController {
   }
 
   @Get()
-  async findAll() {
+  async findAll(@CurrentUser() user: User) {
     try {
-      const data = await this.cropService.findAll();
+      const data = await this.cropService.findAll(user);
       return new ApiResponse<Crop[]>(true, "All Crops", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
@@ -116,7 +116,7 @@ export class CropController {
       if (!file) {
         throw new BadRequestException('No file uploaded');
       }
-      const data = await this.cropService.importCrops(file, user.id);
+      const data = await this.cropService.importCrops(file, user);
       return new ApiResponse<any>(true, "All Crops", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
