@@ -3,7 +3,7 @@ import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { LocationService } from 'src/location/location.service';
-import { Farmer } from '@prisma/client';
+import { Farmer, User } from '@prisma/client';
 import { UsersService } from 'src/users/users.service';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
 import * as XLSX from 'xlsx';
@@ -15,14 +15,14 @@ import e from 'express';
 @Injectable()
 export class FarmerService {
   constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService, private readonly userServcice: UsersService) { }
-  async registerFarmer(CreateFarmerDto: CreateFarmerDto): Promise<Farmer> {
+  async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "FARMER"
         }
       });
-      let user = await this.userServcice.create({ roleId: role.id, ...CreateFarmerDto });
+      let user = await this.userServcice.create({ roleId: role.id, ...CreateFarmerDto }, loggedInUser);
 
       let farmer = await this.databaseService.farmer.create({
         data: {

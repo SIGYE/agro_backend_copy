@@ -398,9 +398,11 @@ export class CropService {
               id: farmer.cooperative.id,
               name: farmer.cooperative.name,
               type: farmer.cooperative.type,
-              cooperativeManagerNames: farmer.cooperative.cooperativeManager.firstName + ' ' + farmer.cooperative.cooperativeManager.lastName,
-              cooperativeManagerPhoneNumber: farmer.cooperative.cooperativeManager.telephone,
-              cooperativeManagerEmail: farmer.cooperative.cooperativeManager.email
+              cooperativeManagerInfo: {
+                name: farmer.cooperative.cooperativeManager.firstName + ' ' + farmer.cooperative.cooperativeManager.lastName,
+                phoneNumber: farmer.cooperative.cooperativeManager.telephone,
+                email: farmer.cooperative.cooperativeManager.email
+              }
             } : null
           },
           cropInfo: {
@@ -455,6 +457,7 @@ export class CropService {
               id: farmer.personalInfo.cooperative.id,
               name: farmer.personalInfo.cooperative.name,
               type: farmer.personalInfo.cooperative.type,
+              cooperativeManagerInfo: farmer.personalInfo.cooperative.cooperativeManagerInfo,
               memberCount: 0,
               cropInfo: {
                 id: cropType.id,
