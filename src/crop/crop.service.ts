@@ -4,17 +4,19 @@ import { UpdateCropDto } from './dto/update-crop.dto';
 import { DatabaseService } from 'src/database/database.service';
 import * as XLSX from 'xlsx';
 import { LocationService } from 'src/location/location.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class CropService {
   constructor(private readonly dataBaseService: DatabaseService, private readonly locationService: LocationService) { }
-  async create(createCropDto: CreateCropDto, userId: string) {
+  async create(createCropDto: CreateCropDto, user: User) {
 
     try {
       let crop = await this.dataBaseService.crop.create({
         data: {
           name: createCropDto.name,
-          createdBy: userId
+          createdBy: user.id,
+          country: user.country
 
         }
       })
@@ -48,9 +50,16 @@ export class CropService {
     }
   }
 
-  async findAll() {
+  async findAll(user: User) {
     try {
+      const countryQuery = user.country ? {
+        country: user.country
+      } : {}
+
       return await this.dataBaseService.crop.findMany({
+        where: {
+          ...countryQuery
+        },
         include: {
           cropType: true
         }
@@ -226,7 +235,7 @@ export class CropService {
       throw new BadRequestException(error.message);
     }
   }
-  async importCrops(file: Express.Multer.File, userId: string): Promise<{ success: number; failed: number; errors: any[] }> {
+  async importCrops(file: Express.Multer.File, user: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -253,7 +262,7 @@ export class CropService {
         };
 
 
-        await this.create(cropDto, userId) // Register vet with the custom object
+        await this.create(cropDto, user) // Register vet with the custom object
         success++;
       } catch (error) {
         failed++;
