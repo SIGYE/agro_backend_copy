@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { SeedStrainService } from './seed-strain.service';
 import { CreateSeedStrainDto } from './dto/create-seed-strain.dto';
 import { UpdateSeedStrainDto } from './dto/update-seed-strain.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
@@ -32,7 +32,34 @@ export class SeedStrainController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
-
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Get('/top-seed-strains')
+  async getTopSeedStrains(@Query('locationId') locationId?: number, @Query('limit') limit?: number) {
+    try {
+      return new ApiResponse(true, "All Seed Strains", await this.seedStrainService.getTopSeedStrains(limit, locationId), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Get('seed-strain-crop-relation')
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async getSeedStrainUsageByCrop(@Query('locationId') locationId?: number) {
+    try {
+      return new ApiResponse(true, "All Seed Strains", await this.seedStrainService.getSeedStrainUsageByCrop(locationId), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  @Get('seed-strain-table')
+  async getSeedStrainTable(@Query('locationId') locationId?: number) {
+    try {
+      return new ApiResponse(true, "All Seed Strains", await this.seedStrainService.getSeedStrainTable(locationId), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
   @Get('crop-type/:cropTypeId')
   async findAllByCropType(@Param('cropTypeId') cropTypeId: string) {
     try {
