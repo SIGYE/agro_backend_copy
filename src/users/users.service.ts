@@ -107,8 +107,6 @@ export class UsersService {
         sendSms(user.telephone, { id: randomUUID(), content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is ${createUserDto.password}. Please change your password after logging in.` })
         console.log(createUserDto.password)
         return user
-      } else {
-        return null
       }
     } catch (e) {
       throw e
@@ -116,8 +114,16 @@ export class UsersService {
 
   }
 
-  async findAll(): Promise<User[]> {
+  async findAll(locationId?: number): Promise<User[]> {
+    const whereClause: Record<string, any> = {};
+
+    // Add location filter if locationId is provided
+    if (locationId) {
+      whereClause.locationId = locationId;
+    }
+
     return this.databaseService.user.findMany({
+      where: whereClause,
       include: {
         role: true,
         location: true

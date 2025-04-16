@@ -33,7 +33,8 @@ export class UsersController {
   }
 
   @Get('/all')
-  async findAll(): Promise<ApiResponse<User[]>> {
+  @ApiQuery({ name: 'locationId', required: false, type: Number })
+  async findAll(@Query('locationId') locationId?: Number): Promise<ApiResponse<User[]>> {
     try {
       return new ApiResponse<User[]>(true, "All Users", await this.usersService.findAll(), 200);
     } catch (e) {
