@@ -1,8 +1,10 @@
 name: Deploy Application
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
 jobs:
   build-and-deploy:
     runs-on: self-hosted
@@ -30,7 +32,7 @@ jobs:
           echo "${{ secrets.ENV }}" > .env
 
       - name: Login to Self-hosted Registry
-        if: ${{ secrets.REGISTRY_USERNAME && secrets.REGISTRY_PASSWORD }}
+        if: ${{ secrets.REGISTRY_USERNAME != '' && secrets.REGISTRY_PASSWORD != '' }}
         uses: docker/login-action@v2
         with:
           registry: 143.198.225.193:6060
@@ -92,9 +94,9 @@ jobs:
       - name: Verify deployment
         run: |
           if docker ps | grep agro-app-backend; then
-            echo "Deployment successful: agro-app-backend is running"
+            echo "✅ Deployment successful: agro-app-backend is running"
           else
-            echo "Deployment failed: agro-app-backend is not running"
+            echo "❌ Deployment failed: agro-app-backend is not running"
             exit 1
           fi
           docker ps
