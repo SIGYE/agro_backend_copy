@@ -8,6 +8,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateCropDto } from './dto/create-crop.dto';
 import { CropService } from './crop.service';
 import { UpdateCropDto } from './dto/update-crop.dto';
+import { BulkCreateCropDto } from './dto/bulk-create-crop.dto';
 
 @Controller('crop')
 @UseGuards(AuthGuard)
@@ -26,7 +27,14 @@ export class CropController {
       return new ApiResponse(false, e.message, null, 400);
     }
   }
-
+  @Post('bulk-create')
+  async bulkCreate(@Body() createCropDto: BulkCreateCropDto, @CurrentUser() user: User): Promise<ApiResponse<Crop>> {
+    try {
+      return new ApiResponse<any>(true, "Crop Created", await this.cropService.bulkCreate(createCropDto, user), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
   @Get()
   async findAll(@CurrentUser() user: User) {
     try {
