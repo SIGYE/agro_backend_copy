@@ -201,6 +201,7 @@ model Feterlizer {
   createdBy                              String
   creator                                User                                    @relation("FeterlizerCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   cropFertilizerFarmerRegistrations      CropFertilizerFarmerRegistration[]
+  crops                                  Crop[]
   farmingActivities                      FarmingActivity[]
   createdAt                              DateTime                                @default(now())
   updatedAt                              DateTime                                @updatedAt
@@ -216,6 +217,7 @@ model Crop {
   pests                        Pest[]
   country                      Int?
   cropMedicines                CropMedicine[]
+  fertilisers                  Feterlizer[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
 }

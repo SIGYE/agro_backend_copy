@@ -1,0 +1,3 @@
+interface BulkSeedStrainDto {
+    name: string;
+}
