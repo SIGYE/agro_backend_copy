@@ -9,73 +9,76 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           driver-opts: |
             image=moby/buildkit:master
             network=host
+
       - name: Configure Docker for insecure registry (only if needed)
         run: |
           if ! grep -q "143.198.225.193:6060" /etc/docker/daemon.json 2>/dev/null; then
             echo '{ "insecure-registries": ["143.198.225.193:6060"] }' | sudo tee /etc/docker/daemon.json
             sudo systemctl restart docker
-            # Wait for Docker to restart
             sleep 5
           fi
+
       - name: Create .env file
         run: |
           echo "${{ secrets.ENV }}" > .env
-      - name: Login to Self-hosted Registry (if needed)
+
+      - name: Login to Self-hosted Registry
+        if: ${{ secrets.REGISTRY_USERNAME && secrets.REGISTRY_PASSWORD }}
         uses: docker/login-action@v2
         with:
           registry: 143.198.225.193:6060
-          username: ${{ secrets.REGISTRY_USERNAME || '' }}
-          password: ${{ secrets.REGISTRY_PASSWORD || '' }}
-        # This step might be optional if your registry doesn't require authentication locally
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
       - name: Extract branch name
         shell: bash
         run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+
       - name: Set image tag
         id: vars
         run: |
           echo "TAG=${BRANCH_NAME}-${GITHUB_SHA::8}" >> $GITHUB_ENV
-      # Test registry connectivity and use direct docker commands
+
       - name: Build and push Docker image
         run: |
-          # Test registry connectivity
           echo "Testing registry connectivity..."
-          curl -v http://143.198.225.193:6060/v2/ || echo "Registry connection warning, but continuing..."
-          
-          # Build the Docker image with smaller layers (may help with unreliable registry)
+          curl -v http://143.198.225.193:6060/v2/ || echo "Registry connection warning, continuing..."
+
           echo "Building Docker image..."
-          docker build --network=host -t 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} -t 143.198.225.193:6060/agro-app-backend:latest .
-          
-          # Push with retries
+          docker build --network=host \
+            -t 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} \
+            -t 143.198.225.193:6060/agro-app-backend:latest .
+
           echo "Pushing Docker image with tag ${{ env.TAG }}..."
           for i in 1 2 3 4 5; do
-            docker push 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} && break || echo "Push attempt $i failed, retrying after sleep"
+            docker push 143.198.225.193:6060/agro-app-backend:${{ env.TAG }} && break || echo "Push attempt $i failed, retrying..."
             sleep 10
           done
-          
+
           echo "Pushing Docker image with tag latest..."
           for i in 1 2 3 4 5; do
-            docker push 143.198.225.193:6060/agro-app-backend:latest && break || echo "Push attempt $i failed, retrying after sleep"
+            docker push 143.198.225.193:6060/agro-app-backend:latest && break || echo "Push attempt $i failed, retrying..."
             sleep 10
           done
+
       - name: Deploy container
         run: |
-          # Stop and remove existing container if it exists
           docker stop agro-app-backend || true
           docker rm agro-app-backend || true
-          
-          # Create Docker network if it doesn't exist (no need to restart Docker)
+
           docker network ls | grep my-network || docker network create my-network
-          
-          # Pull the latest image
+
+          echo "Pulling latest image..."
           docker pull 143.198.225.193:6060/agro-app-backend:latest
-          
-          # Run the new container with the env file
+
+          echo "Starting container..."
           docker run -d \
             --name agro-app-backend \
             --restart unless-stopped \
@@ -83,19 +86,15 @@ jobs:
             --env-file .env \
             -p 8090:7070 \
             143.198.225.193:6060/agro-app-backend:latest
-          
-          # Use a safer prune command - only remove dangling images
+
           docker image prune -f
-      
+
       - name: Verify deployment
         run: |
-          # Check if the container is running
           if docker ps | grep agro-app-backend; then
             echo "Deployment successful: agro-app-backend is running"
           else
             echo "Deployment failed: agro-app-backend is not running"
             exit 1
           fi
-          
-          # Display all running containers for verification
           docker ps
