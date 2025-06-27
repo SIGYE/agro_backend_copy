@@ -9,6 +9,7 @@ import { BulkPestDto } from './dto/bulk-pest.dto';
 import { BulkDiseaseDto } from './dto/bulk-disease.dto';
 import { BulkCreateCropDto } from './dto/bulk-create-crop.dto';
 import { BulkCropDto } from './dto/bulk-crop.dto';
+import { BulkCropTypeDto } from './dto/bulk-cropType.dto';
 
 @Injectable()
 export class CropService {
@@ -57,9 +58,19 @@ export class CropService {
     try {
       const results = [];
 
-      for (const cropDto of bulkCreateCropDto.crops) {
-        const result = await this.createSingleCropWithDetails(cropDto, user);
-        results.push(result);
+      // Process crops in smaller batches to avoid transaction timeouts
+      const BATCH_SIZE = 3; // Reduce batch size for complex operations
+
+      for (let i = 0; i < bulkCreateCropDto.crops.length; i += BATCH_SIZE) {
+        const batch = bulkCreateCropDto.crops.slice(i, i + BATCH_SIZE);
+
+        // Process batch in parallel with individual transactions
+        const batchPromises = batch.map(cropDto =>
+          this.createSingleCropWithDetails(cropDto, user)
+        );
+
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
       }
 
       return results;
@@ -70,305 +81,425 @@ export class CropService {
 
   private async createSingleCropWithDetails(cropDto: BulkCropDto, user: User) {
     return await this.dataBaseService.$transaction(async (prisma) => {
-      // 1. Create or get existing crop
-      let crop = await prisma.crop.findFirst({
-        where: {
-          name: cropDto.name,
-          country: user.country
-        }
-      });
-
-      if (!crop) {
-        crop = await prisma.crop.create({
-          data: {
+      try {
+        // 1. Create or get existing crop
+        let crop = await prisma.crop.findFirst({
+          where: {
             name: cropDto.name,
-            createdBy: user.id,
             country: user.country
           }
         });
-      }
 
-      // 2. Handle fertilizers
-      if (cropDto.fertilizers && cropDto.fertilizers.length > 0) {
-        await this.handleFertilizers(prisma, crop.id, cropDto.fertilizers, user);
-      }
-
-      // 3. Handle diseases
-      if (cropDto.diseases && cropDto.diseases.length > 0) {
-        await this.handleDiseases(prisma, crop.id, cropDto.diseases, user);
-      }
-
-      // 4. Handle pests
-      if (cropDto.pests && cropDto.pests.length > 0) {
-        await this.handlePests(prisma, crop.id, cropDto.pests, user);
-      }
-
-      // 5. Handle medicines
-      if (cropDto.medicines && cropDto.medicines.length > 0) {
-        await this.handleMedicines(prisma, crop.id, cropDto.medicines);
-      }
-
-      // 6. Handle crop types and seed strains
-      if (cropDto.cropTypes && cropDto.cropTypes.length > 0) {
-        await this.handleCropTypesAndSeedStrains(prisma, crop.id, cropDto.cropTypes);
-      } else {
-        // Create default crop type if none provided
-        await this.createDefaultCropType(prisma, crop.id, cropDto.name);
-      }
-
-      // Return the complete crop with all relations
-      return await prisma.crop.findUnique({
-        where: { id: crop.id },
-        include: {
-          cropType: {
-            include: {
-              seedStrains: true
+        if (!crop) {
+          crop = await prisma.crop.create({
+            data: {
+              name: cropDto.name,
+              createdBy: user.id,
+              country: user.country
             }
-          },
-          fertilisers: true,
-          diseases: true,
-          pests: true,
-          cropMedicines: {
-            include: {
-              medicine: true
+          });
+        }
+
+        // 2. Handle all related data in parallel where possible
+        const promises = [];
+
+        if (cropDto.fertilizers && cropDto.fertilizers.length > 0) {
+          promises.push(this.handleFertilizers(prisma, crop.id, cropDto.fertilizers, user));
+        }
+
+        if (cropDto.diseases && cropDto.diseases.length > 0) {
+          promises.push(this.handleDiseases(prisma, crop.id, cropDto.diseases, user));
+        }
+
+        if (cropDto.pests && cropDto.pests.length > 0) {
+          promises.push(this.handlePests(prisma, crop.id, cropDto.pests, user));
+        }
+
+        if (cropDto.medicines && cropDto.medicines.length > 0) {
+          promises.push(this.handleMedicines(prisma, crop.id, cropDto.medicines));
+        }
+
+        // Wait for all related data to be processed
+        await Promise.all(promises);
+
+        // 3. Handle crop types and seed strains - OPTIMIZED VERSION
+        if (cropDto.cropTypes && cropDto.cropTypes.length > 0) {
+          await this.handleCropTypesAndSeedStrainsBatch(prisma, crop.id, cropDto.cropTypes);
+        } else {
+          // Create default crop type if none provided
+          await this.createDefaultCropType(prisma, crop.id, cropDto.name);
+        }
+
+        // Return the complete crop with all relations
+        return await prisma.crop.findUnique({
+          where: { id: crop.id },
+          include: {
+            cropType: {
+              include: {
+                seedStrains: true
+              }
+            },
+            fertilisers: true,
+            diseases: true,
+            pests: true,
+            cropMedicines: {
+              include: {
+                medicine: true
+              }
             }
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.error('Transaction error:', error);
+        throw error;
+      }
+    }, {
+      timeout: 60000, // Increase timeout to 60 seconds
+      maxWait: 10000   // Increase max wait time
     });
   }
 
-  private async handleFertilizers(prisma: any, cropId: string, fertilizerNames: string[], user: User) {
-    for (const fertilizerName of fertilizerNames) {
-      // Check if fertilizer exists
-      let fertilizer = await prisma.feterlizer.findFirst({
-        where: { name: fertilizerName }
-      });
-
-      if (!fertilizer) {
-        // Create new fertilizer
-        fertilizer = await prisma.feterlizer.create({
-          data: {
-            name: fertilizerName,
-            createdBy: user.id
-          }
-        });
-      }
-
-      // Check if crop-fertilizer relation exists
-      const existingRelation = await prisma.crop.findFirst({
-        where: {
-          id: cropId,
-          fertilisers: {
-            some: { id: fertilizer.id }
-          }
-        }
-      });
-
-      if (!existingRelation) {
-        // Connect fertilizer to crop
-        await prisma.crop.update({
-          where: { id: cropId },
-          data: {
-            fertilisers: {
-              connect: { id: fertilizer.id }
-            }
-          }
-        });
-      }
-    }
-  }
-
-  private async handleDiseases(prisma: any, cropId: string, diseases: BulkDiseaseDto[], user: User) {
-    for (const diseaseDto of diseases) {
-      // Check if disease exists
-      let disease = await prisma.disease.findFirst({
-        where: {
-          name: diseaseDto.name,
-          type: diseaseDto.type
-        }
-      });
-
-      if (!disease) {
-        // Create new disease
-        disease = await prisma.disease.create({
-          data: {
-            name: diseaseDto.name,
-            type: diseaseDto.type,
-            medication: diseaseDto.medication,
-            createdBy: user.id
-          }
-        });
-      }
-
-      // Check if crop-disease relation exists
-      const existingRelation = await prisma.crop.findFirst({
-        where: {
-          id: cropId,
-          diseases: {
-            some: { id: disease.id }
-          }
-        }
-      });
-
-      if (!existingRelation) {
-        // Connect disease to crop
-        await prisma.crop.update({
-          where: { id: cropId },
-          data: {
-            diseases: {
-              connect: { id: disease.id }
-            }
-          }
-        });
-      }
-    }
-  }
-
-  private async handlePests(prisma: any, cropId: string, pests: BulkPestDto[], user: User) {
-    for (const pestDto of pests) {
-      // Check if pest exists
-      let pest = await prisma.pest.findFirst({
-        where: {
-          name: pestDto.name,
-          type: pestDto.type
-        }
-      });
-
-      if (!pest) {
-        // Create new pest
-        pest = await prisma.pest.create({
-          data: {
-            name: pestDto.name,
-            type: pestDto.type,
-            medication: pestDto.medication,
-            createdBy: user.id
-          }
-        });
-      }
-
-      // Check if crop-pest relation exists
-      const existingRelation = await prisma.crop.findFirst({
-        where: {
-          id: cropId,
-          pests: {
-            some: { id: pest.id }
-          }
-        }
-      });
-
-      if (!existingRelation) {
-        // Connect pest to crop
-        await prisma.crop.update({
-          where: { id: cropId },
-          data: {
-            pests: {
-              connect: { id: pest.id }
-            }
-          }
-        });
-      }
-    }
-  }
-
-  private async handleMedicines(prisma: any, cropId: string, medicineNames: string[]) {
-    for (const medicineName of medicineNames) {
-      // Check if medicine exists
-      let medicine = await prisma.medicine.findFirst({
-        where: { name: medicineName }
-      });
-
-      if (!medicine) {
-        // Create new medicine
-        medicine = await prisma.medicine.create({
-          data: {
-            name: medicineName
-          }
-        });
-      }
-
-      // Check if crop-medicine relation exists
-      const existingRelation = await prisma.cropMedicine.findFirst({
-        where: {
-          cropId: cropId,
-          medicineId: medicine.id
-        }
-      });
-
-      if (!existingRelation) {
-        // Create crop-medicine relation
-        await prisma.cropMedicine.create({
-          data: {
-            cropId: cropId,
-            medicineId: medicine.id
-          }
-        });
-      }
-    }
-  }
-
-  private async handleCropTypesAndSeedStrains(prisma: any, cropId: string, cropTypes: BulkCropTypeDto[]) {
-    for (const cropTypeDto of cropTypes) {
-      // Check if crop type exists for this crop
-      let cropType = await prisma.cropType.findFirst({
-        where: {
-          name: cropTypeDto.name,
-          cropId: cropId
-        }
-      });
-
-      if (!cropType) {
-        // Create new crop type
-        cropType = await prisma.cropType.create({
-          data: {
-            name: cropTypeDto.name,
-            cropId: cropId
-          }
-        });
-      }
-
-      // Handle seed strains
-      if (cropTypeDto.seedStrains && cropTypeDto.seedStrains.length > 0) {
-        for (const seedStrainDto of cropTypeDto.seedStrains) {
-          // Check if seed strain exists for this crop type
-          const existingSeedStrain = await prisma.seedStrain.findFirst({
-            where: {
-              name: seedStrainDto.name,
-              cropTypeId: cropType.id
-            }
-          });
-
-          if (!existingSeedStrain) {
-            // Create new seed strain
-            await prisma.seedStrain.create({
-              data: {
-                name: seedStrainDto.name,
-                cropTypeId: cropType.id
-              }
-            });
-          }
-        }
-      }
-    }
-  }
-
-  private async createDefaultCropType(prisma: any, cropId: string, cropName: string) {
-    const existingCropType = await prisma.cropType.findFirst({
+  // OPTIMIZED: Handle crop types and seed strains in batch operations
+  private async handleCropTypesAndSeedStrainsBatch(prisma: any, cropId: string, cropTypes: BulkCropTypeDto[]) {
+    // 1. Get all existing crop types for this crop
+    const existingCropTypes = await prisma.cropType.findMany({
       where: {
-        name: cropName,
+        name: { in: cropTypes.map(ct => ct.name) },
         cropId: cropId
+      },
+      include: {
+        seedStrains: true
       }
+    });
+
+    const existingCropTypeNames = existingCropTypes.map(ct => ct.name);
+    const newCropTypes = cropTypes.filter(ct => !existingCropTypeNames.includes(ct.name));
+
+    // 2. Create new crop types in batch
+    if (newCropTypes.length > 0) {
+      await prisma.cropType.createMany({
+        data: newCropTypes.map(ct => ({
+          name: ct.name,
+          cropId: cropId
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    // 3. Get all crop types (existing + newly created)
+    const allCropTypes = await prisma.cropType.findMany({
+      where: {
+        name: { in: cropTypes.map(ct => ct.name) },
+        cropId: cropId
+      },
+      include: {
+        seedStrains: true
+      }
+    });
+
+    // 4. Prepare all seed strains for batch creation
+    const allSeedStrainsToCreate = [];
+
+    for (const cropTypeDto of cropTypes) {
+      if (cropTypeDto.seedStrains && cropTypeDto.seedStrains.length > 0) {
+        const matchingCropType = allCropTypes.find(ct => ct.name === cropTypeDto.name);
+        if (matchingCropType) {
+          const existingSeedStrainNames = matchingCropType.seedStrains.map(ss => ss.name);
+
+          for (const seedStrainDto of cropTypeDto.seedStrains) {
+            if (!existingSeedStrainNames.includes(seedStrainDto.name)) {
+              allSeedStrainsToCreate.push({
+                name: seedStrainDto.name,
+                cropTypeId: matchingCropType.id
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Create all seed strains in one batch operation
+    if (allSeedStrainsToCreate.length > 0) {
+      await prisma.seedStrain.createMany({
+        data: allSeedStrainsToCreate,
+        skipDuplicates: true
+      });
+    }
+  }
+
+  // Add a default crop type creation method
+  private async createDefaultCropType(prisma: any, cropId: string, cropName: string) {
+    // Check if any crop type already exists for this crop
+    const existingCropType = await prisma.cropType.findFirst({
+      where: { cropId: cropId }
     });
 
     if (!existingCropType) {
       await prisma.cropType.create({
         data: {
-          name: cropName,
+          name: `${cropName} - Standard`,
           cropId: cropId
         }
       });
     }
   }
+
+  // Optimized fertilizer handling with batch operations
+  private async handleFertilizers(prisma: any, cropId: string, fertilizerNames: string[], user: User) {
+    // Get all existing fertilizers in one query
+    const existingFertilizers = await prisma.feterlizer.findMany({
+      where: {
+        name: { in: fertilizerNames }
+      }
+    });
+
+    const existingFertilizerNames = existingFertilizers.map(f => f.name);
+    const newFertilizerNames = fertilizerNames.filter(name => !existingFertilizerNames.includes(name));
+
+    // Create new fertilizers in batch
+    if (newFertilizerNames.length > 0) {
+      await prisma.feterlizer.createMany({
+        data: newFertilizerNames.map(name => ({
+          name,
+          createdBy: user.id
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all fertilizers (existing + newly created)
+    const allFertilizers = await prisma.feterlizer.findMany({
+      where: {
+        name: { in: fertilizerNames }
+      }
+    });
+
+    // Get existing crop-fertilizer relations
+    const existingRelations = await prisma.crop.findFirst({
+      where: { id: cropId },
+      include: {
+        fertilisers: {
+          where: {
+            id: { in: allFertilizers.map(f => f.id) }
+          }
+        }
+      }
+    });
+
+    const existingFertilizerIds = existingRelations?.fertilisers?.map(f => f.id) || [];
+    const newConnectionIds = allFertilizers
+      .filter(f => !existingFertilizerIds.includes(f.id))
+      .map(f => ({ id: f.id }));
+
+    // Connect new fertilizers to crop
+    if (newConnectionIds.length > 0) {
+      await prisma.crop.update({
+        where: { id: cropId },
+        data: {
+          fertilisers: {
+            connect: newConnectionIds
+          }
+        }
+      });
+    }
+  }
+
+  // Optimized disease handling
+  private async handleDiseases(prisma: any, cropId: string, diseases: BulkDiseaseDto[], user: User) {
+    // Get existing diseases
+    const existingDiseases = await prisma.disease.findMany({
+      where: {
+        OR: diseases.map(d => ({
+          name: d.name,
+          type: d.type
+        }))
+      }
+    });
+
+    // Find diseases that need to be created
+    const newDiseases = diseases.filter(diseaseDto =>
+      !existingDiseases.some(existing =>
+        existing.name === diseaseDto.name && existing.type === diseaseDto.type
+      )
+    );
+
+    // Create new diseases in batch
+    if (newDiseases.length > 0) {
+      await prisma.disease.createMany({
+        data: newDiseases.map(d => ({
+          name: d.name,
+          type: d.type,
+          medication: d.medication,
+          createdBy: user.id
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all diseases for connection
+    const allDiseases = await prisma.disease.findMany({
+      where: {
+        OR: diseases.map(d => ({
+          name: d.name,
+          type: d.type
+        }))
+      }
+    });
+
+    // Get existing crop-disease relations
+    const existingRelations = await prisma.crop.findFirst({
+      where: { id: cropId },
+      include: {
+        diseases: {
+          where: {
+            id: { in: allDiseases.map(d => d.id) }
+          }
+        }
+      }
+    });
+
+    const existingDiseaseIds = existingRelations?.diseases?.map(d => d.id) || [];
+    const newConnectionIds = allDiseases
+      .filter(d => !existingDiseaseIds.includes(d.id))
+      .map(d => ({ id: d.id }));
+
+    // Connect new diseases to crop
+    if (newConnectionIds.length > 0) {
+      await prisma.crop.update({
+        where: { id: cropId },
+        data: {
+          diseases: {
+            connect: newConnectionIds
+          }
+        }
+      });
+    }
+  }
+
+  // Optimized pest handling
+  private async handlePests(prisma: any, cropId: string, pests: BulkPestDto[], user: User) {
+    // Get existing pests
+    const existingPests = await prisma.pest.findMany({
+      where: {
+        OR: pests.map(p => ({
+          name: p.name,
+          type: p.type
+        }))
+      }
+    });
+
+    // Find pests that need to be created
+    const newPests = pests.filter(pestDto =>
+      !existingPests.some(existing =>
+        existing.name === pestDto.name && existing.type === pestDto.type
+      )
+    );
+
+    // Create new pests in batch
+    if (newPests.length > 0) {
+      await prisma.pest.createMany({
+        data: newPests.map(p => ({
+          name: p.name,
+          type: p.type,
+          medication: p.medication,
+          createdBy: user.id
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all pests for connection
+    const allPests = await prisma.pest.findMany({
+      where: {
+        OR: pests.map(p => ({
+          name: p.name,
+          type: p.type
+        }))
+      }
+    });
+
+    // Get existing crop-pest relations
+    const existingRelations = await prisma.crop.findFirst({
+      where: { id: cropId },
+      include: {
+        pests: {
+          where: {
+            id: { in: allPests.map(p => p.id) }
+          }
+        }
+      }
+    });
+
+    const existingPestIds = existingRelations?.pests?.map(p => p.id) || [];
+    const newConnectionIds = allPests
+      .filter(p => !existingPestIds.includes(p.id))
+      .map(p => ({ id: p.id }));
+
+    // Connect new pests to crop
+    if (newConnectionIds.length > 0) {
+      await prisma.crop.update({
+        where: { id: cropId },
+        data: {
+          pests: {
+            connect: newConnectionIds
+          }
+        }
+      });
+    }
+  }
+
+  // Optimized medicine handling
+  private async handleMedicines(prisma: any, cropId: string, medicineNames: string[]) {
+    // Get existing medicines
+    const existingMedicines = await prisma.medicine.findMany({
+      where: {
+        name: { in: medicineNames }
+      }
+    });
+
+    const existingMedicineNames = existingMedicines.map(m => m.name);
+    const newMedicineNames = medicineNames.filter(name => !existingMedicineNames.includes(name));
+
+    // Create new medicines in batch
+    if (newMedicineNames.length > 0) {
+      await prisma.medicine.createMany({
+        data: newMedicineNames.map(name => ({ name })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all medicines
+    const allMedicines = await prisma.medicine.findMany({
+      where: {
+        name: { in: medicineNames }
+      }
+    });
+
+    // Get existing crop-medicine relations
+    const existingRelations = await prisma.cropMedicine.findMany({
+      where: {
+        cropId: cropId,
+        medicineId: { in: allMedicines.map(m => m.id) }
+      }
+    });
+
+    const existingMedicineIds = existingRelations.map(r => r.medicineId);
+    const newRelations = allMedicines
+      .filter(m => !existingMedicineIds.includes(m.id))
+      .map(m => ({
+        cropId: cropId,
+        medicineId: m.id
+      }));
+
+    // Create new crop-medicine relations in batch
+    if (newRelations.length > 0) {
+      await prisma.cropMedicine.createMany({
+        data: newRelations,
+        skipDuplicates: true
+      });
+    }
+  }
+
 
   async findAll(user: User) {
     try {
