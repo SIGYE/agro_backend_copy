@@ -1,0 +1,129 @@
+{
+  "crops": [
+    {
+      "name": "Maize",
+      "cropTypes": [
+        {
+          "name": "SC301",
+          "seedStrains": [
+            {
+              "name": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "SC403",
+          "seedStrains": [
+            {
+              "name": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "SC529",
+          "seedStrains": [
+            {
+              "name": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "SC637",
+          "seedStrains": [
+            {
+              "name": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "SC545 (10C844)",
+          "seedStrains": [
+            {
+              "name": "Hybrid"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "DAP (18-46-0) is mixed with urea (46-0-0)",
+        "NPK (17-17-17)",
+        "CEREALS (23-10-5 + 2Mg + 3S + 0.3Zn)"
+      ],
+      "diseases": [
+        {
+          "name": "Maize Lethal Necrosis",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Maize streak virus",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Turcicum Leaf Blight or Northern Leaf Blight",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Stalk rot",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "maize ear rot",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Striga spp(parasite plant)",
+          "type": "CROP",
+          "medication": "Not specified"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Cicadulina mbila (Naude)",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Busseola fusca(larvae)",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "FallArmyworm Spodoptera frugiperda (J.E. Smith)",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "maize weevil",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Sitophilus zeamais (Motschulsky)",
+          "type": "CROP",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Angoumois grain moth",
+          "type": "CROP",
+          "medication": "Not specified"
+        }
+      ],
+      "medicines": [
+        "Malathion 2% w/w Dust",
+        "Malathion 2.0% w/w + Permethrin 0.3% w/w Profenofos",
+        "40%EC; 50%EC",
+        "Pyrethrins",
+        "75%w/w EC",
+        "Pyrimiphos-Methyl 400g/l + 75g/l Permethrin EC",
+        "Pyrimiphos-methyl",
+        "2 % PP Dust",
+        "Aluminium phosphide (PH3) 56% 57% pills tablets and plates for fumigation"
+      ]
+    }
+  ]
+}
