@@ -1,0 +1,93 @@
+{
+  "animals": [
+    {
+      "name": "Cattle",
+      "breeds": [
+        {
+          "breedName": "Frisian (Friesian)"
+        }
+      ],
+      "animalProducts": [
+        {
+          "name": "milk production"
+        }
+      ],
+      "vaccines": [],
+      "medicines": [],
+      "diseases": [
+        {
+          "name": "worms",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Bovine pestuerelosis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Anaplasmosis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Trypanosomiasis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Foot-and-Mouth Diseases",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Anthrax",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Blackleg (BQ)",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Brucellosis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Tuberculosis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Mastitis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Babesiosis",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Worms",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Ticks",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Tsetse fly",
+          "type": "ANIMAL",
+          "medication": "Not specified"
+        }
+      ]
+    }
+  ]
+}

@@ -13,43 +13,121 @@ import { BulkCropTypeDto } from './dto/bulk-cropType.dto';
 
 @Injectable()
 export class CropService {
-  constructor(private readonly dataBaseService: DatabaseService, private readonly locationService: LocationService) { }
-  async create(createCropDto: CreateCropDto, user: User) {
-
+  constructor(private readonly dataBaseService: DatabaseService, private readonly locationService: LocationService) { } async create(createCropDto: CreateCropDto, user: User) {
     try {
-      let crop = await this.dataBaseService.crop.create({
-        data: {
-          name: createCropDto.name,
-          createdBy: user.id,
-          country: user.country
+      return await this.dataBaseService.$transaction(async (prisma) => {
+        // Check if crop already exists by checking if any of the provided names exist in the same languages
+        let existingCrop = null;
 
-        }
-      })
-      if (createCropDto.cropTypes && createCropDto.cropTypes.length > 0) {
-        for (let cropType of createCropDto.cropTypes) {
-          await this.dataBaseService.cropType.create({
-            data: {
-              name: cropType.name,
-              cropId: crop.id
+        if (createCropDto.names && createCropDto.names.length > 0) {
+          // Build conditions to check for existing names in same languages
+          const nameLanguagePairs = createCropDto.names.map(nameDto => ({
+            name: nameDto.name,
+            languageCode: nameDto.languageCode
+          }));
+
+          existingCrop = await prisma.crop.findFirst({
+            where: {
+              country: user.country,
+              names: {
+                some: {
+                  OR: nameLanguagePairs
+                }
+              }
+            },
+            include: {
+              names: true,
+              cropType: true
             }
-          })
+          });
         }
-      } else {
-        await this.dataBaseService.cropType.create({
-          data: {
-            name: createCropDto.name,
-            cropId: crop.id
+
+        if (existingCrop) {
+          // Crop exists, add any missing names (different languages)
+          const existingLanguages = existingCrop.names.map(n => n.languageCode);
+          const newNames = createCropDto.names.filter(
+            nameDto => !existingLanguages.includes(nameDto.languageCode)
+          );
+
+          if (newNames.length > 0) {
+            await prisma.cropNames.createMany({
+              data: newNames.map(nameDto => ({
+                name: nameDto.name,
+                languageName: nameDto.languageName,
+                languageCode: nameDto.languageCode,
+                cropId: existingCrop.id
+              }))
+            });
           }
-        })
-      }
-      return await this.dataBaseService.crop.findUnique({
-        where: {
-          id: crop.id
-        },
-        include: {
-          cropType: true
+
+          // Handle additional crop types if provided
+          if (createCropDto.cropTypes && createCropDto.cropTypes.length > 0) {
+            const existingCropTypeNames = existingCrop.cropType.map(ct => ct.name);
+            const newCropTypes = createCropDto.cropTypes.filter(
+              ct => !existingCropTypeNames.includes(ct.name)
+            );
+
+            for (let cropType of newCropTypes) {
+              await prisma.cropType.create({
+                data: {
+                  name: cropType.name,
+                  cropId: existingCrop.id
+                }
+              });
+            }
+          }
+
+          // Return updated crop
+          return await prisma.crop.findUnique({
+            where: { id: existingCrop.id },
+            include: {
+              names: true,
+              cropType: true
+            }
+          });
+        } else {
+          // Create new crop
+          let crop = await prisma.crop.create({
+            data: {
+              createdBy: user.id,
+              country: user.country
+            }
+          });
+
+          // Create crop names
+          if (createCropDto.names && createCropDto.names.length > 0) {
+            await prisma.cropNames.createMany({
+              data: createCropDto.names.map(nameDto => ({
+                name: nameDto.name,
+                languageName: nameDto.languageName,
+                languageCode: nameDto.languageCode,
+                cropId: crop.id
+              }))
+            });
+          }
+
+          // Handle crop types
+          if (createCropDto.cropTypes && createCropDto.cropTypes.length > 0) {
+            for (let cropType of createCropDto.cropTypes) {
+              await prisma.cropType.create({
+                data: {
+                  name: cropType.name,
+                  cropId: crop.id
+                }
+              });
+            }
+          }
+
+          // Return the created crop with all relations
+          return await prisma.crop.findUnique({
+            where: { id: crop.id },
+            include: {
+              names: true,
+              cropType: true
+            }
+          });
         }
-      })
+      });
     } catch (error) {
       throw new BadRequestException(error.message);
     }
@@ -82,39 +160,77 @@ export class CropService {
   private async createSingleCropWithDetails(cropDto: BulkCropDto, user: User) {
     return await this.dataBaseService.$transaction(async (prisma) => {
       try {
-        // 1. Create or get existing crop
+        // 1. Check if crop exists by looking for any matching name in any language
         let crop = await prisma.crop.findFirst({
           where: {
-            name: cropDto.name,
+            names: {
+              some: {
+                name: {
+                  in: cropDto.names?.map(n => n.name)
+                }
+              }
+            },
             country: user.country
+          },
+          include: {
+            names: true
           }
         });
 
         if (!crop) {
+          // Create new crop
           crop = await prisma.crop.create({
             data: {
-              name: cropDto.name,
               createdBy: user.id,
               country: user.country
+            },
+            include: {
+              names: true
             }
           });
+
+          // Create all provided names
+          if (cropDto.names && cropDto.names.length > 0) {
+            await prisma.cropNames.createMany({
+              data: cropDto.names.map(nameDto => ({
+                name: nameDto.name,
+                languageName: nameDto.languageName,
+                languageCode: nameDto.languageCode,
+                cropId: crop.id
+              }))
+            });
+          }
+        } else {
+          // Crop exists, check for missing names and add them
+          if (cropDto.names && cropDto.names.length > 0) {
+            const existingLanguages = crop.names.map(n => n.languageCode);
+
+            for (const nameDto of cropDto.names) {
+              if (!existingLanguages.includes(nameDto.languageCode)) {
+                await prisma.cropNames.create({
+                  data: {
+                    name: nameDto.name,
+                    languageName: nameDto.languageName,
+                    languageCode: nameDto.languageCode,
+                    cropId: crop.id
+                  }
+                });
+              }
+            }
+          }
         }
 
         // 2. Handle all related data in parallel where possible
         const promises = [];
-
         if (cropDto.fertilizers && cropDto.fertilizers.length > 0) {
           promises.push(this.handleFertilizers(prisma, crop.id, cropDto.fertilizers, user));
         }
-
         if (cropDto.diseases && cropDto.diseases.length > 0) {
           promises.push(this.handleDiseases(prisma, crop.id, cropDto.diseases, user));
         }
-
         if (cropDto.pests && cropDto.pests.length > 0) {
           promises.push(this.handlePests(prisma, crop.id, cropDto.pests, user));
         }
-
         if (cropDto.medicines && cropDto.medicines.length > 0) {
           promises.push(this.handleMedicines(prisma, crop.id, cropDto.medicines));
         }
@@ -126,14 +242,16 @@ export class CropService {
         if (cropDto.cropTypes && cropDto.cropTypes.length > 0) {
           await this.handleCropTypesAndSeedStrainsBatch(prisma, crop.id, cropDto.cropTypes);
         } else {
-          // Create default crop type if none provided
-          await this.createDefaultCropType(prisma, crop.id, cropDto.name);
+          // Create default crop type using first available name
+          const defaultName = crop.names?.[0]?.name
+          await this.createDefaultCropType(prisma, crop.id, defaultName);
         }
 
         // Return the complete crop with all relations
         return await prisma.crop.findUnique({
           where: { id: crop.id },
           include: {
+            names: true,
             cropType: {
               include: {
                 seedStrains: true
@@ -501,6 +619,7 @@ export class CropService {
   }
 
 
+
   async findAll(user: User) {
     try {
       const countryQuery = user.country ? {
@@ -661,16 +780,62 @@ export class CropService {
 
   async update(id: string, updateCropDto: UpdateCropDto) {
     try {
-      return await this.dataBaseService.crop.update({
-        where: {
-          id: id
-        },
-        data: {
-          name: updateCropDto.name
+      return await this.dataBaseService.$transaction(async (prisma) => {
+        // Update the crop itself
+        const updatedCrop = await prisma.crop.update({
+          where: { id: id },
+          data: {
+            // Add any other crop fields that need updating here
+          }
+        });
+
+        // Handle names updates if provided
+        if (updateCropDto.names && updateCropDto.names.length > 0) {
+          // Get existing names for this crop
+          const existingNames = await prisma.cropNames.findMany({
+            where: { cropId: id }
+          });
+
+          // Process each name in the update
+          for (const nameDto of updateCropDto.names) {
+            // Check if a name with the same language already exists
+            const existingName = existingNames.find(
+              existing => existing.languageCode === nameDto.languageCode
+            );
+
+            if (existingName) {
+              // Update existing name for this language
+              await prisma.cropNames.update({
+                where: { id: existingName.id },
+                data: {
+                  name: nameDto.name,
+                  languageName: nameDto.languageName
+                }
+              });
+            } else {
+              // Create new name for this language
+              await prisma.cropNames.create({
+                data: {
+                  name: nameDto.name,
+                  languageName: nameDto.languageName,
+                  languageCode: nameDto.languageCode,
+                  cropId: id
+                }
+              });
+            }
+          }
         }
+
+        // Return the updated crop with names
+        return await prisma.crop.findUnique({
+          where: { id: id },
+          include: {
+            names: true,
+            cropType: true
+          }
+        });
       });
-    }
-    catch (error) {
+    } catch (error) {
       throw new BadRequestException(error.message);
     }
   }

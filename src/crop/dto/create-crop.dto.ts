@@ -1,13 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsNotEmpty, IsString, ValidateNested } from "class-validator";
 import { CreateCropTypeDto } from "./create-cropType.dto";
+import { CropNameDto } from "./crop-name.dto";
 
 export class CreateCropDto {
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    name: string
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CropNameDto)
+    names?: CropNameDto[];
     @ApiProperty({
         isArray: true,
         type: CreateCropTypeDto

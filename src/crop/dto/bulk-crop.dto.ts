@@ -1,15 +1,16 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { BulkDiseaseDto } from "./bulk-disease.dto";
 import { BulkPestDto } from "./bulk-pest.dto";
-import { IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsNotEmpty, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { BulkCropTypeDto } from "./bulk-cropType.dto";
+import { CropNameDto } from "./crop-name.dto";
 
 export class BulkCropDto {
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    name: string;
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CropNameDto)
+    names?: CropNameDto[];
     @ApiProperty({
         isArray: true,
         type: BulkCropTypeDto
