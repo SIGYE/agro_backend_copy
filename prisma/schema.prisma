@@ -150,7 +150,7 @@ model Disease {
   name              String
   createdBy         String
   creator           User               @relation("DiseaseCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
-  animals        LiveStockRegistration[]
+  animals        Animal[]
   crops             Crop[]
   seasons           Season[]
   type              DiseaseType
@@ -164,7 +164,7 @@ model Pest{
   name              String
   createdBy         String
   creator           User               @relation("PestCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
-  animals         LiveStockRegistration[]
+  animals         Animal[]
   crops             Crop[]
   seasons           Season[]
   farmingActivities FarmingActivity[]
@@ -209,7 +209,8 @@ model Feterlizer {
 
 model Crop {
   id                           String                        @id @default(uuid())
-  name                         String                        @unique
+  name                         String?                       
+  names                        CropNames[]
   createdBy                    String
   creator                      User                          @relation("CropCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   cropType                     CropType[]
@@ -220,6 +221,16 @@ model Crop {
   fertilisers                  Feterlizer[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
+}
+model CropNames{
+  id           String @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  name         String
+  languageName String
+  languageCode  String
+  cropId       String
+  crop         Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)     
 }
 model CropType{
   id        String   @id @default(uuid())
@@ -266,7 +277,7 @@ model Season{
 
 model Animal {
   id                             String                          @id @default(uuid())
-  name                           String
+  name                           String?
   createdBy                      String
   creator                        User                            @relation("AnimalCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
   animalProducts                 AnimalProduct[]
@@ -275,10 +286,22 @@ model Animal {
   breeds                         Breed[]
   animalMedicines                AnimalMedicine[]
   animalVaccinations             AnimalVaccine[]
+  diseases                       Disease[]
+  pests                          Pest[]
+  animalNames                    AnimalNames[]
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
 }
-
+model AnimalNames{
+  id           String @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  name         String
+  languageName String
+  languageCode  String
+  animalId       String
+  animal         Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)     
+}
 model AnimalProduct {
   id                                    String                                 @id @default(uuid())
   name                                  String
@@ -415,8 +438,6 @@ model LiveStockRegistration {
   breed                       Breed                        @relation(fields: [breedId], references: [id], onDelete: Cascade)
   liveStockVaccinations       LiveStockVaccination[]
   liveStockVitamins           LiveStockVitamins[]
-  diseases                        Disease[]
-  pests                           Pest[]
   farmerAnimalRegistrationProduce FarmerAnimalRegistrationProduce[]
   purpose                        Purpose
   slaughterAnimalRegistration SlaughterAnimalRegistration?

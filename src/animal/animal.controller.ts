@@ -9,6 +9,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateAnimalProductDto } from './dto/create-animal-product.dto';
+import { BulkAnimalDto, BulkCreateAnimalDto } from './dto/bulk-create.dtos';
 
 @Controller('animal')
 @UseGuards(AuthGuard)
@@ -21,6 +22,14 @@ export class AnimalController {
   @ApiBody({ type: CreateAnimalDto })
   async create(@Body() createAnimalDto: CreateAnimalDto, @CurrentUser() user: User): Promise<ApiResponse<Animal>> {
     return new ApiResponse<Animal>(true, "Animal Created", await this.animalService.create(createAnimalDto, user.id), 201);
+  }
+  @Post('/bulk-create')
+  async bulkCreate(@Body() createAnimalsDto: BulkCreateAnimalDto, @CurrentUser() user: User): Promise<ApiResponse<Animal>> {
+    try {
+      return new ApiResponse<any>(true, "Animals Created", await this.animalService.bulkCreateAnimals(createAnimalsDto, user), 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
   @Post('/create-product')
   async createAnimalProduct(@Body() createAnimalProduct: CreateAnimalProductDto) {

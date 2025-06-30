@@ -5,6 +5,8 @@ import { DatabaseService } from 'src/database/database.service';
 import * as XLSX from 'xlsx';
 import { CreateAnimalProductDto } from './dto/create-animal-product.dto';
 import { LocationService } from 'src/location/location.service';
+import { BulkAnimalDiseaseDto, BulkAnimalDto, BulkAnimalPestDto, BulkAnimalProductDto, BulkBreedDto, BulkCreateAnimalDto } from './dto/bulk-create.dtos';
+import { User } from '@prisma/client';
 
 
 @Injectable()
@@ -17,7 +19,7 @@ export class AnimalService {
       console.log('createAnimalDto : ' + createAnimalDto)
       return await this.dataBaseService.animal.create({
         data: {
-          name: createAnimalDto.name,
+          // name: createAnimalDto.name,
           createdBy: userId
         }
       })
@@ -43,7 +45,409 @@ export class AnimalService {
     }
   }
 
+  async bulkCreateAnimals(bulkCreateAnimalDto: BulkCreateAnimalDto, user: User) {
+    try {
+      const results = [];
 
+      // Process animals in smaller batches to avoid transaction timeouts
+      const BATCH_SIZE = 3;
+
+      for (let i = 0; i < bulkCreateAnimalDto.animals.length; i += BATCH_SIZE) {
+        const batch = bulkCreateAnimalDto.animals.slice(i, i + BATCH_SIZE);
+
+        // Process batch in parallel with individual transactions
+        const batchPromises = batch.map(animalDto =>
+          this.createSingleAnimalWithDetails(animalDto, user)
+        );
+
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+      }
+
+      return results;
+    } catch (error) {
+      throw new BadRequestException(`Animal bulk create failed: ${error.message}`);
+    }
+  }
+
+  private async createSingleAnimalWithDetails(animalDto: BulkAnimalDto, user: User) {
+    return await this.dataBaseService.$transaction(async (prisma) => {
+      try {
+        // 1. Create or get existing animal
+        let animal = await prisma.animal.findFirst({
+          where: {
+            // name: animalDto.name,
+            createdBy: user.id
+          }
+        });
+
+        if (!animal) {
+          animal = await prisma.animal.create({
+            data: {
+              // name: animalDto.namesp,
+              createdBy: user.id
+            }
+          });
+        }
+
+        // 2. Handle all related data in parallel where possible
+        const promises = [];
+
+        if (animalDto.vaccines && animalDto.vaccines.length > 0) {
+          promises.push(this.handleAnimalVaccines(prisma, animal.id, animalDto.vaccines));
+        }
+
+        if (animalDto.medicines && animalDto.medicines.length > 0) {
+          promises.push(this.handleAnimalMedicines(prisma, animal.id, animalDto.medicines));
+        }
+
+        if (animalDto.diseases && animalDto.diseases.length > 0) {
+          promises.push(this.handleAnimalDiseases(prisma, animal.id, animalDto.diseases, user));
+        }
+
+        if (animalDto.pests && animalDto.pests.length > 0) {
+          promises.push(this.handleAnimalPests(prisma, animal.id, animalDto.pests, user));
+        }
+
+        // Wait for all related data to be processed
+        await Promise.all(promises);
+
+        // 3. Handle breeds and animal products (must be after animal creation)
+        if (animalDto.breeds && animalDto.breeds.length > 0) {
+          await this.handleAnimalBreeds(prisma, animal.id, animalDto.breeds);
+        }
+
+        if (animalDto.animalProducts && animalDto.animalProducts.length > 0) {
+          await this.handleAnimalProducts(prisma, animal.id, animalDto.animalProducts);
+        }
+
+        // Return the complete animal with all relations
+        return await prisma.animal.findUnique({
+          where: { id: animal.id },
+          include: {
+            breeds: true,
+            animalProducts: true,
+            animalVaccinations: {
+              include: {
+                vaccine: true
+              }
+            },
+            animalMedicines: {
+              include: {
+                medicine: true
+              }
+            },
+            // Note: diseases and pests are many-to-many relations through arrays
+            // You might need to adjust based on your actual schema
+          }
+        });
+      } catch (error) {
+        console.error('Animal transaction error:', error);
+        throw error;
+      }
+    }, {
+      timeout: 60000, // 60 seconds timeout
+      maxWait: 10000   // 10 seconds max wait
+    });
+  }
+
+  // Handle animal vaccines with batch operations
+  private async handleAnimalVaccines(prisma: any, animalId: string, vaccineNames: string[]) {
+    // Get existing vaccines
+    const existingVaccines = await prisma.vaccine.findMany({
+      where: {
+        name: { in: vaccineNames }
+      }
+    });
+
+    const existingVaccineNames = existingVaccines.map(v => v.name);
+    const newVaccineNames = vaccineNames.filter(name => !existingVaccineNames.includes(name));
+
+    // Create new vaccines in batch
+    if (newVaccineNames.length > 0) {
+      await prisma.vaccine.createMany({
+        data: newVaccineNames.map(name => ({ name })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all vaccines (existing + newly created)
+    const allVaccines = await prisma.vaccine.findMany({
+      where: {
+        name: { in: vaccineNames }
+      }
+    });
+
+    // Get existing animal-vaccine relations
+    const existingRelations = await prisma.animalVaccine.findMany({
+      where: {
+        animalId: animalId,
+        vaccineId: { in: allVaccines.map(v => v.id) }
+      }
+    });
+
+    const existingVaccineIds = existingRelations.map(r => r.vaccineId);
+    const newRelations = allVaccines
+      .filter(v => !existingVaccineIds.includes(v.id))
+      .map(v => ({
+        animalId: animalId,
+        vaccineId: v.id
+      }));
+
+    // Create new animal-vaccine relations in batch
+    if (newRelations.length > 0) {
+      await prisma.animalVaccine.createMany({
+        data: newRelations,
+        skipDuplicates: true
+      });
+    }
+  }
+
+  // Handle animal medicines with batch operations
+  private async handleAnimalMedicines(prisma: any, animalId: string, medicineNames: string[]) {
+    // Get existing medicines
+    const existingMedicines = await prisma.medicine.findMany({
+      where: {
+        name: { in: medicineNames }
+      }
+    });
+
+    const existingMedicineNames = existingMedicines.map(m => m.name);
+    const newMedicineNames = medicineNames.filter(name => !existingMedicineNames.includes(name));
+
+    // Create new medicines in batch
+    if (newMedicineNames.length > 0) {
+      await prisma.medicine.createMany({
+        data: newMedicineNames.map(name => ({ name })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all medicines
+    const allMedicines = await prisma.medicine.findMany({
+      where: {
+        name: { in: medicineNames }
+      }
+    });
+
+    // Get existing animal-medicine relations
+    const existingRelations = await prisma.animalMedicine.findMany({
+      where: {
+        animalId: animalId,
+        medicineId: { in: allMedicines.map(m => m.id) }
+      }
+    });
+
+    const existingMedicineIds = existingRelations.map(r => r.medicineId);
+    const newRelations = allMedicines
+      .filter(m => !existingMedicineIds.includes(m.id))
+      .map(m => ({
+        animalId: animalId,
+        medicineId: m.id
+      }));
+
+    // Create new animal-medicine relations in batch
+    if (newRelations.length > 0) {
+      await prisma.animalMedicine.createMany({
+        data: newRelations,
+        skipDuplicates: true
+      });
+    }
+  }
+
+  // Handle animal diseases with batch operations
+  private async handleAnimalDiseases(prisma: any, animalId: string, diseases: BulkAnimalDiseaseDto[], user: User) {
+    // Get existing diseases
+    const existingDiseases = await prisma.disease.findMany({
+      where: {
+        OR: diseases.map(d => ({
+          name: d.name,
+          type: d.type
+        }))
+      }
+    });
+
+    // Find diseases that need to be created
+    const newDiseases = diseases.filter(diseaseDto =>
+      !existingDiseases.some(existing =>
+        existing.name === diseaseDto.name && existing.type === diseaseDto.type
+      )
+    );
+
+    // Create new diseases in batch
+    if (newDiseases.length > 0) {
+      await prisma.disease.createMany({
+        data: newDiseases.map(d => ({
+          name: d.name,
+          type: d.type,
+          medication: d.medication,
+          createdBy: user.id
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all diseases for connection
+    const allDiseases = await prisma.disease.findMany({
+      where: {
+        OR: diseases.map(d => ({
+          name: d.name,
+          type: d.type
+        }))
+      }
+    });
+
+    // Get existing animal-disease relations
+    const existingRelations = await prisma.animal.findFirst({
+      where: { id: animalId },
+      include: {
+        diseases: {
+          where: {
+            id: { in: allDiseases.map(d => d.id) }
+          }
+        }
+      }
+    });
+
+    const existingDiseaseIds = existingRelations?.diseases?.map(d => d.id) || [];
+    const newConnectionIds = allDiseases
+      .filter(d => !existingDiseaseIds.includes(d.id))
+      .map(d => ({ id: d.id }));
+
+    // Connect new diseases to animal
+    if (newConnectionIds.length > 0) {
+      await prisma.animal.update({
+        where: { id: animalId },
+        data: {
+          diseases: {
+            connect: newConnectionIds
+          }
+        }
+      });
+    }
+  }
+
+  // Handle animal pests with batch operations
+  private async handleAnimalPests(prisma: any, animalId: string, pests: BulkAnimalPestDto[], user: User) {
+    // Get existing pests
+    const existingPests = await prisma.pest.findMany({
+      where: {
+        OR: pests.map(p => ({
+          name: p.name,
+          type: p.type
+        }))
+      }
+    });
+
+    // Find pests that need to be created
+    const newPests = pests.filter(pestDto =>
+      !existingPests.some(existing =>
+        existing.name === pestDto.name && existing.type === pestDto.type
+      )
+    );
+
+    // Create new pests in batch
+    if (newPests.length > 0) {
+      await prisma.pest.createMany({
+        data: newPests.map(p => ({
+          name: p.name,
+          type: p.type,
+          medication: p.medication,
+          createdBy: user.id
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    // Get all pests for connection
+    const allPests = await prisma.pest.findMany({
+      where: {
+        OR: pests.map(p => ({
+          name: p.name,
+          type: p.type
+        }))
+      }
+    });
+
+    // Get existing animal-pest relations
+    const existingRelations = await prisma.animal.findFirst({
+      where: { id: animalId },
+      include: {
+        pests: {
+          where: {
+            id: { in: allPests.map(p => p.id) }
+          }
+        }
+      }
+    });
+
+    const existingPestIds = existingRelations?.pests?.map(p => p.id) || [];
+    const newConnectionIds = allPests
+      .filter(p => !existingPestIds.includes(p.id))
+      .map(p => ({ id: p.id }));
+
+    // Connect new pests to animal
+    if (newConnectionIds.length > 0) {
+      await prisma.animal.update({
+        where: { id: animalId },
+        data: {
+          pests: {
+            connect: newConnectionIds
+          }
+        }
+      });
+    }
+  }
+
+  // Handle animal breeds with batch operations
+  private async handleAnimalBreeds(prisma: any, animalId: string, breeds: BulkBreedDto[]) {
+    // Get existing breeds for this animal
+    const existingBreeds = await prisma.breed.findMany({
+      where: {
+        animalId: animalId,
+        breedName: { in: breeds.map(b => b.breedName) }
+      }
+    });
+
+    const existingBreedNames = existingBreeds.map(b => b.breedName);
+    const newBreeds = breeds.filter(b => !existingBreedNames.includes(b.breedName));
+
+    // Create new breeds in batch
+    if (newBreeds.length > 0) {
+      await prisma.breed.createMany({
+        data: newBreeds.map(b => ({
+          breedName: b.breedName,
+          animalId: animalId
+        })),
+        skipDuplicates: true
+      });
+    }
+  }
+
+  // Handle animal products with batch operations
+  private async handleAnimalProducts(prisma: any, animalId: string, animalProducts: BulkAnimalProductDto[]) {
+    // Get existing animal products for this animal
+    const existingProducts = await prisma.animalProduct.findMany({
+      where: {
+        animalId: animalId,
+        name: { in: animalProducts.map(p => p.name) }
+      }
+    });
+
+    const existingProductNames = existingProducts.map(p => p.name);
+    const newProducts = animalProducts.filter(p => !existingProductNames.includes(p.name));
+
+    // Create new animal products in batch
+    if (newProducts.length > 0) {
+      await prisma.animalProduct.createMany({
+        data: newProducts.map(p => ({
+          name: p.name,
+          animalId: animalId
+        })),
+        skipDuplicates: true
+      });
+    }
+  }
   async findAll() {
     try {
       return await this.dataBaseService.animal.findMany();
@@ -411,7 +815,7 @@ export class AnimalService {
           id: id
         },
         data: {
-          name: updateAnimalDto.name
+          // name: updateAnimalDto.name
         }
       });
     }
@@ -432,44 +836,44 @@ export class AnimalService {
     }
   }
   async importAnimals(file: Express.Multer.File, userId: string): Promise<{ success: number; failed: number; errors: any[] }> {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    // if (!file) {
+    //   throw new BadRequestException('No file uploaded');
+    // }
 
-    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    // const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    // const sheetName = workbook.SheetNames[0];
+    // const worksheet = workbook.Sheets[sheetName];
+    // const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Skip the first row (assuming it's the header row)
-    const rowsToProcess = data.slice(1);
+    // // Skip the first row (assuming it's the header row)
+    // const rowsToProcess = data.slice(1);
 
-    let success = 0;
-    let failed = 0;
-    const errors = [];
+    // let success = 0;
+    // let failed = 0;
+    // const errors = [];
 
-    for (const row of rowsToProcess) {
-      try {
-        // Map the row to a userDto-like object based on the cell index
-        let animalDto = {
-          name: row[0],
-          purpose: row[1]
+    // for (const row of rowsToProcess) {
+    //   try {
+    //     // Map the row to a userDto-like object based on the cell index
+    //     let animalDto = {
+    //       name: row[0],
+    //       purpose: row[1]
 
-        };
+    //     };
 
 
-        await this.create(animalDto, userId) // Register vet with the custom object
-        success++;
-      } catch (error) {
-        failed++;
-        errors.push({
-          row: row,
-          error: error.message || 'Unknown error occurred',
-        });
-      }
-    }
+    //     await this.create(animalDto, userId) // Register vet with the custom object
+    //     success++;
+    //   } catch (error) {
+    //     failed++;
+    //     errors.push({
+    //       row: row,
+    //       error: error.message || 'Unknown error occurred',
+    //     });
+    //   }
+    // }
 
-    return { success, failed, errors };
+    return { success: 0, failed: 0, errors: [] };
   }
   // async assignLivestockDisease(livestockId: string, diseaseId: string) {
   //   try {

@@ -1,10 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { Purpose } from "@prisma/client"
-import { IsEnum, IsNotEmpty } from "class-validator"
+import { Type } from "class-transformer";
+import { IsArray, IsEnum, IsNotEmpty, ValidateNested } from "class-validator"
+import { AnimalNameDto } from "./bulk-create.dtos";
 
 export class CreateAnimalDto {
-    @IsNotEmpty()
-    @ApiProperty()
-    name: string
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => AnimalNameDto)
+    names?: AnimalNameDto[];
 
 }

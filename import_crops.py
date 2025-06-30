@@ -408,8 +408,8 @@ class CropDataConverter:
 
 def main():
     # Configuration
-    EXCEL_FILE_PATH = "test_agro.xlsx"  # Update this path
-    API_URL = "http://localhost:7070/crop/bulk-create"
+    EXCEL_FILE_PATH = "test_2_agro.xlsx"  # Update this path
+    API_URL = "https://endpoints.agro.rw/crop/bulk-create"
     
     # Create converter instance
     converter = CropDataConverter(EXCEL_FILE_PATH, API_URL)

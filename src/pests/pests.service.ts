@@ -87,7 +87,7 @@ export class PestsService {
         // Update each animal registration individually to handle the relation
         await Promise.all(
           assignPestsDto.animals.map(animalRegId =>
-            this.databaseService.liveStockRegistration.update({
+            this.databaseService.animal.update({
               where: { id: animalRegId },
               data: {
                 pests: {
