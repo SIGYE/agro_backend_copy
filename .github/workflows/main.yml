@@ -32,7 +32,7 @@ jobs:
           registry: 143.198.225.193:6060
           username: ${{ secrets.REGISTRY_USERNAME || '' }}
           password: ${{ secrets.REGISTRY_PASSWORD || '' }}
-        # This step might be optional if your registry doesn't require authentication locally
+        # This step might be optional if your registry doesn't  require authentication locally
       - name: Extract branch name
         shell: bash
         run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
