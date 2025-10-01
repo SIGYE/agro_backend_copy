@@ -81,7 +81,7 @@ jobs:
             --restart unless-stopped \
             --network my-network \
             --env-file .env \
-            -p 8090:7070 \
+            -p 8030:7070 \
             143.198.225.193:6060/agro-app-backend:latest
           
           # Use a safer prune command - only remove dangling images
