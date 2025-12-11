@@ -20,35 +20,47 @@ export class CreateUserDto {
     @IsOptional()
     nationalId?: string
 
-    @IsOptional()
+    @IsNotEmpty()
     @ApiProperty()
     telephone: string
+
+    @IsNotEmpty()
     @ApiProperty()
     @IsEnum(Gender)
     gender: Gender
+
     @ApiProperty()
     @IsOptional()
     @IsEmail()
     email?: string
+
     @ApiProperty({
         type: String,
         example: 'YYYY-MM-DD'
     })
-
+    @IsNotEmpty()
     dob: string;
+
     @ApiProperty()
+    @IsNotEmpty()
     password?: string
 
     @ApiProperty()
-    @IsOptional()
+    @IsNotEmpty()
     @IsString()
-    roleId?: string
+    roleId: string
 
     @ApiProperty()
-    @IsOptional()
+    @IsNotEmpty()
     locationId: number
+    
+    // @ApiProperty()
+    // @IsOptional()
+    // country?: number
+
     @ApiProperty()
+    @IsString()
     @IsOptional()
-    country?: number
+    username?: string
 
 }

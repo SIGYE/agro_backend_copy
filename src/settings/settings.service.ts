@@ -4,7 +4,7 @@ import { DatabaseService } from 'src/database/database.service';
 @Injectable()
 export class SettingsService {
     constructor(
-        private readonly databaseServic : DatabaseService
+        private readonly databaseService : DatabaseService
     ){}
 
     // get the sms price per message

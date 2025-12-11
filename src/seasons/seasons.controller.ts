@@ -1,87 +1,169 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  BadRequestException,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { SeasonsService } from './seasons.service';
 import { CreateSeasonDto } from './dto/create-season.dto';
 import { UpdateSeasonDto } from './dto/update-season.dto';
-import { ApiResponse } from 'src/responses/api.response';
-import { ApiTags } from '@nestjs/swagger';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { AuthGuard } from 'src/guards/auth.guard';
+import { AuthGuard } from '../guards/auth.guard';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../decorators/roles.decorator';
+import { Role_Enum } from '../enums/role.enum';
 
 @Controller('seasons')
-@ApiTags("Seasons")
-@ApiBearerAuth()
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class SeasonsController {
-  constructor(private readonly seasonsService: SeasonsService) { }
+  constructor(private readonly seasonsService: SeasonsService) {}
 
   @Post()
-  async create(@Body() createSeasonDto: CreateSeasonDto) {
-    try {
-      return new ApiResponse(true, "Season Created", await this.seasonsService.create(createSeasonDto), 201)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async create(@Body() createSeasonDto: CreateSeasonDto, @Request() req) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.create(createSeasonDto, userId, userRole);
   }
-
 
   @Get()
-  async findAll() {
-    try {
-      return new ApiResponse(true, "All Seasons", await this.seasonsService.findAll(), 200)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
-  }
-  @Get('/crop-type/:id')
-  async findAllByCropType(@Param('id') id: string) {
-    try {
-      return new ApiResponse(true, "All Seasons", await this.seasonsService.findAllByCropTypeId(id), 200)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
-  }
-  @Get('/farmer/:id')
-  async findAllByFarmer(@Param('id') id: string) {
-    try {
-      return new ApiResponse(true, "All Seasons", await this.seasonsService.findAllByFarmerId(id), 200)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
-  }
-  @Get('/farmer/:farmerId/crop-type/:cropTypeId')
-  async findAllByFarmerAndCropType(@Param('farmerId') farmerId: string, @Param('cropTypeId') cropTypeId: string) {
-    try {
-      return new ApiResponse(true, "All Seasons", await this.seasonsService.findAllByFarmerIdAndCropTypeId(farmerId, cropTypeId), 200);
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400);
-    }
-  }
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    try {
-      return new ApiResponse(true, "Season", await this.seasonsService.findOne(id), 200)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findAll(@Request() req) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findAll(userId, userRole);
   }
 
+  @Get('farmer/:farmerId')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findAllByFarmerId(@Param('farmerId') farmerId: string, @Request() req) {
+    if (!farmerId) throw new BadRequestException('farmerId is required');
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findAllByFarmerId(farmerId, userId, userRole);
+  }
+
+  @Get('cooperative/:cooperativeId')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findAllByCooperativeId(@Param('cooperativeId') cooperativeId: string, @Request() req) {
+    if (!cooperativeId) throw new BadRequestException('cooperativeId is required');
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findAllByCooperativeId(cooperativeId, userId, userRole);
+  }
+
+  @Get('crop-type/:cropTypeId')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findAllByCropTypeId(@Param('cropTypeId') cropTypeId: string, @Request() req) {
+    if (!cropTypeId) throw new BadRequestException('cropTypeId is required');
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findAllByCropTypeId(cropTypeId, userId, userRole);
+  }
+
+  @Get('farmer/:farmerId/crop-type/:cropTypeId')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findAllByFarmerIdAndCropTypeId(
+    @Param('farmerId') farmerId: string,
+    @Param('cropTypeId') cropTypeId: string,
+    @Request() req
+  ) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findAllByFarmerIdAndCropTypeId(farmerId, cropTypeId, userId, userRole);
+  }
+
+  @Get('cooperative/:cooperativeId/crop-type/:cropTypeId')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findAllByCooperativeIdAndCropTypeId(
+    @Param('cooperativeId') cooperativeId: string,
+    @Param('cropTypeId') cropTypeId: string,
+    @Request() req
+  ) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findAllByCooperativeIdAndCropTypeId(
+      cooperativeId,
+      cropTypeId,
+      userId,
+      userRole
+    );
+  }
+
+  @Get(':id')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async findOne(@Param('id') id: string, @Request() req) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.findOne(id, userId, userRole);
+  }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateSeasonDto: UpdateSeasonDto) {
-    try {
-      return new ApiResponse(true, "Season Updated", await this.seasonsService.update(id, updateSeasonDto), 200)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async update(
+    @Param('id') id: string,
+    @Body() updateSeasonDto: UpdateSeasonDto,
+    @Request() req
+  ) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.update(id, updateSeasonDto, userId, userRole);
   }
 
-
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    try {
-      return new ApiResponse(true, "Season Deleted", await this.seasonsService.remove(id), 200)
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400)
-    }
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.FARMER,
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  async remove(@Param('id') id: string, @Request() req) {
+    const userId = req.user.id;
+    const userRole = req.user.role?.name || req.user.role;
+    return this.seasonsService.remove(id, userId, userRole);
   }
 }

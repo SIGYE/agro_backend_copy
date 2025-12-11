@@ -11,8 +11,5 @@ export class CropNameDto {
     @IsString()
     @ApiProperty()
     languageCode: string
-    @IsString()
-    @ApiProperty()
-    cropId?: string
 
 }

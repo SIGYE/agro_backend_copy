@@ -54,6 +54,53 @@ enum SeasonStatus{
   ENDED
 }
 
+enum CollectiveType {
+  COLLECTIVE
+  NON_COLLECTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum OrderType {
+  FARMER
+  COLLECTIVE_COOPERATIVE
+  NON_COLLECTIVE_COOPERATIVE
+}
+
+enum BusinessType {
+  RESTAURANT          
+  RETAILER            
+  PROCESSOR           
+  WHOLESALER          
+  EXPORTER            
+  INSTITUTION         
+  COOPERATIVE         
+  INDIVIDUAL          
+  FARMER_TO_FARMER    
+  MANUFACTURER        
+  ONLINE_PLATFORM     
+  CATERER             
+  BAKERY              
+  BUTCHER           
+  DISTRIBUTOR        
+  OTHER               
+}
+
+enum PreferredPayment{
+  MOBILE_MONEY
+  CASH 
+  BANK_TRANSFER
+  OTHER
+}
+
 model User {
   id                String             @id @default(uuid())
   createdAt         DateTime           @default(now())
@@ -92,8 +139,37 @@ model User {
   feterlizers  Feterlizer[]  @relation("FeterlizerCreatedBy")
   crops        Crop[]        @relation("CropCreatedBy")
   animals      Animal[]      @relation("AnimalCreatedBy")
+  orderStatusChanges  OrderStatusHistory[]   @relation("OrderStatusChanges")
+  buyerProfile      Buyer?   @relation("BuyerProfile")
+
 
   @@map("user")
+}
+
+model Buyer {
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation("BuyerProfile", fields: [userId], references: [id], onDelete: Cascade)
+  businessName      String?  
+  businessType      BusinessType?   // Use the enum
+  tin               String?  
+  address           String?
+  favorites         Favorite[]
+  orders            Order[]         @relation("BuyerOrders") // Orders belong to Buyer
+  preferredPayment  PreferredPayment? // Use the enum
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+model Favorite {
+  id        String   @id @default(uuid())
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listingId String?
+  cropListing  CropListing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([buyerId, listingId]) // Prevent duplicate favorites
 }
 
 model Role {
@@ -131,6 +207,7 @@ model Location {
   users             User[]
   cooperatives      Cooperative[]
   locationLevelName  Location_Level_Name[]
+  cropListings CropListing[]
 
   @@map("location")
 }
@@ -221,6 +298,8 @@ model Crop {
   fertilisers                  Feterlizer[]
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
+  cooperativeId                String?                     
+  cooperative                  Cooperative?                  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
 }
 model CropNames{
   id           String @id @default(uuid())
@@ -243,7 +322,9 @@ model CropType{
   seedStrains SeedStrain[]
   cropFarmerRegistrations      CropFarmerRegistration[]
   cooperativeCropRegistrations CooperativeCropRegistration[]
+  cropListings CropListing[]
 }
+
 
 model Season{
   id        String   @id @default(uuid())
@@ -253,26 +334,27 @@ model Season{
   plantationArea                    Float
   seeds                             Float
   produceHarvested                  Float
-  expectedYield                      Float
+  expectedYield                     Float
   startDate                         DateTime
   endDate                           DateTime
   seasonStatus                      SeasonStatus @default(ON_GOING)
   cropTypeId    String
-  croType    CropType @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
+  croType       CropType @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
   seedStrainId  String
   seedStrain    SeedStrain @relation(fields: [seedStrainId], references: [id], onDelete: Cascade)
-  farmerId      String
-  farmer Farmer @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  farmerId      String?
+  farmer        Farmer? @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cooperativeId String?
+  cooperative   Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   harvestSeasonId String
   harvestSeason HarvestSeason @relation(fields: [harvestSeasonId], references: [id], onDelete: Cascade)
   cropFertilizerFarmerRegistrations CropFertilizerFarmerRegistration[]
-  diseases                           Disease[]
-  pests                              Pest[]
-  harvests                           Harvest[]
-  metricId                           String
-  metric                             Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
-  farmingActivities                  FarmingActivity[]
-  
+  diseases                          Disease[]
+  pests                             Pest[]
+  harvests                          Harvest[]
+  metricId                          String
+  metric                            Metric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  farmingActivities                 FarmingActivity[]
 }
 
 model Animal {
@@ -321,6 +403,8 @@ model Farmer {
   seasons                   Season[]
   cooperative              Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   cooperativeId            String?
+  cropListings              CropListing[]
+  orders                    Order[]
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
 }
@@ -329,15 +413,20 @@ model Cooperative {
   id                             String                          @id @default(uuid())
   name                           String
   telephone                      String
-  registrationNumber              String
+  registrationNumber             String
   membersNumber                  Int
-  Location                       Location                       @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  locationId                       Int
+  Location                       Location                        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  locationId                     Int
   farmers                        Farmer[]
   cooperativeCropRegistrations   CooperativeCropRegistration[]
-  type                           CooperativeType
-  cooperativeManager             User                          @relation(fields: [cooperativeManagerId], references: [id], onDelete: Cascade)
+  seasons                        Season[]  
+  type                           CooperativeType                 
+  collectiveType                 CollectiveType                
+  cooperativeManager             User                            @relation(fields: [cooperativeManagerId], references: [id], onDelete: Cascade)
   cooperativeManagerId           String
+  cropListings                   CropListing[]
+  orders                         Order[]
+  crops                          Crop[]
   createdAt                      DateTime                        @default(now())
   updatedAt                      DateTime                        @updatedAt
 }
@@ -628,8 +717,93 @@ model Harvest{
   season    Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
 
+model CropListing {
+  id                String        @id @default(uuid())
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  farmerId          String?       
+  cooperativeId     String?       
+  farmer            Farmer?       @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cooperative       Cooperative?  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cropTypeId        String
+  cropType          CropType      @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
+  pricePerKg        Float       
+  currency          String        @default("RWF") 
+  totalAvailableKg  Float       
+  availableKg       Float         
+  minimumOrderKg    Float         @default(1) 
+  locationId        Int
+  location          Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  isActive          Boolean       @default(true)
+  orderItems        OrderItem[]
+  favorites         Favorite[] 
 
+  @@unique([farmerId, cropTypeId])
+  @@unique([cooperativeId, cropTypeId])
+  @@index([isActive])
+  @@index([pricePerKg])
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  buyerId           String       
+  buyer             Buyer         @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade) // References Buyer
+  farmerId          String?      
+  cooperativeId     String?      
+  farmer            Farmer?       @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cooperative       Cooperative?  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  orderType         OrderType    
+  orderNumber       String        @unique 
+  totalAmount       Float        
+  currency          String        @default("RWF")
+  status            OrderStatus   @default(PENDING)
+  deliveryAddress   String?
+  deliveryDate      DateTime?
+  deliveryNotes     String?
+  orderItems        OrderItem[]
+  statusHistory     OrderStatusHistory[]
+  
+  @@index([buyerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                String        @id @default(uuid())
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cropListingId     String
+  cropListing       CropListing   @relation(fields: [cropListingId], references: [id], onDelete: Cascade)
+  quantityKg        Float         
+  unitPrice         Float        
+  totalPrice        Float         
+  cropTypeId        String
+  cropTypeName      String
+  cropName          String
+  sellerName        String        
+  sellerType        OrderType    
+  
+  @@index([orderId])
+  @@index([cropListingId])
+}
+
+model OrderStatusHistory {
+  id                String        @id @default(uuid())
+  createdAt         DateTime      @default(now())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status            OrderStatus
+  notes             String?
+  changedByUserId   String
+  changedByUser     User          @relation("OrderStatusChanges", fields: [changedByUserId], references: [id], onDelete: Cascade)
+  @@index([orderId])
+  @@index([createdAt])
 }
 
 model Metric {

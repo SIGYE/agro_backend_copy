@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Agronomy, Farmer, Gender, Prisma, Status, User, Veterinary } from '@prisma/client';
+import { Agronomy, Farmer, Gender, Prisma, Status, User, Veterinary, Umufashamyumvire } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -20,18 +20,18 @@ export type UserWithRoles = Prisma.UserGetPayload<{
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService) {
+  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService) {}
 
-  }
   async create(createUserDto: CreateUserDto, loggedInUser?: User): Promise<User> {
     try {
       if (createUserDto.password) {
-        createUserDto.password = await bcrypt.hash(createUserDto.password, 10)
+        createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
       } else {
-        let password = "Test@12345"
-        console.log("password: ", password)
-        createUserDto.password = await bcrypt.hash(password, 10)
+        let password = "Test@12345";
+        console.log("password: ", password);
+        createUserDto.password = await bcrypt.hash(password, 10);
       }
+
       let usersnumber = await this.databaseService.user.count();
       const username = createUserDto.firstName.toLowerCase() + usersnumber;
 
@@ -45,39 +45,51 @@ export class UsersService {
         }
       });
 
-
       if (userPresent) {
-        throw new BadRequestException("The user with the national Id , telephone and email already exists")
+        throw new BadRequestException("The user with the national Id, telephone and email already exists");
       }
 
+      // Validate role exists
       let role = await this.databaseService.role.findUnique({
         where: {
           id: createUserDto.roleId
         }
-      })
+      });
 
       if (!role) {
-        throw new NotFoundException("The role does not exist")
+        throw new NotFoundException("The role does not exist");
       }
 
+      let locationId: number;
+      
+      // Case 1: User provided locationId in DTO
+      if (createUserDto.locationId) {
+        locationId = createUserDto.locationId;
+      } 
+      // Case 2: Use loggedInUser's location if no locationId provided
+      else if (loggedInUser?.locationId) {
+        locationId = loggedInUser.locationId;
+      }
+      // Case 3: No location provided at all
+      else {
+        throw new BadRequestException("Location is required. Please provide locationId");
+      }
+
+      // Validate location exists
       let location = await this.databaseService.location.findUnique({
         where: {
-          id: createUserDto.locationId
+          id: locationId
         }
-      })
+      });
 
       if (!location) {
-        location = await this.databaseService.location.findUnique({
-          where: {
-            id: loggedInUser.locationId
-          }
-        })
-        if (location) {
-          throw new BadRequestException("The location does not exist")
-        }
+        throw new BadRequestException(`Location with id ${locationId} does not exist`);
       }
-      let childrenLocationsIds = await this.locationService.getAllChildrenLocations(location.id)
 
+      // Get children location IDs
+      let childrenLocationsIds = await this.locationService.getAllChildrenLocations(location.id);
+
+      // Create user
       let user = await this.databaseService.user.create({
         data: {
           firstName: createUserDto.firstName,
@@ -90,7 +102,6 @@ export class UsersService {
           gender: createUserDto.gender,
           dob: createUserDto.dob ? new Date(createUserDto.dob) : null,
           locationChildrenIds: JSON.stringify(childrenLocationsIds),
-          country: createUserDto.country,
           role: {
             connect: {
               id: role.id
@@ -103,15 +114,18 @@ export class UsersService {
           }
         }
       });
+
       if (user) {
-        sendSms(user.telephone, { id: randomUUID(), content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is ${createUserDto.password}. Please change your password after logging in.` })
-        console.log(createUserDto.password)
-        return user
+        sendSms(user.telephone, { 
+          id: randomUUID(), 
+          content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is Test@12345. Please change your password after logging in.` 
+        });
+        console.log(createUserDto.password);
+        return user;
       }
     } catch (e) {
-      throw e
+      throw e;
     }
-
   }
 
   async findAll(locationId?: number): Promise<User[]> {
@@ -142,6 +156,7 @@ export class UsersService {
       }
     });
   }
+
   async findUserByEmail(email: string): Promise<any> {
     const user = await this.databaseService.user.findUnique({
       where: {
@@ -168,7 +183,6 @@ export class UsersService {
             name: true,
             id: true,
             type: true
-
           }
         }
       }
@@ -200,7 +214,6 @@ export class UsersService {
                 type: true
               }
             }
-
           }
         },
         cooperativeManager: {
@@ -208,7 +221,6 @@ export class UsersService {
             name: true,
             id: true,
             type: true
-
           }
         }
       }
@@ -246,7 +258,6 @@ export class UsersService {
             name: true,
             id: true,
             type: true
-
           }
         }
       }
@@ -266,10 +277,10 @@ export class UsersService {
         where: {
           email: updateUserDto.email
         }
-      })
+      });
 
       if (user && user.id != id) {
-        throw new BadRequestException("The email already exists")
+        throw new BadRequestException("The email already exists");
       }
     }
     return this.databaseService.user.update({
@@ -283,7 +294,6 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<User> {
-
     return this.databaseService.user.delete({
       where: { id }
     });
@@ -298,12 +308,12 @@ export class UsersService {
       }
     });
     if (!user) {
-      throw new NotFoundException("The user was not found")
+      throw new NotFoundException("The user was not found");
     }
 
     // Reset the password logic here
     if (!(changePasswordDTO.newPassword == changePasswordDTO.confirmNewPassword)) {
-      throw new BadRequestException("The password and confirmation passwords do not match")
+      throw new BadRequestException("The password and confirmation passwords do not match");
     }
     // For example, you might generate a new password and update the user record
     const newPassword = await bcrypt.hash(changePasswordDTO.newPassword, 12); // Generate a secure password
@@ -315,8 +325,7 @@ export class UsersService {
         password: newPassword,
         isDefaultPassword: false
       }
-    }
-    );
+    });
   }
 
   // deactivating the user 
@@ -327,7 +336,7 @@ export class UsersService {
       }
     });
     if (!user) {
-      throw new NotFoundException("The user was not found")
+      throw new NotFoundException("The user was not found");
     }
     return await this.databaseService.user.update({
       data: {
@@ -336,43 +345,45 @@ export class UsersService {
       where: {
         id: user.id
       }
-    }
-    );
+    });
   }
 
-  async registerAgronomist(createUserDto: CreateUserDto): Promise<Agronomy> {
+  async registerAgronomist(createUserDto: CreateUserDto, loggedInUser?: User): Promise<Agronomy> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "AGRONOMIST"
         }
-      })
-      let user = await this.create({ roleId: role.id, ...createUserDto });
+      });
+
+      if (!role) {
+        throw new NotFoundException("AGRONOMIST role not found");
+      }
+
+      let user = await this.create({ roleId: role.id, ...createUserDto }, loggedInUser);
+      
       let location = await this.databaseService.location.findUnique({
         where: {
           id: user.locationId
         }
-      })
+      });
+
       let locationLevel = await this.databaseService.locationLevel.findUnique({
         where: {
           id: location.locationLevelId
         }
-      })
+      });
+
       return await this.databaseService.agronomy.create({
         data: {
           userId: user.id,
           locationLevel: locationLevel.order_number,
           locationName: location.name,
-
         }
-
-      })
-
+      });
+    } catch (e) {
+      throw new BadRequestException(e.message);
     }
-    catch (e) {
-      throw new BadRequestException(e.message)
-    }
-
   }
 
   async registerFarmer(createUserDto: CreateUserDto, cooperativeId?: string, loggedInUser?: User): Promise<Farmer> {
@@ -381,7 +392,12 @@ export class UsersService {
         where: {
           name: "FARMER"
         }
-      })
+      });
+
+      if (!role) {
+        throw new NotFoundException("FARMER role not found");
+      }
+
       let user = await this.create({ roleId: role.id, ...createUserDto }, loggedInUser);
 
       let farmer = await this.databaseService.farmer.create({
@@ -391,19 +407,20 @@ export class UsersService {
               id: user.id
             }
           }
-
         }
+      });
 
-      })
       if (cooperativeId) {
-        let cooperative = this.databaseService.cooperative.findUnique({
+        let cooperative = await this.databaseService.cooperative.findUnique({
           where: {
             id: cooperativeId
           }
-        })
+        });
+
         if (!cooperative) {
-          throw new NotFoundException(`Cooperative with ID ${cooperativeId} not found`)
+          throw new NotFoundException(`Cooperative with ID ${cooperativeId} not found`);
         }
+
         await this.databaseService.cooperative.update({
           where: { id: cooperativeId },
           data: {
@@ -416,19 +433,24 @@ export class UsersService {
         });
       }
       return farmer;
-
     } catch (e) {
-      throw new BadRequestException(e.message)
+      throw new BadRequestException(e.message);
     }
   }
-  async registerVet(createUserDto: CreateUserDto): Promise<Veterinary> {
+
+  async registerVet(createUserDto: CreateUserDto, loggedInUser?: User): Promise<Veterinary> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "VETERINARIAN"
         }
-      })
-      let user = await this.create({ roleId: role.id, ...createUserDto });
+      });
+
+      if (!role) {
+        throw new NotFoundException("VETERINARIAN role not found");
+      }
+
+      let user = await this.create({ roleId: role.id, ...createUserDto }, loggedInUser);
 
       return await this.databaseService.veterinary.create({
         data: {
@@ -437,67 +459,61 @@ export class UsersService {
               id: user.id
             }
           }
-
         }
-
-      })
-    }
-    catch (e) {
-      throw new BadRequestException(e.message)
+      });
+    } catch (e) {
+      throw new BadRequestException(e.message);
     }
   }
-  async registerCooperativeManager(createUserDto: CreateUserDto): Promise<Veterinary> {
+
+  async registerCooperativeManager(createUserDto: CreateUserDto, loggedInUser?: User): Promise<User> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "COOPERATIVE_MANAGER"
         }
-      })
-      let user = await this.create({ roleId: role.id, ...createUserDto });
+      });
 
-      return await this.databaseService.veterinary.create({
-        data: {
-          user: {
-            connect: {
-              id: user.id
-            }
-          }
+      if (!role) {
+        throw new NotFoundException("COOPERATIVE_MANAGER role not found");
+      }
 
-        }
-
-      })
-    }
-    catch (e) {
-      throw new BadRequestException(e.message)
+      let user = await this.create({ roleId: role.id, ...createUserDto }, loggedInUser);
+      return user;
+    } catch (e) {
+      throw new BadRequestException(e.message);
     }
   }
-  async registerUmufashaMyumvire(createUserDto: CreateUserDto): Promise<Veterinary> {
+
+  async registerUmufashaMyumvire(createUserDto: CreateUserDto, loggedInUser?: User): Promise<Umufashamyumvire> {
     try {
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "UMUFASHAMYUMVIRE"
         }
-      })
-      let user = await this.create({ roleId: role.id, ...createUserDto });
+      });
 
-      return await this.databaseService.veterinary.create({
+      if (!role) {
+        throw new NotFoundException("UMUFASHAMYUMVIRE role not found");
+      }
+
+      let user = await this.create({ roleId: role.id, ...createUserDto }, loggedInUser);
+
+      return await this.databaseService.umufashamyumvire.create({
         data: {
           user: {
             connect: {
               id: user.id
             }
           }
-
         }
-
-      })
-    }
-    catch (e) {
-      throw new BadRequestException(e.message)
+      });
+    } catch (e) {
+      throw new BadRequestException(e.message);
     }
   }
 
-  async registerMultipleVets(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
+  async registerMultipleVets(file: Express.Multer.File, loggedInUser?: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -507,7 +523,6 @@ export class UsersService {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Skip the first row (assuming it's the header row)
     const rowsToProcess = data.slice(1);
 
     let success = 0;
@@ -516,7 +531,6 @@ export class UsersService {
 
     for (const row of rowsToProcess) {
       try {
-        // Map the row to a userDto-like object based on the cell index
         let userDto = {
           firstName: row[0],
           lastName: row[1],
@@ -527,19 +541,13 @@ export class UsersService {
           gender: row[5],
           dob: row[6],
           country: row[7],
-
-
         };
+        
         let location = await this.locationService.getLocationByName(row[7]);
         userDto.locationId = location.id;
-        userDto.country = location.id
-        let role = await this.databaseService.role.findFirst({
-          where: {
-            name: "VETERINARIAN"
-          }
-        })
+        userDto.country = location.id;
 
-        await this.registerVet({ roleId: role.id, ...userDto }); // Register vet with the custom object
+        await this.registerVet(userDto as any, loggedInUser);
         success++;
       } catch (error) {
         failed++;
@@ -552,7 +560,8 @@ export class UsersService {
 
     return { success, failed, errors };
   }
-  async registerMultipleBafashaMyumvire(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
+
+  async registerMultipleBafashaMyumvire(file: Express.Multer.File, loggedInUser?: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -562,7 +571,6 @@ export class UsersService {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Skip the first row (assuming it's the header row)
     const rowsToProcess = data.slice(1);
 
     let success = 0;
@@ -571,7 +579,6 @@ export class UsersService {
 
     for (const row of rowsToProcess) {
       try {
-        // Map the row to a userDto-like object based on the cell index
         let userDto = {
           firstName: row[0],
           lastName: row[1],
@@ -582,19 +589,13 @@ export class UsersService {
           gender: row[5],
           dob: row[6],
           country: row[7],
-
-
         };
+        
         let location = await this.locationService.getLocationByName(row[7]);
         userDto.country = location.id;
         userDto.locationId = location.id;
-        let role = await this.databaseService.role.findFirst({
-          where: {
-            name: "UMUFASHAMYUMVIRE"
-          }
-        })
 
-        await this.registerVet({ roleId: role.id, ...userDto }); // Register vet with the custom object
+        await this.registerUmufashaMyumvire(userDto as any, loggedInUser);
         success++;
       } catch (error) {
         failed++;
@@ -618,7 +619,6 @@ export class UsersService {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Skip the first row (assuming it's the header row)
     const rowsToProcess = data.slice(1);
 
     let success = 0;
@@ -627,7 +627,6 @@ export class UsersService {
 
     for (const row of rowsToProcess) {
       try {
-        // Map the row to a userDto-like object based on the cell index
         let userDto = {
           firstName: row[0],
           lastName: row[1],
@@ -638,19 +637,13 @@ export class UsersService {
           gender: row[5],
           dob: row[6],
           country: row[7],
-
-
         };
+        
         let location = await this.locationService.getLocationByName(row[7]);
         userDto.locationId = location.id;
-        userDto.country = location.id
-        let role = await this.databaseService.role.findFirst({
-          where: {
-            name: "FARMER"
-          }
-        })
+        userDto.country = location.id;
 
-        await this.registerFarmer({ roleId: role.id, ...userDto }, null, loggedInUser); // Register vet with the custom object
+        await this.registerFarmer(userDto as any, null, loggedInUser);
         success++;
       } catch (error) {
         failed++;
@@ -663,6 +656,7 @@ export class UsersService {
 
     return { success, failed, errors };
   }
+
   async registerMultipleFarmersIntoCooperative(file: Express.Multer.File, cooperativeId: string, loggedInUser?: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -673,7 +667,6 @@ export class UsersService {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Skip the first row (assuming it's the header row)
     const rowsToProcess = data.slice(1);
 
     let success = 0;
@@ -682,7 +675,6 @@ export class UsersService {
 
     for (const row of rowsToProcess) {
       try {
-        // Map the row to a userDto-like object based on the cell index
         let userDto = {
           firstName: row[0],
           lastName: row[1],
@@ -692,18 +684,12 @@ export class UsersService {
           locationId: 0,
           gender: row[5],
           dob: row[6],
-
-
         };
+        
         let location = await this.locationService.getLocationByName(row[9]);
         userDto.locationId = location.id;
-        let role = await this.databaseService.role.findFirst({
-          where: {
-            name: "FARMER"
-          }
-        })
 
-        await this.registerFarmer({ roleId: role.id, ...userDto }, cooperativeId, loggedInUser); // Register vet with the custom object
+        await this.registerFarmer(userDto as any, cooperativeId, loggedInUser);
         success++;
       } catch (error) {
         failed++;
@@ -717,7 +703,7 @@ export class UsersService {
     return { success, failed, errors };
   }
 
-  async registerMultipleAgronomists(file: Express.Multer.File): Promise<{ success: number; failed: number; errors: any[] }> {
+  async registerMultipleAgronomists(file: Express.Multer.File, loggedInUser?: User): Promise<{ success: number; failed: number; errors: any[] }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -727,7 +713,6 @@ export class UsersService {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    // Skip the first row (assuming it's the header row)
     const rowsToProcess = data.slice(1);
 
     let success = 0;
@@ -736,7 +721,6 @@ export class UsersService {
 
     for (const row of rowsToProcess) {
       try {
-        // Map the row to a userDto-like object based on the cell index
         let userDto = {
           firstName: row[0],
           lastName: row[1],
@@ -746,18 +730,12 @@ export class UsersService {
           locationId: 0,
           gender: row[5],
           dob: row[6],
-
-
         };
+        
         let location = await this.locationService.getLocationByName(row[9]);
         userDto.locationId = location.id;
-        let role = await this.databaseService.role.findFirst({
-          where: {
-            name: "AGRONOMIST"
-          }
-        })
 
-        await this.registerVet({ roleId: role.id, ...userDto }); // Register vet with the custom object
+        await this.registerAgronomist(userDto as any, loggedInUser);
         success++;
       } catch (error) {
         failed++;
@@ -770,7 +748,4 @@ export class UsersService {
 
     return { success, failed, errors };
   }
-
-
-
 }

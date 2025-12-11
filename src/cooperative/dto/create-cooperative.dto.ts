@@ -1,10 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsInt, IsOptional, ValidateNested, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsOptional, ValidateNested, IsEnum, IsNumber } from 'class-validator';
 import { CooperativeType } from '@prisma/client';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { cooperativeCropDto } from './cooperative-crop.dto';
 
+
+export enum CollectiveType {
+  COLLECTIVE = 'COLLECTIVE',
+  NON_COLLECTIVE = 'NON_COLLECTIVE'
+}
 export class CreateCooperativeDto {
     @ApiProperty()
     @IsString()
@@ -33,6 +38,7 @@ export class CreateCooperativeDto {
     @IsNotEmpty()
     @ApiProperty()
     locationId: number;
+
     @ApiProperty()
     @Type(() => CreateUserDto)
     managerDto: CreateUserDto
@@ -46,5 +52,9 @@ export class CreateCooperativeDto {
     @IsOptional()
     crops?: cooperativeCropDto[]
 
-
+    @ApiProperty({
+    enum: CollectiveType })
+  @IsEnum(CollectiveType)
+  @IsNotEmpty()
+  collectiveType: CollectiveType;
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateCropDto } from './dto/create-crop.dto';
 import { UpdateCropDto } from './dto/update-crop.dto';
 import { DatabaseService } from 'src/database/database.service';
@@ -10,25 +10,95 @@ import { BulkDiseaseDto } from './dto/bulk-disease.dto';
 import { BulkCreateCropDto } from './dto/bulk-create-crop.dto';
 import { BulkCropDto } from './dto/bulk-crop.dto';
 import { BulkCropTypeDto } from './dto/bulk-cropType.dto';
+import { Role_Enum } from '../enums/role.enum';
+
+// Extended User type
+type ExtendedUser = User & {
+  role?: Role_Enum;
+  cooperativeId?: string;
+};
 
 @Injectable()
 export class CropService {
-  constructor(private readonly dataBaseService: DatabaseService, private readonly locationService: LocationService) { } async create(createCropDto: CreateCropDto, user: User) {
+  constructor(
+    private readonly dataBaseService: DatabaseService, 
+    private readonly locationService: LocationService
+  ) { }
+
+  // Helper method to check if user can manage crops
+  private canManageCrops(user: ExtendedUser): boolean {
+    const allowedRoles = [
+      Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+      Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+      Role_Enum.FARMER,
+    ];
+    return allowedRoles.includes(user.role);
+  }
+
+  // Helper method to check if user can delete crops
+  private canDeleteCrops(user: ExtendedUser): boolean {
+    const allowedRoles = [
+      Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+      Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+      Role_Enum.FARMER,
+    ];
+    return allowedRoles.includes(user.role);
+  }
+
+  // Helper method to get the cooperative ID for a user
+  private async getUserCooperativeId(user: ExtendedUser): Promise<string | null> {
+    if (user.role?.toString().includes('COOPERATIVE_MANAGER')) {
+      return user.cooperativeId || null;
+    }
+    
+    if (user.role === Role_Enum.FARMER) {
+      const farmer = await this.dataBaseService.farmer.findUnique({
+        where: { userId: user.id },
+        select: { cooperativeId: true }
+      });
+      return farmer?.cooperativeId || null;
+    }
+    
+    return null;
+  }
+
+  async create(createCropDto: CreateCropDto, user: ExtendedUser) {
     try {
+      // Check if user has permission to create crops
+      if (!this.canManageCrops(user)) {
+        throw new ForbiddenException('You do not have permission to create crops');
+      }
+
+      // Additional validation for farmers
+      if (user.role === Role_Enum.FARMER) {
+        // Check if farmer belongs to a cooperative
+        const farmer = await this.dataBaseService.farmer.findUnique({
+          where: { userId: user.id },
+          include: { cooperative: true }
+        });
+
+        if (!farmer?.cooperativeId) {
+          throw new BadRequestException('Farmers must be associated with a cooperative to create crops');
+        }
+      }
+
       return await this.dataBaseService.$transaction(async (prisma) => {
-        // Check if crop already exists by checking if any of the provided names exist in the same languages
         let existingCrop = null;
 
-        if (createCropDto.names && createCropDto.names.length > 0) {
-          // Build conditions to check for existing names in same languages
+        // For farmers and cooperative managers, crops are specific to their cooperative
+        const userCooperativeId = await this.getUserCooperativeId(user);
+
+        if (createCropDto.names && createCropDto.names.length > 0) { 
           const nameLanguagePairs = createCropDto.names.map(nameDto => ({
             name: nameDto.name,
             languageCode: nameDto.languageCode
           }));
 
+          // Check if crop already exists for this user/cooperative
           existingCrop = await prisma.crop.findFirst({
             where: {
               country: user.country,
+              cooperativeId: userCooperativeId, // Check within same cooperative
               names: {
                 some: {
                   OR: nameLanguagePairs
@@ -43,7 +113,12 @@ export class CropService {
         }
 
         if (existingCrop) {
-          // Crop exists, add any missing names (different languages)
+          // Check if user can modify this crop
+          // Only allow modification if user created the crop
+          if (existingCrop.createdBy !== user.id) {
+            throw new ForbiddenException('You can only modify crops that you created');
+          }
+
           const existingLanguages = existingCrop.names.map(n => n.languageCode);
           const newNames = createCropDto.names.filter(
             nameDto => !existingLanguages.includes(nameDto.languageCode)
@@ -86,11 +161,14 @@ export class CropService {
             }
           });
         } else {
-          // Create new crop
+          // Create new crop - linked to user's cooperative
+          const userCooperativeId = await this.getUserCooperativeId(user);
+          
           let crop = await prisma.crop.create({
             data: {
               createdBy: user.id,
-              country: user.country
+              country: user.country,
+              cooperativeId: userCooperativeId // Link crop to cooperative
             }
           });
 
@@ -132,17 +210,25 @@ export class CropService {
       throw new BadRequestException(error.message);
     }
   }
-  async bulkCreate(bulkCreateCropDto: BulkCreateCropDto, user: User) {
-    try {
-      const results = [];
 
-      // Process crops in smaller batches to avoid transaction timeouts
-      const BATCH_SIZE = 3; // Reduce batch size for complex operations
+  async bulkCreate(bulkCreateCropDto: BulkCreateCropDto, user: ExtendedUser) {
+    try {
+      // Only allow cooperative managers to do bulk creation
+      const allowedBulkRoles = [
+        Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+        Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+      ];
+      
+      if (!allowedBulkRoles.includes(user.role)) {
+        throw new ForbiddenException('You do not have permission to bulk create crops');
+      }
+
+      const results = [];
+      const BATCH_SIZE = 3;
 
       for (let i = 0; i < bulkCreateCropDto.crops.length; i += BATCH_SIZE) {
         const batch = bulkCreateCropDto.crops.slice(i, i + BATCH_SIZE);
 
-        // Process batch in parallel with individual transactions
         const batchPromises = batch.map(cropDto =>
           this.createSingleCropWithDetails(cropDto, user)
         );
@@ -157,20 +243,24 @@ export class CropService {
     }
   }
 
-  private async createSingleCropWithDetails(cropDto: BulkCropDto, user: User) {
+  private async createSingleCropWithDetails(cropDto: BulkCropDto, user: ExtendedUser) {
     return await this.dataBaseService.$transaction(async (prisma) => {
       try {
-        // 1. Check if crop exists by looking for any matching name in any language
+        // Get user's cooperative ID
+        const userCooperativeId = await this.getUserCooperativeId(user);
+
+        // 1. Check if crop exists within user's cooperative
         let crop = await prisma.crop.findFirst({
           where: {
+            cooperativeId: userCooperativeId,
+            country: user.country,
             names: {
               some: {
                 name: {
                   in: cropDto.names?.map(n => n.name)
                 }
               }
-            },
-            country: user.country
+            }
           },
           include: {
             names: true
@@ -178,11 +268,12 @@ export class CropService {
         });
 
         if (!crop) {
-          // Create new crop
+          // Create new crop linked to user's cooperative
           crop = await prisma.crop.create({
             data: {
               createdBy: user.id,
-              country: user.country
+              country: user.country,
+              cooperativeId: userCooperativeId
             },
             include: {
               names: true
@@ -238,16 +329,14 @@ export class CropService {
         // Wait for all related data to be processed
         await Promise.all(promises);
 
-        // 3. Handle crop types and seed strains - OPTIMIZED VERSION
+        // 3. Handle crop types and seed strains
         if (cropDto.cropTypes && cropDto.cropTypes.length > 0) {
           await this.handleCropTypesAndSeedStrainsBatch(prisma, crop.id, cropDto.cropTypes);
         } else {
-          // Create default crop type using first available name
           const defaultName = crop.names?.[0]?.name
           await this.createDefaultCropType(prisma, crop.id, defaultName);
         }
 
-        // Return the complete crop with all relations
         return await prisma.crop.findUnique({
           where: { id: crop.id },
           include: {
@@ -272,8 +361,8 @@ export class CropService {
         throw error;
       }
     }, {
-      timeout: 60000, // Increase timeout to 60 seconds
-      maxWait: 10000   // Increase max wait time
+      timeout: 60000,
+      maxWait: 10000
     });
   }
 
@@ -363,7 +452,7 @@ export class CropService {
   }
 
   // Optimized fertilizer handling with batch operations
-  private async handleFertilizers(prisma: any, cropId: string, fertilizerNames: string[], user: User) {
+  private async handleFertilizers(prisma: any, cropId: string, fertilizerNames: string[], user: ExtendedUser) {
     // Get all existing fertilizers in one query
     const existingFertilizers = await prisma.feterlizer.findMany({
       where: {
@@ -423,7 +512,7 @@ export class CropService {
   }
 
   // Optimized disease handling
-  private async handleDiseases(prisma: any, cropId: string, diseases: BulkDiseaseDto[], user: User) {
+  private async handleDiseases(prisma: any, cropId: string, diseases: BulkDiseaseDto[], user: ExtendedUser) {
     // Get existing diseases
     const existingDiseases = await prisma.disease.findMany({
       where: {
@@ -495,7 +584,7 @@ export class CropService {
   }
 
   // Optimized pest handling
-  private async handlePests(prisma: any, cropId: string, pests: BulkPestDto[], user: User) {
+  private async handlePests(prisma: any, cropId: string, pests: BulkPestDto[], user: ExtendedUser) {
     // Get existing pests
     const existingPests = await prisma.pest.findMany({
       where: {
@@ -618,55 +707,36 @@ export class CropService {
     }
   }
 
-
-
-  async findAll(user: User) {
+  async findAll(user: ExtendedUser) {
     try {
       const countryQuery = user.country ? {
         country: user.country
       } : {}
 
+      // Get user's cooperative ID to filter crops
+      const userCooperativeId = await this.getUserCooperativeId(user);
+
+      // If user is a farmer or cooperative manager, only show crops from their cooperative
+      const cooperativeQuery = userCooperativeId ? {
+        cooperativeId: userCooperativeId
+      } : {};
+
       return await this.dataBaseService.crop.findMany({
         where: {
-          ...countryQuery
+          ...countryQuery,
+          ...cooperativeQuery
         },
         include: {
-          cropType: true
-        }
-
-      });
-    }
-    catch (error) {
-      throw new BadRequestException(error.message);
-    }
-  }
-
-  async findAllCropFarmerRegistration(locationId: number) {
-    try {
-      // Check if the location exists
-      const location = await this.dataBaseService.location.findUnique({
-        where: { id: locationId },
-      });
-
-      if (!location) {
-        throw new NotFoundException(`Location with ID ${locationId} not found`);
-      }
-      let locations = await this.locationService.getAllChildrenLocationIds(locationId);
-      return await this.dataBaseService.cropFarmerRegistration.findMany({
-        where: {
-          farmer: {
-            user: {
-              location: {
-                id: {
-                  in: locations
-                }
-
-              }
+          names: true,
+          cropType: {
+            include: {
+              seedStrains: true
             }
           }
         }
       });
-    } catch (error) {
+    }
+    catch (error) {
       throw new BadRequestException(error.message);
     }
   }
@@ -682,6 +752,247 @@ export class CropService {
       throw new BadRequestException(error.message);
     }
   }
+
+  async update(id: string, updateCropDto: UpdateCropDto, user?: ExtendedUser) {
+    try {
+      // If user is provided, check permissions
+      if (user && !this.canManageCrops(user)) {
+        throw new ForbiddenException('You do not have permission to update crops');
+      }
+
+      return await this.dataBaseService.$transaction(async (prisma) => {
+        // Check ownership if user is provided
+        if (user) {
+          const existingCrop = await prisma.crop.findUnique({
+            where: { id: id }
+          });
+
+          if (!existingCrop) {
+            throw new NotFoundException('Crop not found');
+          }
+
+          // Get user's cooperative ID
+          const userCooperativeId = await this.getUserCooperativeId(user);
+
+          // Check if user created this crop AND it belongs to their cooperative
+          if (existingCrop.createdBy !== user.id || existingCrop.cooperativeId !== userCooperativeId) {
+            throw new ForbiddenException('You can only update crops that you created within your cooperative');
+          }
+        }
+
+        // Update the crop itself
+        const updatedCrop = await prisma.crop.update({
+          where: { id: id },
+          data: {}
+        });
+
+        // Handle names updates if provided
+        if (updateCropDto.names && updateCropDto.names.length > 0) {
+          const existingNames = await prisma.cropNames.findMany({
+            where: { cropId: id }
+          });
+
+          for (const nameDto of updateCropDto.names) {
+            const existingName = existingNames.find(
+              existing => existing.languageCode === nameDto.languageCode
+            );
+
+            if (existingName) {
+              await prisma.cropNames.update({
+                where: { id: existingName.id },
+                data: {
+                  name: nameDto.name,
+                  languageName: nameDto.languageName
+                }
+              });
+            } else {
+              await prisma.cropNames.create({
+                data: {
+                  name: nameDto.name,
+                  languageName: nameDto.languageName,
+                  languageCode: nameDto.languageCode,
+                  cropId: id
+                }
+              });
+            }
+          }
+        }
+
+        return await prisma.crop.findUnique({
+          where: { id: id },
+          include: {
+            names: true,
+            cropType: true
+          }
+        });
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async remove(id: string, user?: ExtendedUser) {
+    try {
+      // If user is provided, check permissions
+      if (user && !this.canDeleteCrops(user)) {
+        throw new ForbiddenException('You do not have permission to delete crops');
+      }
+
+      // Check ownership if user is provided
+      if (user) {
+        const existingCrop = await this.dataBaseService.crop.findUnique({
+          where: { id: id }
+        });
+
+        if (!existingCrop) {
+          throw new NotFoundException('Crop not found');
+        }
+
+        // Get user's cooperative ID
+        const userCooperativeId = await this.getUserCooperativeId(user);
+
+        // Check if user created this crop AND it belongs to their cooperative
+        if (existingCrop.createdBy !== user.id || existingCrop.cooperativeId !== userCooperativeId) {
+          throw new ForbiddenException('You can only delete crops that you created within your cooperative');
+        }
+      }
+
+      return await this.dataBaseService.crop.delete({
+        where: {
+          id: id
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  // Get crops by cooperative (for cooperative managers to see all crops in their cooperative)
+  async getCooperativeCrops(cooperativeId: string, user: ExtendedUser) {
+    try {
+      // Check permissions: cooperative managers can only see their own cooperative's crops
+      if (user.role?.toString().includes('COOPERATIVE_MANAGER') && 
+          user.cooperativeId !== cooperativeId) {
+        throw new ForbiddenException('You can only view your own cooperative\'s crops');
+      }
+
+      return await this.dataBaseService.crop.findMany({
+        where: {
+          cooperativeId: cooperativeId
+        },
+        include: {
+          names: true,
+          cropType: {
+            include: {
+              seedStrains: true
+            }
+          },
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              telephone: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  // Get farmer's crops
+  async getFarmerCrops(farmerId: string, user: ExtendedUser) {
+    try {
+      // Check if user is the farmer or their cooperative manager
+      const farmer = await this.dataBaseService.farmer.findUnique({
+        where: { id: farmerId },
+        include: { cooperative: true }
+      });
+
+      if (!farmer) {
+        throw new NotFoundException('Farmer not found');
+      }
+
+      // Authorization checks
+      if (user.id !== farmer.userId) {
+        // If not the farmer, check if user is their cooperative manager
+        if (!user.role?.toString().includes('COOPERATIVE_MANAGER') || 
+            user.cooperativeId !== farmer.cooperativeId) {
+          throw new ForbiddenException('You can only view your own crops or crops from your cooperative');
+        }
+      }
+
+      // Get crops created by this farmer's user account
+      return await this.dataBaseService.crop.findMany({
+        where: {
+          createdBy: farmer.userId,
+          cooperativeId: farmer.cooperativeId
+        },
+        include: {
+          names: true,
+          cropType: {
+            include: {
+              seedStrains: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async importCrops(file: Express.Multer.File, user: ExtendedUser): Promise<{ success: number; failed: number; errors: any[] }> {
+    // Only allow cooperative managers to import
+    const allowedImportRoles = [
+      Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+      Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+    ];
+    
+    if (!allowedImportRoles.includes(user.role)) {
+      throw new ForbiddenException('You do not have permission to import crops');
+    }
+
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    // Skip the first row (assuming it's the header row)
+    const rowsToProcess = data.slice(1);
+
+    let success = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const row of rowsToProcess) {
+      try {
+        // Map the row to a userDto-like object based on the cell index
+        let cropDto = {
+          name: row[0],
+          cropTypes: []
+        };
+
+        await this.create(cropDto, user);
+        success++;
+      } catch (error) {
+        failed++;
+        errors.push({
+          row: row,
+          error: error.message || 'Unknown error occurred',
+        });
+      }
+    }
+
+    return { success, failed, errors };
+  }
+
   async cropsCardData(locationId?: number, cooperativeId?: string) {
     try {
       // Handle location query
@@ -778,119 +1089,6 @@ export class CropService {
     }
   }
 
-  async update(id: string, updateCropDto: UpdateCropDto) {
-    try {
-      return await this.dataBaseService.$transaction(async (prisma) => {
-        // Update the crop itself
-        const updatedCrop = await prisma.crop.update({
-          where: { id: id },
-          data: {
-            // Add any other crop fields that need updating here
-          }
-        });
-
-        // Handle names updates if provided
-        if (updateCropDto.names && updateCropDto.names.length > 0) {
-          // Get existing names for this crop
-          const existingNames = await prisma.cropNames.findMany({
-            where: { cropId: id }
-          });
-
-          // Process each name in the update
-          for (const nameDto of updateCropDto.names) {
-            // Check if a name with the same language already exists
-            const existingName = existingNames.find(
-              existing => existing.languageCode === nameDto.languageCode
-            );
-
-            if (existingName) {
-              // Update existing name for this language
-              await prisma.cropNames.update({
-                where: { id: existingName.id },
-                data: {
-                  name: nameDto.name,
-                  languageName: nameDto.languageName
-                }
-              });
-            } else {
-              // Create new name for this language
-              await prisma.cropNames.create({
-                data: {
-                  name: nameDto.name,
-                  languageName: nameDto.languageName,
-                  languageCode: nameDto.languageCode,
-                  cropId: id
-                }
-              });
-            }
-          }
-        }
-
-        // Return the updated crop with names
-        return await prisma.crop.findUnique({
-          where: { id: id },
-          include: {
-            names: true,
-            cropType: true
-          }
-        });
-      });
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
-  }
-
-  async remove(id: string) {
-    try {
-      return await this.dataBaseService.crop.delete({
-        where: {
-          id: id
-        }
-      });
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
-  }
-  async importCrops(file: Express.Multer.File, user: User): Promise<{ success: number; failed: number; errors: any[] }> {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
-    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    // Skip the first row (assuming it's the header row)
-    const rowsToProcess = data.slice(1);
-
-    let success = 0;
-    let failed = 0;
-    const errors = [];
-
-    for (const row of rowsToProcess) {
-      try {
-        // Map the row to a userDto-like object based on the cell index
-        let cropDto = {
-          name: row[0],
-          cropTypes: []
-
-        };
-
-
-        await this.create(cropDto, user) // Register vet with the custom object
-        success++;
-      } catch (error) {
-        failed++;
-        errors.push({
-          row: row,
-          error: error.message || 'Unknown error occurred',
-        });
-      }
-    }
-
-    return { success, failed, errors };
-  }
   async getCropTypeStatistics(
     cropTypeId: string,
     locationId?: number
@@ -1185,7 +1383,8 @@ export class CropService {
       throw new BadRequestException(error.message);
     }
   }
-  async getCropTypesByCrop(cropId) {
+
+  async getCropTypesByCrop(cropId: string) {
     try {
       return this.dataBaseService.cropType.findMany({
         where: {
@@ -1194,6 +1393,35 @@ export class CropService {
       })
     } catch (e) {
       throw e
+    }
+  }
+
+  async findAllCropFarmerRegistration(locationId: number) {
+    try {
+      // Check if the location exists
+      const location = await this.dataBaseService.location.findUnique({
+        where: { id: locationId },
+      });
+
+      if (!location) {
+        throw new NotFoundException(`Location with ID ${locationId} not found`);
+      }
+      let locations = await this.locationService.getAllChildrenLocationIds(locationId);
+      return await this.dataBaseService.cropFarmerRegistration.findMany({
+        where: {
+          farmer: {
+            user: {
+              location: {
+                id: {
+                  in: locations
+                }
+              }
+            }
+          }
+        }
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
   }
 }

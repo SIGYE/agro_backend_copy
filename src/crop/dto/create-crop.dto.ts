@@ -7,8 +7,9 @@ import { CropNameDto } from "./crop-name.dto";
 export class CreateCropDto {
     @IsArray()
     @ValidateNested({ each: true })
+    @IsNotEmpty()
     @Type(() => CropNameDto)
-    names?: CropNameDto[];
+    names: CropNameDto[];
     @ApiProperty({
         isArray: true,
         type: CreateCropTypeDto
