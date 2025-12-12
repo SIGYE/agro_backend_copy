@@ -45,10 +45,10 @@ export class CreateUserDto {
     @IsNotEmpty()
     password?: string
 
-    @ApiProperty()
-    @IsNotEmpty()
+    @ApiProperty({ required: false })
+    @IsOptional()
     @IsString()
-    roleId: string
+    roleId?: string
 
     @ApiProperty()
     @IsNotEmpty()

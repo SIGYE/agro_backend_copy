@@ -12,6 +12,7 @@ import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import { Allow } from 'src/decorators/allow.decorator';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
+import { CreateFarmerLiteDto } from './dto/create-farmer-lite.dto';
 
 @Controller('farmer')
 @ApiBearerAuth()
@@ -26,6 +27,16 @@ export class FarmerController {
   async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user: User) {
     try {
       const data = await this.farmerService.registerFarmer(createFarmerDto);
+      return new ApiResponse(true, "Farmer Created", data, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+  @Post('register-farmer-lite')
+  @ApiBody({ type: CreateFarmerLiteDto, description: 'Lightweight farmer registration for offline sync' })
+  async createLite(@Body() dto: CreateFarmerLiteDto, @CurrentUser() user: User) {
+    try {
+      const data = await this.farmerService.registerFarmerLite(dto, user);
       return new ApiResponse(true, "Farmer Created", data, 201);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
