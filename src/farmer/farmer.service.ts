@@ -11,6 +11,8 @@ import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
 import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import e from 'express';
+import { CreateFarmerLiteDto } from './dto/create-farmer-lite.dto';
+import { Gender } from '@prisma/client';
 
 @Injectable()
 export class FarmerService {
@@ -84,6 +86,47 @@ export class FarmerService {
 
       return farmer;
 
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
+  }
+
+  async registerFarmerLite(dto: CreateFarmerLiteDto, loggedInUser?: User): Promise<Farmer> {
+    try {
+      const role = await this.databaseService.role.findFirst({
+        where: { name: "FARMER" }
+      });
+      if (!role) {
+        throw new NotFoundException("FARMER role not found");
+      }
+
+      // Derive dob from age (YYYY-01-01 in current year - age)
+      const now = new Date();
+      const birthYear = now.getFullYear() - dto.age;
+      const dob = new Date(`${birthYear}-01-01`).toISOString();
+
+      // Determine location: provided or fallback to logged-in user
+      const locationId = dto.locationId ?? loggedInUser?.locationId;
+      if (!locationId) {
+        throw new BadRequestException("Location is required to register a farmer");
+      }
+
+      // Gender fallback safety (should be validated already)
+      const gender = dto.gender ?? Gender.MALE;
+
+      const userDto = {
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        nationalId: dto.nationalId,
+        telephone: dto.telephone,
+        email: dto.email,
+        gender,
+        dob,
+        roleId: role.id,
+        locationId,
+      } as any;
+
+      return await this.userServcice.registerFarmer(userDto, dto.cooperativeId, loggedInUser);
     } catch (e) {
       throw new BadRequestException(e.message);
     }

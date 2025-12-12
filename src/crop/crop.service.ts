@@ -976,6 +976,11 @@ export class CropService {
         // Map the row to a userDto-like object based on the cell index
         let cropDto = {
           name: row[0],
+          names: [{
+            name: row[0],
+            languageName: 'English',
+            languageCode: 'en'
+          }],
           cropTypes: []
         };
 
