@@ -5,7 +5,6 @@ from typing import Dict, List, Any
 import logging
 import re
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -13,289 +12,213 @@ class CropDataConverter:
     def __init__(self, excel_file_path: str, api_url: str = "http://localhost:7070/crop/bulk-create"):
         self.excel_file_path = excel_file_path
         self.api_url = api_url
-        
+
+        # Enums to match your NestJS DTOs
+        self.DISEASE_TYPE_ENUM = {
+            "FUNGAL": "FUNGAL",
+            "VIRAL": "VIRAL",
+            "BACTERIAL": "BACTERIAL",
+            "OTHER": "OTHER"
+        }
+
+        self.PEST_TYPE_ENUM = {
+            "INSECT": "INSECT",
+            "NEMATODE": "NEMATODE",
+            "OTHER": "OTHER"
+        }
+
     def read_excel_data(self) -> pd.DataFrame:
-        """Read the Excel file and return DataFrame"""
         try:
             df = pd.read_excel(self.excel_file_path)
+            df.columns = df.columns.str.strip()
             logger.info(f"Successfully read Excel file with {len(df)} rows")
             return df
         except Exception as e:
             logger.error(f"Error reading Excel file: {str(e)}")
             raise
-    
-    def clean_string_preserve_content(self, value: str, max_length: int = 500) -> str:
-        """Clean string while preserving all meaningful content including special characters"""
+
+    def clean_string(self, value: str, max_length: int = 500) -> str:
         if pd.isna(value) or value == "":
             return ""
-        
-        # Convert to string and clean
         cleaned = str(value).strip()
-        
-        # Replace newlines with spaces but preserve the content
         cleaned = re.sub(r'\n+', ' ', cleaned)
-        
-        # Replace multiple spaces with single space
-        cleaned = re.sub(r'\s+', ' ', cleaned)
-        
-        # Don't remove special characters like %, (, ), +, -, etc. as they're meaningful
-        # Just ensure we don't have leading/trailing spaces
-        cleaned = cleaned.strip()
-        
-        # Only truncate if extremely long (very generous limit)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
         if len(cleaned) > max_length:
             cleaned = cleaned[:max_length].rstrip()
-            logger.warning(f"Truncated extremely long string: {cleaned[:50]}...")
-        
         return cleaned
-    
-    def parse_comma_separated_values_preserve_all(self, value: str) -> List[str]:
-        """Parse comma-separated values preserving ALL content including short names and special chars"""
+
+    def parse_multi_line_list(self, value: str) -> List[str]:
         if pd.isna(value) or value == "":
             return []
-        
         items = []
-        raw_items = str(value).split(',')
-        
-        # Handle cases where items might be split across multiple parts
-        current_item = ""
-        
-        for item in raw_items:
-            cleaned_item = self.clean_string_preserve_content(item.strip())
-            
-            if not cleaned_item:
-                continue
-            
-            # Check if this looks like a continuation of the previous item
-            # (e.g., "Malathion 2% w/w", "Dust" should become "Malathion 2% w/w Dust")
-            if (current_item and 
-                len(cleaned_item) <= 10 and 
-                not any(char in cleaned_item.lower() for char in ['(', ')', '%']) and
-                cleaned_item.lower() in ['dust', 'ec', 'pp', 'w/w', 'pills', 'tablets', 'plates']):
-                # This looks like a continuation/modifier of the previous item
-                current_item = f"{current_item} {cleaned_item}"
-            else:
-                # This is a new item
-                if current_item:
-                    items.append(current_item)
-                current_item = cleaned_item
-        
-        # Don't forget the last item
-        if current_item:
-            items.append(current_item)
-        
-        # Clean up any remaining issues
-        final_items = []
-        for item in items:
-            # Handle percentage signs and special characters properly
-            item = re.sub(r'\s+', ' ', item).strip()
-            
-            # Only add non-empty items
-            if item:
-                final_items.append(item)
-        
-        return final_items
-    
-    def parse_diseases_pests_preserve_content(self, value: str, item_type: str) -> List[Dict[str, str]]:
-        """Parse diseases or pests data preserving all content"""
-        if pd.isna(value) or value == "":
-            return []
-        
-        items = []
-        raw_names = str(value).split(',')
-        
-        for item in raw_names:
-            cleaned_name = self.clean_string_preserve_content(item.strip(), 300)
-            
-            if cleaned_name:  # Include all non-empty names
-                items.append({
-                    "name": cleaned_name,
-                    "type": item_type,
-                    "medication": "Not specified"
-                })
-        
-        return items
-    
-    def smart_combine_fragments(self, items: List[str]) -> List[str]:
-        """Intelligently combine fragmented medicine/fertilizer names"""
-        if not items:
-            return []
-        
-        combined = []
-        current_combination = ""
-        
-        for i, item in enumerate(items):
-            item = item.strip()
-            
-            # Indicators that this might be a fragment that should be combined
-            is_likely_fragment = (
-                len(item) <= 15 and
-                (item.lower() in ['ec', 'dust', 'pp', 'w/w', 'pills', 'tablets', 'plates', 'fumigation'] or
-                 re.match(r'^\d+%?$', item) or  # Just numbers or percentages
-                 item in ['(PH3)', '56%', '57%'] or
-                 re.match(r'^\([^)]+\)$', item))  # Just something in parentheses
-            )
-            
-            # Check if the previous item ended in a way that suggests continuation
-            prev_suggests_continuation = (
-                current_combination and 
-                (current_combination.endswith('+') or 
-                 current_combination.endswith('w/w') or
-                 current_combination.endswith('%') or
-                 'phosphide' in current_combination.lower())
-            )
-            
-            if is_likely_fragment or prev_suggests_continuation:
-                if current_combination:
-                    current_combination = f"{current_combination} {item}"
-                else:
-                    current_combination = item
-            else:
-                # This is a complete item
-                if current_combination:
-                    combined.append(current_combination)
-                current_combination = item
-        
-        # Don't forget the last combination
-        if current_combination:
-            combined.append(current_combination)
-        
-        # Final cleanup
-        final_combined = []
-        for item in combined:
-            # Clean up spacing around special characters
-            cleaned = re.sub(r'\s*\+\s*', ' + ', item)
-            cleaned = re.sub(r'\s*\(\s*', ' (', cleaned)
-            cleaned = re.sub(r'\s*\)\s*', ') ', cleaned)
-            cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-            
+        lines = str(value).split('\n')
+        for line in lines:
+            cleaned = re.sub(r'^\d+(\.\d+)*\.?\s*', '', line.strip())
+            cleaned = self.clean_string(cleaned)
             if cleaned:
-                final_combined.append(cleaned)
-        
-        return final_combined
-    
-    def validate_crop_data_preserve_content(self, crop_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and clean crop data while preserving all meaningful content"""
-        # Clean crop name
-        crop_data["name"] = self.clean_string_preserve_content(crop_data["name"], 100)
-        
-        # Handle crop types
-        if crop_data.get("cropTypes"):
-            validated_crop_types = []
-            for crop_type in crop_data["cropTypes"]:
-                cleaned_type_name = self.clean_string_preserve_content(crop_type["name"], 100)
-                if cleaned_type_name:  # Keep all non-empty names
-                    validated_seed_strains = []
-                    for strain in crop_type.get("seedStrains", []):
-                        cleaned_strain_name = self.clean_string_preserve_content(strain["name"], 100)
-                        if cleaned_strain_name:
-                            validated_seed_strains.append({"name": cleaned_strain_name})
-                    
-                    validated_crop_types.append({
-                        "name": cleaned_type_name,
-                        "seedStrains": validated_seed_strains
-                    })
-            crop_data["cropTypes"] = validated_crop_types
-        
-        # Smart combine fertilizers
-        raw_fertilizers = crop_data.get("fertilizers", [])
-        crop_data["fertilizers"] = self.smart_combine_fragments(raw_fertilizers)
-        
-        # Smart combine medicines  
-        raw_medicines = crop_data.get("medicines", [])
-        crop_data["medicines"] = self.smart_combine_fragments(raw_medicines)
-        
-        # Diseases and pests are already properly handled
-        
-        return crop_data
-    
+                items.append(cleaned)
+        return items
+
+    def parse_pesticides(self, value: str) -> List[str]:
+        if pd.isna(value) or value == "":
+            return []
+        items = []
+        lines = re.split(r'\n|•|o\s+', str(value))
+        for line in lines:
+            cleaned = self.clean_string(line.strip())
+            if cleaned and cleaned.lower() not in ['', 'pesticides', 'fungicides']:
+                items.append(cleaned)
+        return items
+
+    def parse_fertilizers(self, value: str) -> List[str]:
+        if pd.isna(value) or value == "":
+            return []
+        items = []
+        lines = str(value).split('\n')
+        for line in lines:
+            cleaned = re.sub(r'^\d+\.\s*', '', line.strip())
+            cleaned = self.clean_string(cleaned)
+            if cleaned:
+                items.append(cleaned)
+        return items
+
+    def match_disease_to_fungus(self, diseases: List[str], funguses: List[str]) -> List[Dict[str, str]]:
+        matched = []
+        for i, disease in enumerate(diseases):
+            fungus = funguses[i] if i < len(funguses) else None
+            matched.append({
+                "disease": disease,
+                "fungus": fungus
+            })
+        return matched
+
+    def detect_disease_type(self, disease_name: str) -> str:
+        """Auto-detect disease type based on keywords"""
+        disease_name_lower = disease_name.lower()
+        if any(k in disease_name_lower for k in ['virus']):
+            return self.DISEASE_TYPE_ENUM['VIRAL']
+        elif any(k in disease_name_lower for k in ['bacteria', 'bacterial']):
+            return self.DISEASE_TYPE_ENUM['BACTERIAL']
+        elif any(k in disease_name_lower for k in ['fungus', 'fungal', 'mildew', 'rust']):
+            return self.DISEASE_TYPE_ENUM['FUNGAL']
+        else:
+            return self.DISEASE_TYPE_ENUM['OTHER']
+
+    def detect_pest_type(self, pest_name: str) -> str:
+        """Auto-detect pest type based on keywords"""
+        pest_name_lower = pest_name.lower()
+        if any(k in pest_name_lower for k in ['nematode']):
+            return self.PEST_TYPE_ENUM['NEMATODE']
+        elif any(k in pest_name_lower for k in ['insect', 'aphid', 'beetle', 'worm', 'moth']):
+            return self.PEST_TYPE_ENUM['INSECT']
+        else:
+            return self.PEST_TYPE_ENUM['OTHER']
+
     def convert_to_api_format(self, df: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
-        """Convert DataFrame to API format preserving all content"""
         crops_dict = {}
-        
-        logger.info("Converting Excel data to API format (preserving all content)...")
-        
+        logger.info("Converting Excel data to API format...")
+
         for index, row in df.iterrows():
             try:
-                crop_name = self.clean_string_preserve_content(row.get('Crop Name', ''), 100)
-                crop_type_name = self.clean_string_preserve_content(row.get('CropType Name', ''), 100)
-                
-                if not crop_name:
-                    logger.warning(f"Row {index}: Skipping row with empty crop name")
+                crop_name = self.clean_string(row.get('Crop Type', ''), 100)
+                strain_name = self.clean_string(row.get('Strain Type', ''), 100)
+                seed_type = self.clean_string(row.get('Seed Type', ''), 50)
+
+                if not crop_name or not strain_name:
+                    logger.warning(f"Row {index}: Skipping incomplete row")
                     continue
-                
-                if not crop_type_name:
-                    logger.warning(f"Row {index}: Skipping row with empty crop type name")
-                    continue
-                
-                # Initialize crop if not exists
+
                 if crop_name not in crops_dict:
                     crops_dict[crop_name] = {
-                        "name": crop_name,
+                        "names": [{
+                            "name": crop_name,
+                            "languageCode": "en",
+                            "languageName": "English"
+                        }],
                         "cropTypes": [],
-                        "fertilizers": self.parse_comma_separated_values_preserve_all(
-                            row.get('Crop Fertilizers', '')
-                        ),
-                        "diseases": self.parse_diseases_pests_preserve_content(
-                            row.get('Crop Diseases', ''), 'CROP'
-                        ),
-                        "pests": self.parse_diseases_pests_preserve_content(
-                            row.get('Crop Pests', ''), 'CROP'
-                        ),
-                        "medicines": self.parse_comma_separated_values_preserve_all(
-                            row.get('Crop pesticides', '')
-                        )
+                        "fertilizers": self.parse_fertilizers(row.get('Fertilizer', '')),
+                        "diseases": [],
+                        "pests": [],
+                        "medicines": []
                     }
-                
-                # Handle crop types and seed strains
+
+                # Handle crop types & seed strains
+                crop_type_name = seed_type if seed_type else 'Standard'
                 crop_type_exists = False
                 for existing_type in crops_dict[crop_name]["cropTypes"]:
                     if existing_type["name"] == crop_type_name:
                         crop_type_exists = True
-                        # Add seed strains to existing crop type
-                        seed_strains = self.parse_comma_separated_values_preserve_all(
-                            row.get('SeedStrain Names', '')
-                        )
-                        for strain in seed_strains:
-                            if not any(s["name"] == strain for s in existing_type["seedStrains"]):
-                                existing_type["seedStrains"].append({"name": strain})
+                        seed_strain = {
+                            "name": strain_name,
+                            "seedType": seed_type
+                        }
+                        existing_type.setdefault("seedStrains", []).append(seed_strain)
                         break
-                
+
                 if not crop_type_exists:
-                    # Create new crop type
-                    seed_strains = self.parse_comma_separated_values_preserve_all(
-                        row.get('SeedStrain Names', '')
-                    )
                     crop_type = {
                         "name": crop_type_name,
-                        "seedStrains": [{"name": strain} for strain in seed_strains]
+                        "seedStrains": [{
+                            "name": strain_name,
+                            "seedType": seed_type
+                        }]
                     }
                     crops_dict[crop_name]["cropTypes"].append(crop_type)
-                    
+
+                # Parse diseases & pests
+                diseases = self.parse_multi_line_list(row.get('Disease', ''))
+                disease_types = self.parse_multi_line_list(row.get('Types of Disease', ''))
+                funguses = self.parse_multi_line_list(row.get('Fungus', ''))
+                pesticides = self.parse_pesticides(row.get('Pesticides', ''))
+                pests = self.parse_multi_line_list(row.get('Pests', ''))
+
+                # Aggregate medicines
+                for med in pesticides:
+                    if med not in crops_dict[crop_name]["medicines"]:
+                        crops_dict[crop_name]["medicines"].append(med)
+
+                # Add diseases
+                for i, disease in enumerate(diseases):
+                    disease_dto = {
+                        "name": disease,
+                        "type": self.detect_disease_type(disease),
+                        "medication": pesticides[0] if pesticides else "Not specified",
+                        "specificType": disease_types[i] if i < len(disease_types) else None,
+                        "causativeAgent": funguses[i] if i < len(funguses) else None
+                    }
+                    if not any(d["name"] == disease_dto["name"] for d in crops_dict[crop_name]["diseases"]):
+                        crops_dict[crop_name]["diseases"].append(disease_dto)
+
+                # Add pests
+                for pest in pests:
+                    pest_dto = {
+                        "name": pest,
+                        "type": self.detect_pest_type(pest),
+                        "medication": pesticides[0] if pesticides else "Not specified"
+                    }
+                    if not any(p["name"] == pest_dto["name"] for p in crops_dict[crop_name]["pests"]):
+                        crops_dict[crop_name]["pests"].append(pest_dto)
+
             except Exception as e:
                 logger.error(f"Error processing row {index}: {str(e)}")
                 continue
-        
-        # Validate and clean all crop data while preserving content
-        validated_crops = []
+
+        # Clean empty fields
+        api_crops = []
         for crop_data in crops_dict.values():
-            try:
-                validated_crop = self.validate_crop_data_preserve_content(crop_data)
-                if validated_crop["name"]:
-                    validated_crops.append(validated_crop)
-            except Exception as e:
-                logger.error(f"Error validating crop {crop_data.get('name', 'Unknown')}: {str(e)}")
-        
-        # Convert to API format
-        api_data = {
-            "crops": validated_crops
-        }
-        
-        logger.info(f"Successfully converted {len(validated_crops)} crops")
-        return api_data
-    
-    def save_json(self, data: Dict[str, Any], output_file: str = "crops_data.json"):
-        """Save data to JSON file for inspection"""
+            if crop_data["diseases"]:
+                crop_data["diseases"] = [{k: v for k, v in d.items() if v is not None} for d in crop_data["diseases"]]
+            if crop_data["pests"]:
+                crop_data["pests"] = [{k: v for k, v in p.items() if v is not None} for p in crop_data["pests"]]
+            if crop_data["fertilizers"]:
+                crop_data["fertilizers"] = [f for f in crop_data["fertilizers"] if f]
+            if not crop_data["medicines"]:
+                crop_data.pop("medicines")
+            api_crops.append(crop_data)
+
+        return {"crops": api_crops}
+
+    def save_json(self, data: Dict[str, Any], output_file: str = "crops_converted.json"):
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -303,121 +226,88 @@ class CropDataConverter:
         except Exception as e:
             logger.error(f"Error saving JSON file: {str(e)}")
             raise
-    
+
     def send_to_api(self, data: Dict[str, Any], print_response: bool = True) -> bool:
-        """Send data to the API"""
         try:
             headers = {
                 'Content-Type': 'application/json',
-                "Authorization": f"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImY0NTRmZDExLWFlOWQtNDY0Yi1iZTcyLWIzODBhNjM2MTVkZCIsImVtYWlsIjoiaG9ub3JlcnVrdW5kbzc0QGdtYWlsLmNvbSIsInVzZXJOYW1lIjoiUnVrdW5kbyIsInN0YXR1cyI6IkFDVElWRSIsInJvbGUiOnsiaWQiOiJjY2U1YzljNS02ODRmLTQyOTMtYTRiZC0xOTgxMjUzMTBlODQiLCJjcmVhdGVkQXQiOiIyMDI1LTAzLTIwVDEwOjI5OjI0LjMzM1oiLCJ1cGRhdGVkQXQiOiIyMDI1LTAzLTIwVDEwOjI5OjI0LjMzM1oiLCJuYW1lIjoiQURNSU4ifSwiaWF0IjoxNzUxMDE4NzM2LCJleHAiOjE3NTExOTE1MzZ9.9RI3A7LvmtqWZK_Vw3NX7a-fEsj11b0egrOhalK0Xbg"
+                # Replace with actual token
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjliMjMzYWQ4LTNiMmItNDA5MC1iZWI5LTViZmIzNGIwNzA4YSIsImVtYWlsIjoidW11ZmFzaGFAZ21haWwuY29tIiwidXNlck5hbWUiOiJKb3NlcGgiLCJzdGF0dXMiOiJBQ1RJVkUiLCJyb2xlIjp7ImlkIjoiODNjMTgyZmEtOGE5YS00ZGE5LTgyOWEtMTQ2MGRkNTkyMmE4IiwiY3JlYXRlZEF0IjoiMjAyNS0xMi0wOFQwOToxMTo1MC4yNDJaIiwidXBkYXRlZEF0IjoiMjAyNS0xMi0wOFQwOToxMTo1MC4yNDJaIiwibmFtZSI6IlVNVUZBU0hBTVlVTVZJUkUifSwiaWF0IjoxNzY1ODkzODkyLCJleHAiOjE3NjYwNjY2OTJ9.q0IJEUsIPJ2eC_i9GbrkoX79gc6UaTSuX-WzNO54Xa4"
             }
-            
             logger.info("Sending data to API...")
             response = requests.post(self.api_url, json=data, headers=headers)
-            
             if print_response:
                 print("\n" + "="*50)
                 print("API RESPONSE:")
                 print("="*50)
                 print(f"Status Code: {response.status_code}")
-                print(f"Response Headers: {dict(response.headers)}")
-                print(f"Response Body: {response.text}")
+                print(f"Response: {response.text[:500]}..." if len(response.text) > 500 else f"Response: {response.text}")
                 print("="*50 + "\n")
-            
-            if response.status_code == 200 or response.status_code == 201:
-                logger.info("Data successfully sent to API")
-                return True
-            else:
-                logger.error(f"API request failed with status code: {response.status_code}")
-                logger.error(f"Response: {response.text}")
-                return False
-                
+            return response.status_code in [200, 201]
         except Exception as e:
             logger.error(f"Error sending data to API: {str(e)}")
             return False
-    
-    def process_and_send(self, save_json_file: bool = True, send_to_api: bool = True, print_data_before_send: bool = True):
-        """Main method to process Excel file and send to API"""
+
+    def process_and_send(self, save_json: bool = True, send_to_api: bool = True):
         try:
-            # Read Excel data
             df = self.read_excel_data()
-            
-            # Convert to API format
             api_data = self.convert_to_api_format(df)
-            
             logger.info(f"Converted {len(api_data['crops'])} crops for API")
-            
-            # Print summary statistics
-            total_fertilizers = sum(len(crop.get('fertilizers', [])) for crop in api_data['crops'])
+
+            # Summary
+            total_crop_types = sum(len(crop.get('cropTypes', [])) for crop in api_data['crops'])
+            total_seed_strains = sum(sum(len(ct.get('seedStrains', [])) for ct in crop.get('cropTypes', [])) for crop in api_data['crops'])
             total_diseases = sum(len(crop.get('diseases', [])) for crop in api_data['crops'])
             total_pests = sum(len(crop.get('pests', [])) for crop in api_data['crops'])
-            total_medicines = sum(len(crop.get('medicines', [])) for crop in api_data['crops'])
-            
+            total_fertilizers = sum(len(crop.get('fertilizers', [])) for crop in api_data['crops'])
+
             print(f"\n📊 CONVERSION SUMMARY:")
-            print(f"   Crops: {len(api_data['crops'])}")
-            print(f"   Total Fertilizers: {total_fertilizers}")
+            print(f"   Total Crops: {len(api_data['crops'])}")
+            print(f"   Total Crop Types: {total_crop_types}")
+            print(f"   Total Seed Strains: {total_seed_strains}")
             print(f"   Total Diseases: {total_diseases}")
             print(f"   Total Pests: {total_pests}")
-            print(f"   Total Medicines: {total_medicines}")
-            
-            # Show some examples of what was preserved
+            print(f"   Total Fertilizers: {total_fertilizers}")
+
             if api_data['crops']:
-                sample_crop = api_data['crops'][0]
-                if sample_crop.get('medicines'):
-                    print(f"\n🔍 SAMPLE MEDICINES (showing preserved content):")
-                    for i, med in enumerate(sample_crop['medicines'][:3]):
-                        print(f"   {i+1}. {med}")
-                
-                if sample_crop.get('fertilizers'):
-                    print(f"\n🔍 SAMPLE FERTILIZERS:")
-                    for i, fert in enumerate(sample_crop['fertilizers'][:3]):
-                        print(f"   {i+1}. {fert}")
-            
-            # Print data before sending (optional)
-            if print_data_before_send:
-                print("\n" + "="*60)
-                print("DATA TO BE SENT TO API:")
-                print("="*60)
-                print(json.dumps(api_data, indent=2, ensure_ascii=False))
-                print("="*60 + "\n")
-                
-                # Ask for confirmation before sending
-                if send_to_api:
-                    user_input = input("Do you want to proceed with sending this data to the API? (y/n): ").lower().strip()
-                    if user_input not in ['y', 'yes']:
-                        logger.info("API submission cancelled by user.")
-                        send_to_api = False
-            
-            # Save to JSON file for inspection
-            if save_json_file:
-                self.save_json(api_data)
-            
-            # Send to API
+                sample = api_data['crops'][0]
+                print(f"\n🔍 SAMPLE CROP: {sample['names'][0]['name']}")
+                if sample.get('cropTypes'):
+                    ct = sample['cropTypes'][0]
+                    print(f"   Crop Type: {ct['name']}")
+                    if ct.get('seedStrains'):
+                        ss = ct['seedStrains'][0]
+                        print(f"   Seed Strain: {ss['name']} ({ss.get('seedType', 'N/A')})")
+                if sample.get('diseases'):
+                    d = sample['diseases'][0]
+                    print(f"\n   Sample Disease: {d['name']}")
+                    print(f"   Type: {d.get('type')}")
+                    if d.get('specificType'):
+                        print(f"   Specific Type: {d['specificType']}")
+                    if d.get('causativeAgent'):
+                        print(f"   Fungus: {d['causativeAgent']}")
+                    print(f"   Medication: {d['medication'][:50]}...")
+
+            if save_json:
+                self.save_json(api_data, "crops_data_ready.json")
+                print(f"\n💾 JSON file saved: crops_data_ready.json")
+
             if send_to_api:
-                success = self.send_to_api(api_data)
-                if success:
-                    logger.info("Process completed successfully!")
+                user_input = input(f"\n⚠️  READY TO SEND {len(api_data['crops'])} CROPS TO DATABASE. Proceed? (y/n): ").lower().strip()
+                if user_input in ['y', 'yes']:
+                    success = self.send_to_api(api_data)
+                    print("✅ Success!" if success else "❌ Failed")
                 else:
-                    logger.error("Failed to send data to API")
-            else:
-                logger.info("Data conversion completed. Skipped API call.")
-                
+                    print("⏸️ API call cancelled by user")
         except Exception as e:
             logger.error(f"Error in processing: {str(e)}")
             raise
 
 def main():
-    # Configuration
-    EXCEL_FILE_PATH = "test_2_agro.xlsx"  # Update this path
-    API_URL = "https://endpoints.agro.rw/crop/bulk-create"
-    
-    # Create converter instance
+    EXCEL_FILE_PATH = "crops_data.xlsx"
+    API_URL = "http://localhost:7070/crop/bulk-create"
     converter = CropDataConverter(EXCEL_FILE_PATH, API_URL)
-    
-    # Process the data
-    # Set print_data_before_send=True to see the data before sending
-    # Set send_to_api=False if you want to just generate the JSON file first
-    converter.process_and_send(save_json_file=True, send_to_api=True, print_data_before_send=True)
+    converter.process_and_send(save_json=True, send_to_api=True)
 
 if __name__ == "__main__":
     main()

@@ -4,9 +4,10 @@ import {
   IsString, 
   IsNotEmpty, 
   IsInt, 
-  IsOptional, 
   ValidateNested, 
   IsEnum,
+  IsArray,
+  ArrayMinSize,
   Min 
 } from 'class-validator';
 import { CooperativeType } from '@prisma/client';
@@ -19,42 +20,50 @@ export class CreateCollectiveCooperativeDto {
   @IsNotEmpty()
   name: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @ApiProperty()
   telephone: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @ApiProperty()
   registrationNumber: string;
 
+  @ApiProperty({ 
+    minimum: 1
+  })
   @IsInt()
   @IsNotEmpty()
   @Min(1)
-  @ApiProperty()
   membersNumber: number;
   
-  @ApiProperty({ enum: CooperativeType })
+  @ApiProperty({ 
+    enum: CooperativeType,
+  })
   @IsEnum(CooperativeType)
   cooperativeType: CooperativeType;
 
+  @ApiProperty()
   @IsInt()
   @IsNotEmpty()
-  @ApiProperty()
   locationId: number;
 
-  @ApiProperty()
+  @ApiProperty({ 
+    type: () => CreateUserDto,
+  })
   @Type(() => CreateUserDto)
   @ValidateNested()
   managerDto: CreateUserDto;
 
   @ApiProperty({
-    isArray: true,
-    type: cooperativeCropDto
+    type: [cooperativeCropDto],
+    minItems: 1
   })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Collective cooperatives must specify at least one mandatory crop' })
   @ValidateNested({ each: true })
   @Type(() => cooperativeCropDto)
-  @IsOptional()
-  crops?: cooperativeCropDto[];
+  @IsNotEmpty()
+  crops: cooperativeCropDto[];
 }

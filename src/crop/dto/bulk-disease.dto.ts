@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { DiseaseType } from "@prisma/client";
-import { IsEnum, IsNotEmpty, IsString } from "class-validator";
+import { IsEnum, IsNotEmpty, IsString, IsOptional } from "class-validator";
 
 export class BulkDiseaseDto {
     @ApiProperty()
@@ -14,4 +14,12 @@ export class BulkDiseaseDto {
     @ApiProperty()
     @IsString()
     medication: string;
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    specificType?: string;
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    causativeAgent?: string;
 }

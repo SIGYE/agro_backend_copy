@@ -1,59 +1,78 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsInt, IsOptional, ValidateNested, IsEnum, IsNumber } from 'class-validator';
+import { 
+  IsString, 
+  IsNotEmpty, 
+  IsInt, 
+  ValidateNested, 
+  IsEnum,
+  IsArray,
+  ArrayMinSize,
+  Min 
+} from 'class-validator';
 import { CooperativeType } from '@prisma/client';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { cooperativeCropDto } from './cooperative-crop.dto';
-
 
 export enum CollectiveType {
   COLLECTIVE = 'COLLECTIVE',
   NON_COLLECTIVE = 'NON_COLLECTIVE'
 }
+
 export class CreateCooperativeDto {
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    name: string;
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 
-    @IsString()
-    @IsNotEmpty()
-    @ApiProperty()
-    telephone: string;
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  telephone: string;
 
-    @IsString()
-    @IsNotEmpty()
-    @ApiProperty()
-    registrationNumber: string;
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  registrationNumber: string;
 
-    @IsInt()
-    @IsNotEmpty()
-    @ApiProperty()
-    membersNumber: number;
-    @ApiProperty()
-    @IsEnum(CooperativeType)
-    cooperativeType: CooperativeType
+  @ApiProperty()
+  @IsInt()
+  @IsNotEmpty()
+  @Min(1)
+  membersNumber: number;
 
-    @IsInt()
-    @IsNotEmpty()
-    @ApiProperty()
-    locationId: number;
+  @ApiProperty({ 
+    enum: CooperativeType,
+  })
+  @IsEnum(CooperativeType)
+  cooperativeType: CooperativeType;
 
-    @ApiProperty()
-    @Type(() => CreateUserDto)
-    managerDto: CreateUserDto
+  @ApiProperty()
+  @IsInt()
+  @IsNotEmpty()
+  locationId: number;
 
-    @ApiProperty({
-        isArray: true,
-        type: cooperativeCropDto
-    })
-    @ValidateNested({ each: true })
-    @Type(() => cooperativeCropDto)
-    @IsOptional()
-    crops?: cooperativeCropDto[]
+  @ApiProperty({ 
+    type: () => CreateUserDto,
+  })
+  @Type(() => CreateUserDto)
+  @ValidateNested()
+  managerDto: CreateUserDto;
 
-    @ApiProperty({
-    enum: CollectiveType })
+  @ApiProperty({
+    type: [cooperativeCropDto],
+    minItems: 1
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one crop must be specified for the cooperative' })
+  @ValidateNested({ each: true })
+  @Type(() => cooperativeCropDto)
+  @IsNotEmpty()
+  crops: cooperativeCropDto[];
+
+  @ApiProperty({
+    enum: CollectiveType,
+  })
   @IsEnum(CollectiveType)
   @IsNotEmpty()
   collectiveType: CollectiveType;

@@ -37,21 +37,10 @@ export class CooperativeService {
 
       this.validateCooperativeType(createCooperativeDto);
 
-      if (
-        createCooperativeDto.collectiveType === CollectiveType.NON_COLLECTIVE &&
-        createCooperativeDto.crops?.length
-      ) {
+      // BOTH collective and non-collective cooperatives MUST specify crops at registration
+      if (!createCooperativeDto.crops?.length) {
         throw new BadRequestException(
-          'NON_COLLECTIVE cooperatives cannot have cooperative-level crops.',
-        );
-      }
-
-      if (
-        createCooperativeDto.collectiveType === CollectiveType.COLLECTIVE &&
-        !createCooperativeDto.crops?.length
-      ) {
-        console.log(
-          'Note: COLLECTIVE cooperative created without initial crops. Crops can be added later.',
+          'Cooperatives must specify at least one crop during registration.'
         );
       }
 
@@ -99,18 +88,14 @@ export class CooperativeService {
           },
         });
 
-        if (
-          createCooperativeDto.collectiveType === CollectiveType.COLLECTIVE &&
-          createCooperativeDto.crops?.length
-        ) {
-          for (const crop of createCooperativeDto.crops) {
-            await prisma.cooperativeCropRegistration.create({
-              data: { 
-                cooperativeId: cooperative.id, 
-                cropTypeId: crop.cropTypesId 
-              },
-            });
-          }
+        // Register crops to the cooperative (for BOTH collective and non-collective)
+        for (const crop of createCooperativeDto.crops) {
+          await prisma.cooperativeCropRegistration.create({
+            data: { 
+              cooperativeId: cooperative.id, 
+              cropTypeId: crop.cropTypesId 
+            },
+          });
         }
 
         return {
@@ -122,7 +107,10 @@ export class CooperativeService {
             email: user.email,
             telephone: user.telephone,
             role: role.name,
-          }
+          },
+          message: createCooperativeDto.collectiveType === CollectiveType.COLLECTIVE
+            ? 'Collective cooperative created. Farmers joining this cooperative must plant these crops.'
+            : 'Non-collective cooperative created. Farmers will contribute their individual crop quantities to the cooperative total.'
         };
       });
     } catch (error) {
@@ -494,87 +482,79 @@ export class CooperativeService {
   }
 
   // ---------------- UPDATE ----------------
-async update(
-  id: string, 
-  updateCooperativeDto: UpdateCooperativeDto,
-  userId?: string, 
-  userRole?: string
-) {
-  try {
-    const cooperative = await this.checkCooperativeAuthorization(id, userId, userRole);
-    
-    // Additional validation for cooperative managers
-    if (userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
-      // Cooperative managers cannot change certain fields
-      const restrictedFields = ['cooperativeType', 'collectiveType', 'registrationNumber'];
-      for (const field of restrictedFields) {
-        if (updateCooperativeDto[field] !== undefined) {
-          throw new ForbiddenException(`You cannot change the ${field} field`);
+  async update(
+    id: string, 
+    updateCooperativeDto: UpdateCooperativeDto,
+    userId?: string, 
+    userRole?: string
+  ) {
+    try {
+      const cooperative = await this.checkCooperativeAuthorization(id, userId, userRole);
+      
+      // Additional validation for cooperative managers
+      if (userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
+        // Cooperative managers cannot change certain fields
+        const restrictedFields = ['cooperativeType', 'collectiveType', 'registrationNumber'];
+        for (const field of restrictedFields) {
+          if (updateCooperativeDto[field] !== undefined) {
+            throw new ForbiddenException(`You cannot change the ${field} field`);
+          }
         }
       }
-    }
 
-    // Validate member number if being updated
-    if (updateCooperativeDto.membersNumber !== undefined || 
-        updateCooperativeDto.cooperativeType !== undefined) {
+      // Validate member number if being updated
+      if (updateCooperativeDto.membersNumber !== undefined || 
+          updateCooperativeDto.cooperativeType !== undefined) {
+        
+        const validationDto = {
+          ...cooperative,
+          ...updateCooperativeDto,
+          collectiveType: cooperative.collectiveType as CollectiveType,
+        } as CreateCooperativeDto;
+        
+        this.validateCooperativeType(validationDto);
+      }
+
+      // Transform the data for Prisma
+      const { locationId, crops, ...restData } = updateCooperativeDto;
       
-      const validationDto = {
-        ...cooperative,
-        ...updateCooperativeDto,
-        collectiveType: cooperative.collectiveType as CollectiveType,
-      } as CreateCooperativeDto;
+      const prismaData: any = { ...restData };
       
-      this.validateCooperativeType(validationDto);
-    }
-
-    // Validate crops if being updated
-    if (updateCooperativeDto.crops?.length && 
-        cooperative.collectiveType === 'NON_COLLECTIVE') {
-      throw new BadRequestException(
-        'NON_COLLECTIVE cooperatives cannot have cooperative-level crops.'
-      );
-    }
-
-    // Transform the data for Prisma
-    const { locationId, crops, ...restData } = updateCooperativeDto;
-    
-    const prismaData: any = { ...restData };
-    
-    // Handle location connection if provided
-    if (locationId !== undefined) {
-      prismaData.location = {
-        connect: { id: locationId }
-      };
-    }
-    
-    // Handle crops connection if provided
-    if (crops !== undefined) {
-      if (crops.length === 0) {
-        // If crops array is empty, disconnect all crops
-        prismaData.crops = {
-          set: []
-        };
-      } else {
-        // Connect specific crops
-        prismaData.crops = {
-          connect: crops.map(cropId => ({ id: cropId }))
+      // Handle location connection if provided
+      if (locationId !== undefined) {
+        prismaData.location = {
+          connect: { id: locationId }
         };
       }
-    }
+      
+      // Handle crops connection if provided
+      if (crops !== undefined) {
+        if (crops.length === 0) {
+          // If crops array is empty, disconnect all crops
+          prismaData.crops = {
+            set: []
+          };
+        } else {
+          // Connect specific crops
+          prismaData.crops = {
+            connect: crops.map(cropId => ({ id: cropId }))
+          };
+        }
+      }
 
-    return await this.databaseService.cooperative.update({
-      where: { id },
-      data: prismaData, // Use transformed data
-    });
-  } catch (error) {
-    if (error instanceof BadRequestException || 
-        error instanceof NotFoundException ||
-        error instanceof ForbiddenException) {
-      throw error;
+      return await this.databaseService.cooperative.update({
+        where: { id },
+        data: prismaData,
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException || 
+          error instanceof NotFoundException ||
+          error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error updating cooperative');
     }
-    throw new InternalServerErrorException('Error updating cooperative');
   }
-}
 
   // ---------------- ASSIGN FARMERS ----------------
   async assignFarmersToCooperative(
@@ -601,7 +581,7 @@ async update(
 
         const results = [];
         
-        // For collective cooperatives, inherit crops to farmers
+        // For COLLECTIVE cooperatives, farmers MUST plant the cooperative's crops
         if (cooperativeWithCrops.collectiveType === 'COLLECTIVE') {
           for (const farmerId of farmers) {
             const inherited = [];
@@ -633,11 +613,16 @@ async update(
                 }
               }
             }
-            results.push({ farmerId, inheritedCrops: inherited });
+            results.push({ 
+              farmerId, 
+              mandatoryCrops: inherited,
+              note: 'Farmer must plant these cooperative crops'
+            });
           }
         } else {
+          // For NON_COLLECTIVE, farmers add their own crops which contribute to cooperative total
           results.push({ 
-            message: 'NON_COLLECTIVE cooperative: Farmers manage their individual crops', 
+            message: 'NON_COLLECTIVE cooperative: Farmers can add their own crops. Their contributions will be totaled at the cooperative level.', 
             farmersAssigned: farmers.length 
           });
         }
@@ -649,7 +634,7 @@ async update(
             type: cooperativeWithCrops.type, 
             collectiveType: cooperativeWithCrops.collectiveType 
           }, 
-          farmersInheritedCrops: results 
+          results 
         };
       });
     } catch (error) {
@@ -703,9 +688,9 @@ async update(
             } 
           });
 
-          const inherited = [];
+          const mandatoryCrops = [];
           
-          // Inherit crops for collective cooperatives
+          // For COLLECTIVE: inherit mandatory crops
           if (cooperativeWithCrops.collectiveType === 'COLLECTIVE') {
             for (const coopCrop of cooperativeWithCrops.cooperativeCropRegistrations) {
               await prisma.cropFarmerRegistration.create({ 
@@ -715,7 +700,7 @@ async update(
                 } 
               });
               
-              inherited.push({ 
+              mandatoryCrops.push({ 
                 cropTypeId: coopCrop.cropTypeId, 
                 cropTypeName: coopCrop.cropType.name, 
                 cropName: coopCrop.cropType.crop.name 
@@ -725,8 +710,11 @@ async update(
 
           results.push({ 
             farmer: createdFarmer, 
-            inheritedCrops: inherited, 
-            cooperativeType: cooperativeWithCrops.collectiveType 
+            mandatoryCrops, 
+            cooperativeType: cooperativeWithCrops.collectiveType,
+            note: cooperativeWithCrops.collectiveType === 'COLLECTIVE' 
+              ? 'Farmer must plant these cooperative crops'
+              : 'Farmer can add their own crops which will contribute to cooperative total'
           });
         }
 
@@ -749,33 +737,12 @@ async update(
   ) {
     try {
       const cooperative = await this.checkCooperativeAuthorization(cooperativeId, userId, userRole);
-      
-      // Additional check for non-collective cooperatives
-      if (cooperative.collectiveType === 'NON_COLLECTIVE') {
-        throw new BadRequestException('Cannot add crops for NON_COLLECTIVE cooperatives');
-      }
-      
-      // Check if user is collective cooperative manager or UmufashaMyumvire
-      if (cooperative.collectiveType === 'COLLECTIVE') {
-        const managerRole = cooperative.cooperativeManager.role.name;
-        if (managerRole !== Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER && 
-            userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
-          throw new ForbiddenException('Only collective cooperative managers can add crops');
-        }
-      }
 
       return await this.databaseService.$transaction(async (prisma) => {
-        const cooperativeCheck = await prisma.cooperative.findUnique({ 
-          where: { id: cooperativeId } 
-        });
-        
-        if (cooperativeCheck.collectiveType === 'NON_COLLECTIVE') {
-          throw new BadRequestException('Cannot add crops for NON_COLLECTIVE cooperatives');
-        }
-
         // Check if crop type exists
         const cropType = await prisma.cropType.findUnique({
           where: { id: cropTypeId },
+          include: { crop: true }
         });
         
         if (!cropType) {
@@ -792,11 +759,12 @@ async update(
             registration: existing, 
             newlyRegistered: false, 
             farmersUpdated: 0, 
-            collectiveType: cooperativeCheck.collectiveType 
+            collectiveType: cooperative.collectiveType,
+            message: 'Crop already registered to this cooperative'
           };
         }
 
-        // Register crop
+        // Register crop to cooperative
         const registration = await prisma.cooperativeCropRegistration.create({
           data: { cooperativeId, cropTypeId },
           include: { 
@@ -808,33 +776,44 @@ async update(
           },
         });
 
-        // Inherit to farmers
-        const farmers = await prisma.farmer.findMany({ 
-          where: { cooperativeId } 
-        });
-        
         let farmersUpdated = 0;
-        for (const farmer of farmers) {
-          const exists = await prisma.cropFarmerRegistration.findFirst({ 
-            where: { farmerId: farmer.id, cropTypeId } 
+        let message = '';
+
+        // For COLLECTIVE: Add mandatory crop to all existing farmers
+        if (cooperative.collectiveType === 'COLLECTIVE') {
+          const farmers = await prisma.farmer.findMany({ 
+            where: { cooperativeId } 
           });
           
-          if (!exists) {
-            await prisma.cropFarmerRegistration.create({ 
-              data: { 
-                farmerId: farmer.id, 
-                cropTypeId 
-              } 
+          for (const farmer of farmers) {
+            const exists = await prisma.cropFarmerRegistration.findFirst({ 
+              where: { farmerId: farmer.id, cropTypeId } 
             });
-            farmersUpdated++;
+            
+            if (!exists) {
+              await prisma.cropFarmerRegistration.create({ 
+                data: { 
+                  farmerId: farmer.id, 
+                  cropTypeId 
+                } 
+              });
+              farmersUpdated++;
+            }
           }
+          message = `Crop added as mandatory for all ${farmersUpdated} farmers in this collective cooperative`;
+        } else {
+          // For NON_COLLECTIVE: Crop is added to cooperative registry, farmers can choose to plant it
+          message = 'Crop added to cooperative registry. Farmers can plant this crop and contribute to cooperative total.';
         }
 
         return { 
           registration, 
           newlyRegistered: true, 
           farmersUpdated, 
-          collectiveType: cooperativeCheck.collectiveType 
+          collectiveType: cooperative.collectiveType,
+          cropName: cropType.crop.name,
+          cropTypeName: cropType.name,
+          message 
         };
       });
     } catch (error) {
@@ -856,33 +835,8 @@ async update(
   ) {
     try {
       const cooperative = await this.checkCooperativeAuthorization(cooperativeId, userId, userRole);
-      
-      if (cooperative.collectiveType === 'NON_COLLECTIVE') {
-        throw new BadRequestException(
-          'NON_COLLECTIVE cooperatives do not have cooperative-level crops to remove'
-        );
-      }
-      
-      // Check if user is collective cooperative manager or UmufashaMyumvire
-      if (cooperative.collectiveType === 'COLLECTIVE') {
-        const managerRole = cooperative.cooperativeManager.role.name;
-        if (managerRole !== Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER && 
-            userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
-          throw new ForbiddenException('Only collective cooperative managers can remove crops');
-        }
-      }
 
       return await this.databaseService.$transaction(async (prisma) => {
-        const cooperativeCheck = await prisma.cooperative.findUnique({ 
-          where: { id: cooperativeId } 
-        });
-        
-        if (cooperativeCheck.collectiveType === 'NON_COLLECTIVE') {
-          throw new BadRequestException(
-            'NON_COLLECTIVE cooperatives do not have cooperative-level crops to remove'
-          );
-        }
-
         const existing = await prisma.cooperativeCropRegistration.findFirst({ 
           where: { cooperativeId, cropTypeId } 
         });
@@ -898,7 +852,10 @@ async update(
         });
 
         let farmersAffected = 0;
-        if (cooperativeCheck.collectiveType === 'COLLECTIVE' || cascadeToFarmers) {
+        let message = '';
+
+        // For COLLECTIVE: Always remove from farmers (mandatory crops)
+        if (cooperative.collectiveType === 'COLLECTIVE') {
           const result = await prisma.cropFarmerRegistration.deleteMany({ 
             where: { 
               cropTypeId, 
@@ -906,12 +863,26 @@ async update(
             } 
           });
           farmersAffected = result.count;
+          message = `Mandatory crop removed from cooperative and ${farmersAffected} farmers`;
+        } else if (cascadeToFarmers) {
+          // For NON_COLLECTIVE: Only remove from farmers if cascade is explicitly requested
+          const result = await prisma.cropFarmerRegistration.deleteMany({ 
+            where: { 
+              cropTypeId, 
+              farmer: { cooperativeId } 
+            } 
+          });
+          farmersAffected = result.count;
+          message = `Crop removed from cooperative registry and ${farmersAffected} farmers (cascade applied)`;
+        } else {
+          message = 'Crop removed from cooperative registry. Farmers who planted this crop still retain it.';
         }
 
         return { 
           removed: true, 
           farmersAffected, 
-          collectiveType: cooperativeCheck.collectiveType 
+          collectiveType: cooperative.collectiveType,
+          message 
         };
       });
     } catch (error) {
@@ -924,10 +895,9 @@ async update(
     }
   }
 
-  // ---------------- COOPERATIVE CROPS & ANIMALS ----------------
+  // ---------------- COOPERATIVE CROPS & SUMMARY ----------------
   async findAllCooperativeCrops(cooperativeId: string, userId?: string, userRole?: string) {
     try {
-      // Check authorization first
       await this.checkCooperativeAuthorization(cooperativeId, userId, userRole);
       
       const cooperative = await this.databaseService.cooperative.findUnique({ 
@@ -938,56 +908,81 @@ async update(
         throw new NotFoundException(`Cooperative ${cooperativeId} not found`);
       }
 
-      if (cooperative.collectiveType === 'COLLECTIVE') {
-        const direct = await this.databaseService.cooperativeCropRegistration.findMany({
-          where: { cooperativeId },
-          include: { 
-            cropType: { 
-              include: { 
-                crop: true 
-              } 
-            } 
-          },
-        });
-        
-        if (direct.length) {
-          return await this.databaseService.crop.findMany({
-            where: { 
-              cropType: { 
-                some: { 
-                  id: { 
-                    in: direct.map(r => r.cropTypeId) 
-                  } 
-                } 
-              } 
-            },
-            include: { 
-              cropType: { 
-                where: { 
-                  id: { 
-                    in: direct.map(r => r.cropTypeId) 
-                  } 
-                } 
-              } 
-            },
-          });
-        }
-      }
-
-      return await this.databaseService.crop.findMany({
-        where: { 
+      // Get cooperative registered crops
+      const cooperativeCrops = await this.databaseService.cooperativeCropRegistration.findMany({
+        where: { cooperativeId },
+        include: { 
           cropType: { 
-            some: { 
-              cropFarmerRegistrations: { 
-                some: { 
-                  farmer: { cooperativeId } 
-                } 
-              } 
+            include: { 
+              crop: true 
             } 
           } 
         },
-        include: { cropType: true },
       });
+
+      if (cooperative.collectiveType === 'COLLECTIVE') {
+        return {
+          collectiveType: 'COLLECTIVE',
+          message: 'These are the mandatory crops that all farmers must plant',
+          crops: cooperativeCrops.map(reg => ({
+            cropId: reg.cropType.crop.id,
+            cropName: reg.cropType.crop.name,
+            cropTypeId: reg.cropType.id,
+            cropTypeName: reg.cropType.name,
+            mandatory: true
+          }))
+        };
+      } else {
+        // For NON_COLLECTIVE: Show cooperative crops and individual farmer contributions
+        const farmerCrops = await this.databaseService.cropFarmerRegistration.findMany({
+          where: {
+            farmer: { cooperativeId },
+            cropTypeId: { in: cooperativeCrops.map(c => c.cropTypeId) }
+          },
+          include: {
+            farmer: {
+              include: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true
+                  }
+                }
+              }
+            },
+            cropType: {
+              include: {
+                crop: true
+              }
+            }
+          }
+        });
+
+        // Group by crop type
+        const cropMap = new Map();
+        farmerCrops.forEach(fc => {
+          const key = fc.cropTypeId;
+          if (!cropMap.has(key)) {
+            cropMap.set(key, {
+              cropId: fc.cropType.crop.id,
+              cropName: fc.cropType.crop.name,
+              cropTypeId: fc.cropType.id,
+              cropTypeName: fc.cropType.name,
+              farmers: []
+            });
+          }
+          cropMap.get(key).farmers.push({
+            farmerId: fc.farmer.id,
+            farmerName: `${fc.farmer.user.firstName} ${fc.farmer.user.lastName}`
+          });
+        });
+
+        return {
+          collectiveType: 'NON_COLLECTIVE',
+          message: 'These are the cooperative crops. Farmers plant individually and contribute to the total.',
+          crops: Array.from(cropMap.values())
+        };
+      }
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;
@@ -998,7 +993,6 @@ async update(
 
   async findAllCooperativeAnimals(cooperativeId: string, userId?: string, userRole?: string) {
     try {
-      // Check authorization first
       await this.checkCooperativeAuthorization(cooperativeId, userId, userRole);
       
       const cooperative = await this.databaseService.cooperative.findUnique({ 
@@ -1027,38 +1021,69 @@ async update(
     }
   }
 
-  // ---------------- PRODUCE & AREA ----------------
+  // ---------------- PRODUCE & AREA SUMMARY ----------------
   async findAllCooperativeCropsProduceAndArea(cooperativeId: string, userId?: string, userRole?: string) {
     try {
-      // Check authorization first
       await this.checkCooperativeAuthorization(cooperativeId, userId, userRole);
       
+      const cooperative = await this.databaseService.cooperative.findUnique({ 
+        where: { id: cooperativeId } 
+      });
+
+      if (!cooperative) {
+        throw new NotFoundException(`Cooperative ${cooperativeId} not found`);
+      }
+
+      // Get only the cooperative's registered crops
+      const cooperativeCrops = await this.databaseService.cooperativeCropRegistration.findMany({
+        where: { cooperativeId },
+        select: { cropTypeId: true }
+      });
+
+      const cropTypeIds = cooperativeCrops.map(cc => cc.cropTypeId);
+
+      if (cropTypeIds.length === 0) {
+        return {
+          cooperativeName: cooperative.name,
+          collectiveType: cooperative.collectiveType,
+          crops: [],
+          message: 'No crops registered to this cooperative'
+        };
+      }
+
       const croptypesData = await this.databaseService.cropType.findMany({
         where: { 
+          id: { in: cropTypeIds },
           seasons: { 
             some: { 
-              OR: [
-                { farmer: { cooperativeId } }, 
-                { cooperativeId }]
+              farmer: { cooperativeId }
             } 
           } 
         },
         select: {
+          id: true,
           crop: { select: { name: true } },
           name: true,
           seasons: {
             where: { 
-              OR: [
-                { farmer: { cooperativeId } }, 
-                { cooperativeId }
-              ] 
+              farmer: { cooperativeId }
             },
             select: {
               produceHarvested: true,
               plantationArea: true,
               farmerId: true,
-              cooperativeId: true,
               seeds: true,
+              farmer: {
+                select: {
+                  id: true,
+                  user: {
+                    select: {
+                      firstName: true,
+                      lastName: true
+                    }
+                  }
+                }
+              },
               cropFertilizerFarmerRegistrations: { 
                 select: { 
                   amount: true, 
@@ -1073,38 +1098,51 @@ async update(
               },
             },
           },
-          cropFarmerRegistrations: { 
-            where: { farmer: { cooperativeId } }, 
-            select: { farmerId: true } 
-          },
         },
       });
 
-      return croptypesData.map((croptype) => {
-        const produce = croptype.seasons.reduce(
+      const summary = croptypesData.map((croptype) => {
+        const totalProduce = croptype.seasons.reduce(
           (sum, s) => sum + (Number(s.produceHarvested) || 0), 
           0
         );
         
-        const area = croptype.seasons.reduce(
+        const totalArea = croptype.seasons.reduce(
           (sum, s) => sum + (Number(s.plantationArea) || 0), 
           0
         );
         
-        const seeds = croptype.seasons.reduce(
+        const totalSeeds = croptype.seasons.reduce(
           (sum, s) => sum + (Number(s.seeds) || 0), 
           0
         );
 
-        const uniqueFarmers = new Set(
-          croptype.seasons.map((s) => s.farmerId).filter(Boolean)
-        );
+        // Get unique farmers for this crop type
+        const farmerMap = new Map();
+        croptype.seasons.forEach((season) => {
+          if (season.farmer && !farmerMap.has(season.farmerId)) {
+            farmerMap.set(season.farmerId, {
+              farmerId: season.farmer.id,
+              farmerName: `${season.farmer.user.firstName} ${season.farmer.user.lastName}`,
+              produce: 0,
+              area: 0,
+              seeds: 0
+            });
+          }
+          if (season.farmer) {
+            const farmer = farmerMap.get(season.farmerId);
+            farmer.produce += Number(season.produceHarvested) || 0;
+            farmer.area += Number(season.plantationArea) || 0;
+            farmer.seeds += Number(season.seeds) || 0;
+          }
+        });
 
+        // Fertilizer aggregation
         const fertilizerUsage = new Map();
         const fertilizerFarmers = new Map();
 
-        croptype.seasons.forEach((registration) => {
-          registration.cropFertilizerFarmerRegistrations.forEach((fertReg) => {
+        croptype.seasons.forEach((season) => {
+          season.cropFertilizerFarmerRegistrations.forEach((fertReg) => {
             const fertilizerId = fertReg.feterlizer.id;
             if (!fertilizerUsage.has(fertilizerId)) {
               fertilizerUsage.set(fertilizerId, { 
@@ -1118,8 +1156,8 @@ async update(
             if (!fertilizerFarmers.has(fertilizerId)) {
               fertilizerFarmers.set(fertilizerId, new Set());
             }
-            if (registration.farmerId) {
-              fertilizerFarmers.get(fertilizerId).add(registration.farmerId);
+            if (season.farmerId) {
+              fertilizerFarmers.get(fertilizerId).add(season.farmerId);
             }
           });
         });
@@ -1132,16 +1170,33 @@ async update(
           farmersCount: fertilizerFarmers.get(id).size,
         }));
 
-        return {
+        const result: any = {
           cropName: croptype.crop.name,
           cropTypeName: croptype.name,
-          totalProduce: produce,
-          plantationArea: area,
-          totalFarmers: uniqueFarmers.size,
-          totalInputSeeds: seeds,
+          totalProduce,
+          plantationArea: totalArea,
+          totalInputSeeds: totalSeeds,
+          totalFarmers: farmerMap.size,
           fertilizers,
         };
+
+        // For NON_COLLECTIVE: Include breakdown by farmer
+        if (cooperative.collectiveType === 'NON_COLLECTIVE') {
+          result.farmerContributions = Array.from(farmerMap.values());
+          result.note = 'Individual farmer contributions aggregated to cooperative total';
+        }
+
+        return result;
       });
+
+      return {
+        cooperativeName: cooperative.name,
+        collectiveType: cooperative.collectiveType,
+        message: cooperative.collectiveType === 'COLLECTIVE' 
+          ? 'All farmers plant these mandatory crops collectively'
+          : 'Individual farmer contributions totaled at cooperative level',
+        crops: summary
+      };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;

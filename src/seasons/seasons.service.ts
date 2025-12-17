@@ -23,7 +23,14 @@ export class SeasonsService {
       where: { id: seasonId },
       include: {
         farmer: {
-          include: { user: true }
+          include: { 
+            user: true,
+            cooperative: {
+              include: {
+                cooperativeManager: true
+              }
+            }
+          }
         },
         cooperative: {
           include: { cooperativeManager: { include: { role: true } } }
@@ -45,15 +52,19 @@ export class SeasonsService {
       if (season.farmer.user.id === userId) {
         return season;
       }
+      
+      // Check if user is the cooperative manager of the farmer's cooperative
+      if (season.farmer.cooperative?.cooperativeManagerId === userId) {
+        return season;
+      }
     }
     
     // Check if user is the cooperative manager of the cooperative that owns the season
     if (season.cooperativeId) {
       if (season.cooperative.cooperativeManagerId === userId) {
-        // Check if user is a collective cooperative manager
         const managerRole = season.cooperative.cooperativeManager.role.name;
         if (managerRole !== Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER) {
-          throw new ForbiddenException('Only collective cooperative managers can manage seasons');
+          throw new ForbiddenException('Only collective cooperative managers can manage cooperative seasons');
         }
         return season;
       }
@@ -89,41 +100,82 @@ export class SeasonsService {
 
       // Authorization checks
       if (createSeasonDto.farmerId) {
-        // Check if user is creating season for themselves (farmers)
-        if (userRole !== Role_Enum.FARMER && userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
-          throw new ForbiddenException('Only farmers can create seasons for themselves');
-        }
-        
+        // Farmers can create their own seasons
         if (userRole === Role_Enum.FARMER) {
-          // Get farmer by user ID
           const farmer = await this.databaseService.farmer.findFirst({
-            where: { userId }
+            where: { userId },
+            include: { cooperative: true }
           });
           
           if (!farmer || farmer.id !== createSeasonDto.farmerId) {
             throw new ForbiddenException('You can only create seasons for yourself');
           }
+          
+          // Validate crop registration for farmer
+          const farmerCropReg = await this.databaseService.cropFarmerRegistration.findFirst({
+            where: {
+              farmerId: createSeasonDto.farmerId,
+              cropTypeId: createSeasonDto.cropTypeId,
+            },
+          });
+
+          if (!farmerCropReg) {
+            throw new BadRequestException(
+              'You have not registered this crop type. Please register it first.',
+            );
+          }
+          
+          // Add context message
+          let context = '';
+          if (farmer.cooperative) {
+            if (farmer.cooperative.collectiveType === 'COLLECTIVE') {
+              context = 'Season created for mandatory collective crop.';
+            } else {
+              context = `Season created. Your harvest will contribute to ${farmer.cooperative.name}'s total.`;
+            }
+          }
+          
+        } else if (userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER || 
+                   userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
+          // Cooperative managers can create seasons for farmers in their cooperative
+          const farmer = await this.databaseService.farmer.findFirst({
+            where: { 
+              id: createSeasonDto.farmerId,
+              cooperative: {
+                cooperativeManagerId: userId
+              }
+            },
+            include: { cooperative: true }
+          });
+          
+          if (!farmer) {
+            throw new ForbiddenException('You can only create seasons for farmers in your cooperative');
+          }
+          
+        } else if (userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
+          throw new ForbiddenException('Not authorized to create farmer seasons');
         }
       }
       
       if (createSeasonDto.cooperativeId) {
+        // Only collective cooperatives can have cooperative-level seasons
+        const isCollective = await this.isCollectiveCooperative(createSeasonDto.cooperativeId);
+        if (!isCollective) {
+          throw new BadRequestException(
+            'Only COLLECTIVE cooperatives can create cooperative-level seasons. Non-collective cooperative farmers create individual seasons.'
+          );
+        }
+        
         // Check if user is a collective cooperative manager or UmufashaMyumvire
         if (userRole !== Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER && 
             userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
           throw new ForbiddenException('Only collective cooperative managers can create cooperative seasons');
         }
         
-        // Check if cooperative is collective
-        const isCollective = await this.isCollectiveCooperative(createSeasonDto.cooperativeId);
-        if (!isCollective) {
-          throw new BadRequestException('Only collective cooperatives can create seasons');
-        }
-        
         if (userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER) {
-          // Check if user is the manager of this cooperative
           const cooperative = await this.databaseService.cooperative.findUnique({
             where: { id: createSeasonDto.cooperativeId },
-            select: { cooperativeManagerId: true }
+            select: { cooperativeManagerId: true, name: true }
           });
           
           if (!cooperative || cooperative.cooperativeManagerId !== userId) {
@@ -131,7 +183,7 @@ export class SeasonsService {
           }
         }
         
-        // Validate they have registered this crop type
+        // Validate crop is registered with cooperative
         const cooperativeCropReg = await this.databaseService.cooperativeCropRegistration.findFirst({
           where: {
             cooperativeId: createSeasonDto.cooperativeId,
@@ -146,7 +198,7 @@ export class SeasonsService {
         }
       }
 
-      // Build the data object conditionally
+      // Build the data object
       const data: any = {
         name: createSeasonDto.name,
         plantationArea: createSeasonDto.plantationArea,
@@ -193,7 +245,7 @@ export class SeasonsService {
         };
       }
 
-      return await this.databaseService.season.create({
+      const season = await this.databaseService.season.create({
         data,
         include: {
           croType: {
@@ -201,32 +253,57 @@ export class SeasonsService {
               crop: true,
             },
           },
-          farmer: createSeasonDto.farmerId
-            ? {
-                include: {
-                  user: {
-                    select: {
-                      firstName: true,
-                      lastName: true,
-                      telephone: true,
-                    },
-                  },
-                },
-              }
-            : false,
-          cooperative: createSeasonDto.cooperativeId
-            ? {
+          farmer: {
+            include: {
+              user: {
                 select: {
-                  name: true,
-                  registrationNumber: true,
+                  firstName: true,
+                  lastName: true,
+                  telephone: true,
                 },
+              },
+              cooperative: {
+                select: {
+                  id: true,
+                  name: true,
+                  collectiveType: true
+                }
               }
-            : false,
+            },
+          },
+          cooperative: {
+            select: {
+              id: true,
+              name: true,
+              registrationNumber: true,
+              collectiveType: true
+            },
+          },
           seedStrain: true,
           metric: true,
           harvestSeason: true,
         },
       });
+      
+      // Add context message
+      let message = '';
+      if (season.cooperativeId) {
+        message = 'Collective cooperative season created. All farmers will contribute to this season.';
+      } else if (season.farmer?.cooperative) {
+        if (season.farmer.cooperative.collectiveType === 'COLLECTIVE') {
+          message = 'Individual season created for mandatory collective crop.';
+        } else {
+          message = `Individual season created. Harvests will contribute to ${season.farmer.cooperative.name}'s total.`;
+        }
+      } else {
+        message = 'Individual farmer season created.';
+      }
+      
+      return {
+        season,
+        message
+      };
+      
     } catch (e) {
       if (e instanceof BadRequestException || e instanceof ForbiddenException) {
         throw e;
@@ -254,18 +331,30 @@ export class SeasonsService {
                     lastName: true,
                   },
                 },
+                cooperative: {
+                  select: {
+                    id: true,
+                    name: true,
+                    collectiveType: true
+                  }
+                }
               },
             },
             cooperative: {
               select: {
+                id: true,
                 name: true,
                 registrationNumber: true,
+                collectiveType: true
               },
             },
             seedStrain: true,
             metric: true,
             harvestSeason: true,
           },
+          orderBy: {
+            createdAt: 'desc'
+          }
         });
       }
       
@@ -290,16 +379,24 @@ export class SeasonsService {
                 crop: true,
               },
             },
+            cooperative: {
+              select: {
+                name: true,
+                collectiveType: true
+              }
+            },
             seedStrain: true,
             metric: true,
             harvestSeason: true,
           },
+          orderBy: {
+            createdAt: 'desc'
+          }
         });
       }
       
-      // Collective cooperative managers can see their cooperative's seasons
+      // Collective cooperative managers see their cooperative's seasons
       if (userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER) {
-        // Find cooperative managed by this user
         const cooperative = await this.databaseService.cooperative.findFirst({
           where: { cooperativeManagerId: userId },
           select: { id: true }
@@ -319,16 +416,63 @@ export class SeasonsService {
                 crop: true,
               },
             },
+            cooperative: {
+              select: {
+                name: true,
+                collectiveType: true
+              }
+            },
             seedStrain: true,
             metric: true,
             harvestSeason: true,
           },
+          orderBy: {
+            createdAt: 'desc'
+          }
         });
       }
       
-      // Non-collective cooperative managers cannot see seasons at cooperative level
+      // Non-collective cooperative managers see their member farmers' seasons
       if (userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
-        return []; // Non-collective cooperatives don't have cooperative-level seasons
+        const cooperative = await this.databaseService.cooperative.findFirst({
+          where: { cooperativeManagerId: userId },
+          select: { id: true }
+        });
+        
+        if (!cooperative) {
+          return [];
+        }
+        
+        return await this.databaseService.season.findMany({
+          where: {
+            farmer: {
+              cooperativeId: cooperative.id
+            }
+          },
+          include: {
+            croType: {
+              include: {
+                crop: true,
+              },
+            },
+            farmer: {
+              include: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true
+                  }
+                }
+              }
+            },
+            seedStrain: true,
+            metric: true,
+            harvestSeason: true,
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
       }
       
       throw new ForbiddenException('Not authorized to view seasons');
@@ -341,9 +485,111 @@ export class SeasonsService {
     }
   }
 
+  // NEW: Get all seasons for a cooperative (both collective seasons + member farmer seasons)
+  async findAllByCooperativeIdComprehensive(
+    cooperativeId: string, 
+    userId?: string, 
+    userRole?: string
+  ) {
+    try {
+      // Get cooperative details
+      const cooperative = await this.databaseService.cooperative.findUnique({
+        where: { id: cooperativeId },
+        include: {
+          cooperativeManager: true
+        }
+      });
+      
+      if (!cooperative) {
+        throw new NotFoundException(`Cooperative with ID ${cooperativeId} not found`);
+      }
+      
+      // Authorization
+      if (userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
+        if (cooperative.cooperativeManagerId !== userId) {
+          throw new ForbiddenException('You can only view seasons of cooperatives you manage');
+        }
+      }
+      
+      if (cooperative.collectiveType === 'COLLECTIVE') {
+        // For COLLECTIVE: Get cooperative-level seasons only
+        const seasons = await this.databaseService.season.findMany({
+          where: {
+            cooperativeId: cooperativeId
+          },
+          include: {
+            croType: {
+              include: {
+                crop: true,
+              },
+            },
+            seedStrain: true,
+            metric: true,
+            harvestSeason: true,
+            harvests: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
+        
+        return {
+          cooperativeName: cooperative.name,
+          collectiveType: 'COLLECTIVE',
+          message: 'Collective cooperative seasons - all farmers contribute to these shared seasons',
+          seasons
+        };
+      } else {
+        // For NON_COLLECTIVE: Get all member farmers' individual seasons
+        const seasons = await this.databaseService.season.findMany({
+          where: {
+            farmer: {
+              cooperativeId: cooperativeId
+            }
+          },
+          include: {
+            croType: {
+              include: {
+                crop: true,
+              },
+            },
+            farmer: {
+              include: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true
+                  }
+                }
+              }
+            },
+            seedStrain: true,
+            metric: true,
+            harvestSeason: true,
+            harvests: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
+        
+        return {
+          cooperativeName: cooperative.name,
+          collectiveType: 'NON_COLLECTIVE',
+          message: 'Individual farmer seasons - each farmer manages their own seasons',
+          seasons
+        };
+      }
+    } catch (e) {
+      if (e instanceof NotFoundException || e instanceof ForbiddenException) {
+        throw e;
+      }
+      throw new BadRequestException(e.message);
+    }
+  }
+
   async findAllByCropTypeId(cropTypeId: string, userId?: string, userRole?: string) {
     try {
-      // Apply role-based filtering
       let whereClause: any = { cropTypeId };
       
       if (userRole === Role_Enum.FARMER) {
@@ -369,17 +615,48 @@ export class SeasonsService {
         
         whereClause.cooperativeId = cooperative.id;
       } else if (userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
-        return []; // Non-collective cooperatives don't have cooperative-level seasons
+        const cooperative = await this.databaseService.cooperative.findFirst({
+          where: { cooperativeManagerId: userId },
+          select: { id: true }
+        });
+        
+        if (!cooperative) {
+          return [];
+        }
+        
+        whereClause.farmer = {
+          cooperativeId: cooperative.id
+        };
       }
-      // UmufashaMyumvire can see all without additional filtering
       
       return await this.databaseService.season.findMany({
         where: whereClause,
         include: {
-          croType: true,
-          farmer: true,
-          cooperative: true,
+          croType: {
+            include: {
+              crop: true
+            }
+          },
+          farmer: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true
+                }
+              }
+            }
+          },
+          cooperative: {
+            select: {
+              name: true,
+              collectiveType: true
+            }
+          },
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       });
     } catch (e) {
       throw new BadRequestException(e.message);
@@ -388,7 +665,7 @@ export class SeasonsService {
 
   async findAllByFarmerId(farmerId: string, userId?: string, userRole?: string) {
     try {
-      // Authorization: User can only view their own farmer seasons
+      // Authorization
       if (userRole === Role_Enum.FARMER) {
         const farmer = await this.databaseService.farmer.findFirst({
           where: { userId },
@@ -398,22 +675,8 @@ export class SeasonsService {
         if (!farmer || farmer.id !== farmerId) {
           throw new ForbiddenException('You can only view your own seasons');
         }
-      } else if (userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER) {
-        // Cooperative managers can view seasons of farmers in their cooperative
-        const farmerInCooperative = await this.databaseService.farmer.findFirst({
-          where: { 
-            id: farmerId,
-            cooperative: {
-              cooperativeManagerId: userId
-            }
-          }
-        });
-        
-        if (!farmerInCooperative) {
-          throw new ForbiddenException('You can only view seasons of farmers in your cooperative');
-        }
-      } else if (userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
-        // Non-collective cooperative managers can also view member farmer seasons
+      } else if (userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER || 
+                 userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
         const farmerInCooperative = await this.databaseService.farmer.findFirst({
           where: { 
             id: farmerId,
@@ -427,7 +690,6 @@ export class SeasonsService {
           throw new ForbiddenException('You can only view seasons of farmers in your cooperative');
         }
       }
-      // UmufashaMyumvire can view any farmer's seasons
       
       return await this.databaseService.season.findMany({
         where: {
@@ -439,10 +701,20 @@ export class SeasonsService {
               crop: true,
             },
           },
+          cooperative: {
+            select: {
+              name: true,
+              collectiveType: true
+            }
+          },
           seedStrain: true,
           metric: true,
           harvestSeason: true,
+          harvests: true
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       });
     } catch (e) {
       if (e instanceof ForbiddenException) {
@@ -454,10 +726,12 @@ export class SeasonsService {
 
   async findAllByCooperativeId(cooperativeId: string, userId?: string, userRole?: string) {
     try {
-      // Only collective cooperatives can have cooperative-level seasons
+      // Only collective cooperatives have cooperative-level seasons
       const isCollective = await this.isCollectiveCooperative(cooperativeId);
       if (!isCollective) {
-        throw new BadRequestException('Non-collective cooperatives do not have cooperative-level seasons');
+        throw new BadRequestException(
+          'Non-collective cooperatives do not have cooperative-level seasons. Use findAllByCooperativeIdComprehensive to see member farmer seasons.'
+        );
       }
       
       // Authorization
@@ -473,7 +747,6 @@ export class SeasonsService {
       } else if (userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
         throw new ForbiddenException('Non-collective cooperative managers cannot view cooperative-level seasons');
       }
-      // UmufashaMyumvire can view any cooperative's seasons
       
       return await this.databaseService.season.findMany({
         where: {
@@ -485,10 +758,20 @@ export class SeasonsService {
               crop: true,
             },
           },
+          cooperative: {
+            select: {
+              name: true,
+              collectiveType: true
+            }
+          },
           seedStrain: true,
           metric: true,
           harvestSeason: true,
+          harvests: true
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       });
     } catch (e) {
       if (e instanceof BadRequestException || e instanceof ForbiddenException) {
@@ -505,7 +788,6 @@ export class SeasonsService {
     userRole?: string
   ) {
     try {
-      // Only collective cooperatives can have cooperative-level seasons
       const isCollective = await this.isCollectiveCooperative(cooperativeId);
       if (!isCollective) {
         throw new BadRequestException('Non-collective cooperatives do not have cooperative-level seasons');
@@ -536,7 +818,17 @@ export class SeasonsService {
               crop: true,
             },
           },
+          cooperative: {
+            select: {
+              name: true,
+              collectiveType: true
+            }
+          },
+          harvests: true
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       });
     } catch (e) {
       if (e instanceof BadRequestException || e instanceof ForbiddenException) {
@@ -565,7 +857,6 @@ export class SeasonsService {
         }
       } else if (userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER || 
                  userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
-        // Cooperative managers can view seasons of farmers in their cooperative
         const farmerInCooperative = await this.databaseService.farmer.findFirst({
           where: { 
             id: farmerId,
@@ -586,8 +877,16 @@ export class SeasonsService {
           cropTypeId,
         },
         include: {
-          croType: true,
+          croType: {
+            include: {
+              crop: true
+            }
+          },
+          harvests: true
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       });
     } catch (e) {
       if (e instanceof ForbiddenException) {
@@ -599,7 +898,7 @@ export class SeasonsService {
 
   async findOne(id: string, userId?: string, userRole?: string) {
     try {
-      const season = await this.checkSeasonAuthorization(id, userId, userRole);
+      await this.checkSeasonAuthorization(id, userId, userRole);
       
       return await this.databaseService.season.findUnique({
         where: {
@@ -624,13 +923,22 @@ export class SeasonsService {
                   email: true,
                 },
               },
+              cooperative: {
+                select: {
+                  id: true,
+                  name: true,
+                  collectiveType: true
+                }
+              }
             },
           },
           cooperative: {
             select: {
+              id: true,
               name: true,
               registrationNumber: true,
               telephone: true,
+              collectiveType: true
             },
           },
           cropFertilizerFarmerRegistrations: {
@@ -639,6 +947,11 @@ export class SeasonsService {
               measurement: true,
             },
           },
+          harvests: {
+            orderBy: {
+              harvestDate: 'desc'
+            }
+          }
         },
       });
     } catch (e) {
@@ -656,7 +969,6 @@ export class SeasonsService {
     userRole?: string
   ) {
     try {
-      // Check authorization
       await this.checkSeasonAuthorization(id, userId, userRole);
       
       return await this.databaseService.season.update({
@@ -684,7 +996,6 @@ export class SeasonsService {
 
   async remove(id: string, userId?: string, userRole?: string) {
     try {
-      // Check authorization
       await this.checkSeasonAuthorization(id, userId, userRole);
       
       return await this.databaseService.season.delete({

@@ -6,10 +6,13 @@ import {
   IsInt, 
   ValidateNested, 
   IsEnum,
+  IsArray,
+  ArrayMinSize,
   Min 
 } from 'class-validator';
 import { CooperativeType } from '@prisma/client';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { cooperativeCropDto } from './cooperative-crop.dto';
 
 export class CreateNonCollectiveCooperativeDto {
   @ApiProperty()
@@ -17,33 +20,50 @@ export class CreateNonCollectiveCooperativeDto {
   @IsNotEmpty()
   name: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @ApiProperty()
   telephone: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @ApiProperty()
   registrationNumber: string;
 
+  @ApiProperty({ 
+    minimum: 1
+  })
   @IsInt()
   @IsNotEmpty()
   @Min(1)
-  @ApiProperty()
   membersNumber: number;
   
-  @ApiProperty({ enum: CooperativeType })
+  @ApiProperty({ 
+    enum: CooperativeType,
+  })
   @IsEnum(CooperativeType)
   cooperativeType: CooperativeType;
 
+  @ApiProperty()
   @IsInt()
   @IsNotEmpty()
-  @ApiProperty()
   locationId: number;
 
-  @ApiProperty()
+  @ApiProperty({ 
+    type: () => CreateUserDto,
+  })
   @Type(() => CreateUserDto)
   @ValidateNested()
   managerDto: CreateUserDto;
+
+  @ApiProperty({
+    type: [cooperativeCropDto],
+    minItems: 1
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Non-collective cooperatives must specify at least one crop in the registry' })
+  @ValidateNested({ each: true })
+  @Type(() => cooperativeCropDto)
+  @IsNotEmpty()
+  crops: cooperativeCropDto[];
 }

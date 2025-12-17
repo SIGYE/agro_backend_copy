@@ -14,7 +14,7 @@ import { Role_Enum } from '../enums/role.enum';
 
 // Extended User type
 type ExtendedUser = User & {
-  role?: Role_Enum;
+  role?: { name: Role_Enum };
   cooperativeId?: string;
 };
 
@@ -32,7 +32,7 @@ export class CropService {
       Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
       Role_Enum.FARMER,
     ];
-    return allowedRoles.includes(user.role);
+    return allowedRoles.includes(user.role?.name);
   }
 
   // Helper method to check if user can delete crops
@@ -42,16 +42,16 @@ export class CropService {
       Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
       Role_Enum.FARMER,
     ];
-    return allowedRoles.includes(user.role);
+    return allowedRoles.includes(user.role?.name);
   }
 
   // Helper method to get the cooperative ID for a user
   private async getUserCooperativeId(user: ExtendedUser): Promise<string | null> {
-    if (user.role?.toString().includes('COOPERATIVE_MANAGER')) {
+    if (user.role?.name?.toString().includes('COOPERATIVE_MANAGER')) {
       return user.cooperativeId || null;
     }
     
-    if (user.role === Role_Enum.FARMER) {
+    if (user.role?.name === Role_Enum.FARMER) {
       const farmer = await this.dataBaseService.farmer.findUnique({
         where: { userId: user.id },
         select: { cooperativeId: true }
@@ -70,7 +70,7 @@ export class CropService {
       }
 
       // Additional validation for farmers
-      if (user.role === Role_Enum.FARMER) {
+      if (user.role?.name === Role_Enum.FARMER) {
         // Check if farmer belongs to a cooperative
         const farmer = await this.dataBaseService.farmer.findUnique({
           where: { userId: user.id },
@@ -219,7 +219,7 @@ export class CropService {
         Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
       ];
       
-      if (!allowedBulkRoles.includes(user.role)) {
+      if (!allowedBulkRoles.includes(user.role.name)) {
         throw new ForbiddenException('You do not have permission to bulk create crops');
       }
 
@@ -405,33 +405,34 @@ export class CropService {
     });
 
     // 4. Prepare all seed strains for batch creation
-    const allSeedStrainsToCreate = [];
+  const allSeedStrainsToCreate = [];
 
-    for (const cropTypeDto of cropTypes) {
-      if (cropTypeDto.seedStrains && cropTypeDto.seedStrains.length > 0) {
-        const matchingCropType = allCropTypes.find(ct => ct.name === cropTypeDto.name);
-        if (matchingCropType) {
-          const existingSeedStrainNames = matchingCropType.seedStrains.map(ss => ss.name);
+  for (const cropTypeDto of cropTypes) {
+    if (cropTypeDto.seedStrains && cropTypeDto.seedStrains.length > 0) {
+      const matchingCropType = allCropTypes.find(ct => ct.name === cropTypeDto.name);
+      if (matchingCropType) {
+        const existingSeedStrainNames = matchingCropType.seedStrains.map(ss => ss.name);
 
-          for (const seedStrainDto of cropTypeDto.seedStrains) {
-            if (!existingSeedStrainNames.includes(seedStrainDto.name)) {
-              allSeedStrainsToCreate.push({
-                name: seedStrainDto.name,
-                cropTypeId: matchingCropType.id
-              });
-            }
+        for (const seedStrainDto of cropTypeDto.seedStrains) {
+          if (!existingSeedStrainNames.includes(seedStrainDto.name)) {
+            allSeedStrainsToCreate.push({
+              name: seedStrainDto.name,
+              seedType: seedStrainDto.seedType || null,  // New field
+              cropTypeId: matchingCropType.id
+            });
           }
         }
       }
     }
+  }
 
-    // 5. Create all seed strains in one batch operation
-    if (allSeedStrainsToCreate.length > 0) {
-      await prisma.seedStrain.createMany({
-        data: allSeedStrainsToCreate,
-        skipDuplicates: true
-      });
-    }
+  // 5. Create all seed strains in one batch operation - UPDATED
+  if (allSeedStrainsToCreate.length > 0) {
+    await prisma.seedStrain.createMany({
+      data: allSeedStrainsToCreate,
+      skipDuplicates: true
+    });
+  }
   }
 
   // Add a default crop type creation method
@@ -531,17 +532,19 @@ export class CropService {
     );
 
     // Create new diseases in batch
-    if (newDiseases.length > 0) {
-      await prisma.disease.createMany({
-        data: newDiseases.map(d => ({
-          name: d.name,
-          type: d.type,
-          medication: d.medication,
-          createdBy: user.id
-        })),
-        skipDuplicates: true
-      });
-    }
+   if (newDiseases.length > 0) {
+    await prisma.disease.createMany({
+      data: newDiseases.map(d => ({
+        name: d.name,
+        type: d.type,
+        medication: d.medication || null, 
+        specificType: d.specificType || null,  
+        causativeAgent: d.causativeAgent || null,  
+        createdBy: user.id
+      })),
+      skipDuplicates: true
+    });
+  }
 
     // Get all diseases for connection
     const allDiseases = await prisma.disease.findMany({
@@ -944,54 +947,66 @@ export class CropService {
     }
   }
 
-  async importCrops(file: Express.Multer.File, user: ExtendedUser): Promise<{ success: number; failed: number; errors: any[] }> {
-    // Only allow cooperative managers to import
-    const allowedImportRoles = [
-      Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
-      Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
-    ];
-    
-    if (!allowedImportRoles.includes(user.role)) {
-      throw new ForbiddenException('You do not have permission to import crops');
-    }
+ async importCrops(
+  file: Express.Multer.File,
+  user: ExtendedUser
+): Promise<{ success: number; failed: number; errors: any[] }> {
+  // Only allow cooperative managers to import
+  const allowedImportRoles = [
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.UMUFASHAMYUMVIRE,
 
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+  ];
 
-    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    // Skip the first row (assuming it's the header row)
-    const rowsToProcess = data.slice(1);
-
-    let success = 0;
-    let failed = 0;
-    const errors = [];
-
-    for (const row of rowsToProcess) {
-      try {
-        // Map the row to a userDto-like object based on the cell index
-        let cropDto = {
-          name: row[0],
-          cropTypes: []
-        };
-
-        await this.create(cropDto, user);
-        success++;
-      } catch (error) {
-        failed++;
-        errors.push({
-          row: row,
-          error: error.message || 'Unknown error occurred',
-        });
-      }
-    }
-
-    return { success, failed, errors };
+  if (!user.role || !allowedImportRoles.includes(user.role.name)) {
+    throw new ForbiddenException('You do not have permission to import crops');
   }
+
+  if (!file) {
+    throw new BadRequestException('No file uploaded');
+  }
+
+  const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  // Skip the first row (header row)
+  const rowsToProcess = data.slice(1);
+
+  let success = 0;
+  let failed = 0;
+  const errors = [];
+
+  for (const row of rowsToProcess) {
+    try {
+      // Map the row to your crop DTO
+      const cropDto = {
+        names: [
+          {
+            name: row[0],
+            languageCode: 'en',
+            languageName: 'English',
+          },
+        ],
+        cropTypes: [],
+      };
+
+      await this.create(cropDto, user);
+      success++;
+    } catch (error) {
+      failed++;
+      errors.push({
+        row,
+        error: error.message || 'Unknown error occurred',
+      });
+    }
+  }
+
+  return { success, failed, errors };
+}
+
 
   async cropsCardData(locationId?: number, cooperativeId?: string) {
     try {

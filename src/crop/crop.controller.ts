@@ -18,11 +18,14 @@ const ALLOWED_CROP_ROLES = [
   Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
   Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
   Role_Enum.FARMER,
+  Role_Enum.UMUFASHAMYUMVIRE
 ];
 
 // Extended User type to include role and cooperativeId
 type ExtendedUser = User & {
-  role?: Role_Enum;
+  role?: {
+    name: Role_Enum;
+  };
   cooperativeId?: string;
 };
 
@@ -39,7 +42,7 @@ export class CropController {
   async create(@Body() createCropDto: CreateCropDto, @CurrentUser() user: ExtendedUser): Promise<ApiResponse<Crop>> {
     try {
       // Additional validation for farmers: must have cooperativeId if farmer
-      if (user.role === Role_Enum.FARMER && !user.cooperativeId) {
+      if (user.role?.name === Role_Enum.FARMER && !user.cooperativeId) {
         throw new BadRequestException('Farmers must be associated with a cooperative to create crops');
       }
       
@@ -51,7 +54,7 @@ export class CropController {
   }
 
   @Post('bulk-create')
-  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER)
+  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.UMUFASHAMYUMVIRE)
   async bulkCreate(@Body() createCropDto: BulkCreateCropDto, @CurrentUser() user: ExtendedUser): Promise<ApiResponse<Crop>> {
     try {
       return new ApiResponse<any>(true, "Crop Created", await this.cropService.bulkCreate(createCropDto, user as any), 200);
@@ -153,7 +156,7 @@ export class CropController {
 
   @Post('upload-crops')
   @UseInterceptors(FileInterceptor('file'))
-  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER)
+  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.UMUFASHAMYUMVIRE)
   async uploadCrops(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: ExtendedUser) {
     try {
       if (!file) {

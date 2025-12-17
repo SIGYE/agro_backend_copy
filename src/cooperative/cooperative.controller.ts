@@ -37,9 +37,9 @@ export class CooperativeController {
 
   @Post()
   @Roles(Role_Enum.UMUFASHAMYUMVIRE)
-  @ApiOperation({ summary: 'Create a cooperative (legacy endpoint)' })
+  @ApiOperation({ summary: 'Create a cooperative (legacy endpoint - requires crops)' })
   @ApiResponse({ status: 201, description: 'Cooperative created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 400, description: 'Bad request - Crops are required' })
   @ApiResponse({ status: 403, description: 'Forbidden - Only UmufashaMyumvire can create cooperatives' })
   async create(@Body() dto: CreateCooperativeDto, @Request() req) {
     const userId = req.user.id;
@@ -49,9 +49,15 @@ export class CooperativeController {
 
   @Post('collective')
   @Roles(Role_Enum.UMUFASHAMYUMVIRE)
-  @ApiOperation({ summary: 'Create a collective cooperative' })
-  @ApiResponse({ status: 201, description: 'Collective cooperative created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiOperation({ 
+    summary: 'Create a collective cooperative',
+    description: 'Creates a collective cooperative where all farmers must plant the specified crops. Crops are mandatory and required at registration.'
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Collective cooperative created successfully. All farmers joining this cooperative will be required to plant these crops.' 
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Crops are required' })
   @ApiResponse({ status: 403, description: 'Forbidden - Only UmufashaMyumvire can create cooperatives' })
   async createCollective(@Body() dto: CreateCollectiveCooperativeDto, @Request() req) {
     const userId = req.user.id;
@@ -65,9 +71,15 @@ export class CooperativeController {
 
   @Post('non-collective')
   @Roles(Role_Enum.UMUFASHAMYUMVIRE)
-  @ApiOperation({ summary: 'Create a non-collective cooperative' })
-  @ApiResponse({ status: 201, description: 'Non-collective cooperative created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiOperation({ 
+    summary: 'Create a non-collective cooperative',
+    description: 'Creates a non-collective cooperative where farmers individually plant crops and contribute to the cooperative total. Crops must be specified as the cooperative registry.'
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Non-collective cooperative created successfully. Farmers will contribute their individual crop quantities to the cooperative total.' 
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Crops are required' })
   @ApiResponse({ status: 403, description: 'Forbidden - Only UmufashaMyumvire can create cooperatives' })
   async createNonCollective(@Body() dto: CreateNonCollectiveCooperativeDto, @Request() req) {
     const userId = req.user.id;
@@ -75,7 +87,6 @@ export class CooperativeController {
     const createDto: CreateCooperativeDto = {
       ...dto,
       collectiveType: CollectiveType.NON_COLLECTIVE,
-      crops: [],
     };
     return this.cooperativeService.create(createDto, userId, userRole);
   }
@@ -164,8 +175,11 @@ export class CooperativeController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, 
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiOperation({ summary: 'Get cooperative crops' })
-  @ApiResponse({ status: 200, description: 'List of cooperative crops' })
+  @ApiOperation({ 
+    summary: 'Get cooperative crops',
+    description: 'For COLLECTIVE: Shows mandatory crops all farmers must plant. For NON_COLLECTIVE: Shows cooperative crops registry with list of farmers who planted each crop.'
+  })
+  @ApiResponse({ status: 200, description: 'List of cooperative crops with farmer details for non-collective' })
   @ApiResponse({ status: 404, description: 'Cooperative not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to view cooperative crops' })
   async findAllCooperativeCrops(@Param('id') id: string, @Request() req) {
@@ -180,8 +194,11 @@ export class CooperativeController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, 
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiOperation({ summary: 'Get cooperative crops produce and area summary' })
-  @ApiResponse({ status: 200, description: 'Crops summary' })
+  @ApiOperation({ 
+    summary: 'Get cooperative crops produce and area summary',
+    description: 'For COLLECTIVE: Shows totals from all farmers. For NON_COLLECTIVE: Shows individual farmer contributions and aggregated totals.'
+  })
+  @ApiResponse({ status: 200, description: 'Crops summary with farmer breakdown for non-collective' })
   @ApiResponse({ status: 404, description: 'Cooperative not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to view crops summary' })
   async cropsProduceSummary(@Param('id') id: string, @Request() req) {
@@ -233,8 +250,11 @@ export class CooperativeController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, 
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiOperation({ summary: 'Assign existing farmers to cooperative' })
-  @ApiResponse({ status: 200, description: 'Farmers assigned successfully' })
+  @ApiOperation({ 
+    summary: 'Assign existing farmers to cooperative',
+    description: 'For COLLECTIVE: Farmers automatically receive all mandatory crops. For NON_COLLECTIVE: Farmers can add their own crops which contribute to the cooperative total.'
+  })
+  @ApiResponse({ status: 200, description: 'Farmers assigned successfully with crop details' })
   @ApiResponse({ status: 404, description: 'Cooperative not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to assign farmers' })
   async assignFarmers(@Body() dto: AssignFarmersTOCooperative, @Request() req) {
@@ -249,8 +269,11 @@ export class CooperativeController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, 
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiOperation({ summary: 'Create and assign farmers to cooperative' })
-  @ApiResponse({ status: 201, description: 'Farmers created and assigned successfully' })
+  @ApiOperation({ 
+    summary: 'Create and assign farmers to cooperative',
+    description: 'For COLLECTIVE: New farmers automatically receive all mandatory crops. For NON_COLLECTIVE: Farmers can add their own crops which contribute to the cooperative total.'
+  })
+  @ApiResponse({ status: 201, description: 'Farmers created and assigned successfully with crop details' })
   @ApiResponse({ status: 404, description: 'Cooperative not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to create and assign farmers' })
   async createAndAssignFarmers(@Body() dto: CreateCooperativeFarmerDto, @Request() req) {
@@ -260,11 +283,13 @@ export class CooperativeController {
   }
 
   @Post(':id/add-crop/:cropTypeId')
-  @Roles(Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER)
-  @ApiOperation({ summary: 'Add crop to collective cooperative' })
-  @ApiResponse({ status: 200, description: 'Crop added successfully' })
-  @ApiResponse({ status: 400, description: 'Cannot add crops to non-collective cooperative' })
-  @ApiResponse({ status: 404, description: 'Cooperative not found' })
+  @Roles(Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER)
+  @ApiOperation({ 
+    summary: 'Add crop to cooperative',
+    description: 'For COLLECTIVE: Crop is added as mandatory for all existing farmers. For NON_COLLECTIVE: Crop is added to the registry, farmers can choose to plant it.'
+  })
+  @ApiResponse({ status: 200, description: 'Crop added successfully with details on farmer updates' })
+  @ApiResponse({ status: 404, description: 'Cooperative or crop type not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to add crops' })
   async addCrop(
     @Param('id') cooperativeId: string,
@@ -278,10 +303,12 @@ export class CooperativeController {
 
   @Delete(':id/remove-crop/:cropTypeId')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER)
-  @ApiOperation({ summary: 'Remove crop from collective cooperative' })
-  @ApiResponse({ status: 200, description: 'Crop removed successfully' })
-  @ApiResponse({ status: 400, description: 'Cannot remove crops from non-collective cooperative' })
+  @Roles(Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER)
+  @ApiOperation({ 
+    summary: 'Remove crop from cooperative',
+    description: 'For COLLECTIVE: Always removes from all farmers (mandatory). For NON_COLLECTIVE: Removes from registry; use cascade=true to also remove from farmers.'
+  })
+  @ApiResponse({ status: 200, description: 'Crop removed successfully with details on farmer updates' })
   @ApiResponse({ status: 404, description: 'Cooperative or crop not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not authorized to remove crops' })
   async removeCrop(

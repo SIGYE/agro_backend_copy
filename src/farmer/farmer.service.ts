@@ -15,79 +15,98 @@ import e from 'express';
 @Injectable()
 export class FarmerService {
   constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService, private readonly userServcice: UsersService) { }
-  async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
-    try {
-      let role = await this.databaseService.role.findFirst({
-        where: {
-          name: "FARMER"
-        }
+async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
+  try {
+    // NEW: Check if creator is Umufashamyumvire
+    let isUmufashamyumvire = false;
+    if (loggedInUser) {
+      const creatorRole = await this.databaseService.role.findUnique({
+        where: { id: loggedInUser.roleId }
       });
-      let user = await this.userServcice.create({ roleId: role.id, ...CreateFarmerDto }, loggedInUser);
+      isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
+    }
 
-      let farmer = await this.databaseService.farmer.create({
-        data: {
-          user: {
-            connect: {
-              id: user.id
-            }
+    // NEW: Validate location (double-check)
+    if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
+      throw new BadRequestException("Location is required");
+    }
+
+    // NEW: If Umufashamyumvire and still no location, use theirs
+    if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
+      CreateFarmerDto.locationId = loggedInUser.locationId;
+    }
+
+    // ORIGINAL CODE BELOW (with small fix)
+    let role = await this.databaseService.role.findFirst({
+      where: {
+        name: "FARMER"
+      }
+    });
+    
+    let user = await this.userServcice.create({ 
+      roleId: role.id, 
+      ...CreateFarmerDto 
+    }, loggedInUser);
+
+    let farmer = await this.databaseService.farmer.create({
+      data: {
+        user: {
+          connect: {
+            id: user.id
           }
         }
-      });
+      }
+    });
 
-      // Assign crops to farmer if cropsId is present
-      if (CreateFarmerDto.crops) {
-        for (let crop of CreateFarmerDto.crops) {
-          let cropFarmer = await this.databaseService.cropFarmerRegistration.create({
-            data: {
-              farmer: {
-                connect: {
-                  id: farmer.id
-                }
-              },
-
-              cropType: {
-                connect: {
-                  id: crop.cropTypesId
-                }
+    // Assign crops to farmer if crops is present
+    if (CreateFarmerDto.crops) {
+      for (let crop of CreateFarmerDto.crops) {
+        await this.databaseService.cropFarmerRegistration.create({
+          data: {
+            farmer: {
+              connect: {
+                id: farmer.id
+              }
+            },
+            cropType: {
+              connect: {
+                id: crop.cropTypesId
               }
             }
-          })
-
-
-        }
+          }
+        });
       }
-
-      // Assign animals to farmer if animalIds is present
-      if (CreateFarmerDto.animals) {
-        for (let animal of CreateFarmerDto.animals) {
-          await this.databaseService.animalFarmerRegistration.create({
-            data: {
-              farmer: {
-                connect: {
-                  id: farmer.id
-                }
-              },
-              animal: {
-                connect: {
-                  id: animal.animalId
-                }
-              },
-              totalNumber: animal.totalNumber,
-              femaleNumber: animal.femaleNumber,
-              maleNumber: animal.maleNumber
-
-
-            }
-          });
-        }
-      }
-
-      return farmer;
-
-    } catch (e) {
-      throw new BadRequestException(e.message);
     }
+
+    // Assign animals to farmer if animals is present
+    if (CreateFarmerDto.animals) {
+      for (let animal of CreateFarmerDto.animals) {
+        await this.databaseService.animalFarmerRegistration.create({
+          data: {
+            farmer: {
+              connect: {
+                id: farmer.id
+              }
+            },
+            animal: {
+              connect: {
+                id: animal.animalId
+              }
+            },
+            totalNumber: animal.totalNumber,
+            femaleNumber: animal.femaleNumber,
+            maleNumber: animal.maleNumber
+          }
+        });
+      }
+    }
+
+    return farmer;
+
+  } catch (e) {
+    throw new BadRequestException(e.message);
   }
+}
   async assignCropsToFarmers(assignCropsToFarmers: AssignCropToFarmerDto) {
     try {
       let farmer = await this.databaseService.farmer.findUnique({

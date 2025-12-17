@@ -12,25 +12,52 @@ import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import { Allow } from 'src/decorators/allow.decorator';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
+import { DatabaseService } from 'src/database/database.service';
 
 @Controller('farmer')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @ApiTags('Farmer')
 export class FarmerController {
-  constructor(private readonly farmerService: FarmerService) { }
+  constructor(private readonly farmerService: FarmerService, private readonly databaseService: DatabaseService) { }
 
-  @Post('register-farmer')
-  @ApiBody({ type: CreateFarmerDto })
-  @Allow()
-  async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user: User) {
-    try {
-      const data = await this.farmerService.registerFarmer(createFarmerDto);
-      return new ApiResponse(true, "Farmer Created", data, 201);
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400);
+@Post('register-farmer')
+@ApiBody({ type: CreateFarmerDto })
+@Allow()
+async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user?: User) {
+  try {
+    // Check if user is authenticated and has Umufashamyumvire role
+    if (user) {
+      const userRole = await this.databaseService.role.findUnique({
+        where: { id: user.roleId }
+      });
+      
+      // If user is Umufashamyumvire and didn't provide location, use theirs
+      if (userRole && userRole.name === 'UMUFASHAMYUMVIRE') {
+        if (!createFarmerDto.locationId && user.locationId) {
+          // Create a new object with the updated locationId
+          const farmerData = {
+            ...createFarmerDto,
+            locationId: user.locationId
+          };
+          const data = await this.farmerService.registerFarmer(farmerData, user);
+          return new ApiResponse(true, "Farmer Created by Umufashamyumvire", data, 201);
+        }
+      }
     }
+    
+    // For farmers self-registering or when location is provided
+    if (!createFarmerDto.locationId) {
+      return new ApiResponse(false, "Location is required", null, 400);
+    }
+    
+    const data = await this.farmerService.registerFarmer(createFarmerDto, user);
+    const message = user ? "Farmer Created" : "Farmer Self-Registered Successfully";
+    return new ApiResponse(true, message, data, 201);
+  } catch (e) {
+    return new ApiResponse(false, e.message, null, 400);
   }
+}
 
   @Get()
   async findAll() {
