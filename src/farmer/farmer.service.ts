@@ -11,6 +11,7 @@ import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
 import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import e from 'express';
+import { Gender } from '@prisma/client';
 
 @Injectable()
 export class FarmerService {
