@@ -18,6 +18,8 @@ import { CooperativeType } from '@prisma/client';
 import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
 import { FarmerService } from 'src/farmer/farmer.service';
 import { Role_Enum } from 'src/enums/role.enum';
+import { AssignCropsToCooperativeDto } from './dto/assign-crops-to-cooperative.dto';
+import { AssignAnimalsToCooperativeDto } from './dto/assign-animals-to-cooperative.dto';
 
 @Injectable()
 export class CooperativeService {
@@ -826,6 +828,58 @@ export class CooperativeService {
     }
   }
 
+  async assignCropsToCooperative(
+    dto: AssignCropsToCooperativeDto,
+    userId?: string,
+    userRole?: string
+  ) {
+    try {
+      // Check authorization
+      const cooperative = await this.checkCooperativeAuthorization(dto.cooperativeId, userId, userRole);
+
+      const results = [];
+      const errors = [];
+
+      // Process each crop
+      for (const crop of dto.crops) {
+        try {
+          const result = await this.addCropToCooperative(
+            dto.cooperativeId,
+            crop.cropTypesId,
+            userId,
+            userRole
+          );
+          results.push(result);
+        } catch (error) {
+          errors.push({
+            cropTypeId: crop.cropTypesId,
+            error: error.message || 'Failed to add crop'
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.newlyRegistered).length;
+      const alreadyExistsCount = results.filter(r => !r.newlyRegistered).length;
+
+      return {
+        success: true,
+        message: `Successfully assigned ${successCount} crop(s). ${alreadyExistsCount} crop(s) were already registered.`,
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+        cooperativeId: dto.cooperativeId,
+        cooperativeName: cooperative.name,
+        collectiveType: cooperative.collectiveType
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || 
+          error instanceof BadRequestException ||
+          error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new BadRequestException('Error assigning crops to cooperative');
+    }
+  }
+
   async removeCropFromCooperative(
     cooperativeId: string, 
     cropTypeId: string, 
@@ -925,10 +979,15 @@ export class CooperativeService {
           collectiveType: 'COLLECTIVE',
           message: 'These are the mandatory crops that all farmers must plant',
           crops: cooperativeCrops.map(reg => ({
-            cropId: reg.cropType.crop.id,
-            cropName: reg.cropType.crop.name,
-            cropTypeId: reg.cropType.id,
-            cropTypeName: reg.cropType.name,
+            id: reg.id,
+            cropType: {
+              id: reg.cropType.id,
+              name: reg.cropType.name,
+              crop: {
+                id: reg.cropType.crop.id,
+                name: reg.cropType.crop.name
+              }
+            },
             mandatory: true
           }))
         };
@@ -964,10 +1023,15 @@ export class CooperativeService {
           const key = fc.cropTypeId;
           if (!cropMap.has(key)) {
             cropMap.set(key, {
-              cropId: fc.cropType.crop.id,
-              cropName: fc.cropType.crop.name,
-              cropTypeId: fc.cropType.id,
-              cropTypeName: fc.cropType.name,
+              id: fc.cropType.id,
+              cropType: {
+                id: fc.cropType.id,
+                name: fc.cropType.name,
+                crop: {
+                  id: fc.cropType.crop.id,
+                  name: fc.cropType.crop.name
+                }
+              },
               farmers: []
             });
           }
@@ -1003,21 +1067,162 @@ export class CooperativeService {
         throw new NotFoundException(`Cooperative ${cooperativeId} not found`);
       }
 
-      return await this.databaseService.animal.findMany({
-        where: { 
-          animalFarmerRegistrations: { 
-            some: { 
-              farmer: { cooperativeId } 
-            } 
-          } 
+      // Get all animal registrations for farmers in this cooperative
+      const animalRegistrations = await this.databaseService.animalFarmerRegistration.findMany({
+        where: {
+          farmer: { cooperativeId }
         },
-        include: { breeds: true },
+        include: {
+          animal: {
+            include: { breeds: true }
+          },
+          farmer: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true
+                }
+              }
+            }
+          }
+        }
       });
+
+      // Group by animal and aggregate totals
+      const animalMap = new Map();
+      animalRegistrations.forEach(reg => {
+        const key = reg.animalId;
+        if (!animalMap.has(key)) {
+          animalMap.set(key, {
+            animalId: reg.animal.id,
+            animalName: reg.animal.name,
+            breeds: reg.animal.breeds,
+            totalNumber: 0,
+            maleNumber: 0,
+            femaleNumber: 0,
+            farmers: []
+          });
+        }
+        const entry = animalMap.get(key);
+        entry.totalNumber += reg.totalNumber || 0;
+        entry.maleNumber += reg.maleNumber || 0;
+        entry.femaleNumber += reg.femaleNumber || 0;
+        entry.farmers.push({
+          farmerId: reg.farmer.id,
+          farmerName: `${reg.farmer.user.firstName} ${reg.farmer.user.lastName}`,
+          totalNumber: reg.totalNumber,
+          maleNumber: reg.maleNumber,
+          femaleNumber: reg.femaleNumber
+        });
+      });
+
+      return Array.from(animalMap.values());
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;
       }
       throw new BadRequestException('Error fetching cooperative animals');
+    }
+  }
+
+  async assignAnimalsToCooperative(
+    dto: AssignAnimalsToCooperativeDto,
+    userId?: string,
+    userRole?: string
+  ) {
+    try {
+      // Check authorization
+      const cooperative = await this.checkCooperativeAuthorization(dto.cooperativeId, userId, userRole);
+
+      // For collective cooperatives, assign animals to all farmers
+      // For non-collective, we need to assign to specific farmers or create a shared registration
+      // For now, we'll assign to all farmers in the cooperative
+      const farmers = await this.databaseService.farmer.findMany({
+        where: { cooperativeId: dto.cooperativeId }
+      });
+
+      if (farmers.length === 0) {
+        throw new BadRequestException('No farmers found in this cooperative. Add farmers first.');
+      }
+
+      const results = [];
+      const errors = [];
+
+      // Assign animals to each farmer in the cooperative
+      for (const farmer of farmers) {
+        for (const animal of dto.animals) {
+          try {
+            // Check if this farmer already has this animal
+            const existing = await this.databaseService.animalFarmerRegistration.findFirst({
+              where: {
+                farmerId: farmer.id,
+                animalId: animal.animalId
+              }
+            });
+
+            if (existing) {
+              // Update existing registration
+              await this.databaseService.animalFarmerRegistration.update({
+                where: { id: existing.id },
+                data: {
+                  totalNumber: (existing.totalNumber || 0) + (animal.totalNumber || 0),
+                  maleNumber: (existing.maleNumber || 0) + (animal.maleNumber || 0),
+                  femaleNumber: (existing.femaleNumber || 0) + (animal.femaleNumber || 0)
+                }
+              });
+              results.push({
+                farmerId: farmer.id,
+                animalId: animal.animalId,
+                action: 'updated'
+              });
+            } else {
+              // Create new registration
+              await this.databaseService.animalFarmerRegistration.create({
+                data: {
+                  farmerId: farmer.id,
+                  animalId: animal.animalId,
+                  totalNumber: animal.totalNumber,
+                  maleNumber: animal.maleNumber,
+                  femaleNumber: animal.femaleNumber
+                }
+              });
+              results.push({
+                farmerId: farmer.id,
+                animalId: animal.animalId,
+                action: 'created'
+              });
+            }
+          } catch (error) {
+            errors.push({
+              farmerId: farmer.id,
+              animalId: animal.animalId,
+              error: error.message || 'Failed to assign animal'
+            });
+          }
+        }
+      }
+
+      const successCount = results.filter(r => r.action === 'created').length;
+      const updatedCount = results.filter(r => r.action === 'updated').length;
+
+      return {
+        success: true,
+        message: `Successfully assigned animals to ${farmers.length} farmer(s). ${successCount} new registration(s), ${updatedCount} updated.`,
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+        cooperativeId: dto.cooperativeId,
+        cooperativeName: cooperative.name,
+        collectiveType: cooperative.collectiveType,
+        farmersAffected: farmers.length
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || 
+          error instanceof BadRequestException ||
+          error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new BadRequestException('Error assigning animals to cooperative');
     }
   }
 
@@ -1034,7 +1239,7 @@ export class CooperativeService {
         throw new NotFoundException(`Cooperative ${cooperativeId} not found`);
       }
 
-      // Get only the cooperative's registered crops
+      // Get only the cooperative's registered crops (used for COLLECTIVE)
       const cooperativeCrops = await this.databaseService.cooperativeCropRegistration.findMany({
         where: { cooperativeId },
         select: { cropTypeId: true }
@@ -1042,7 +1247,9 @@ export class CooperativeService {
 
       const cropTypeIds = cooperativeCrops.map(cc => cc.cropTypeId);
 
-      if (cropTypeIds.length === 0) {
+      // For COLLECTIVE cooperatives we expect crops to be explicitly registered.
+      // If none are registered, we can safely return an empty summary.
+      if (cooperative.collectiveType === 'COLLECTIVE' && cropTypeIds.length === 0) {
         return {
           cooperativeName: cooperative.name,
           collectiveType: cooperative.collectiveType,
@@ -1051,27 +1258,46 @@ export class CooperativeService {
         };
       }
 
+      // For COLLECTIVE: Include seasons with cooperativeId OR seasons from farmers
+      // For NON_COLLECTIVE: Include seasons from farmers only
+      const seasonWhere = cooperative.collectiveType === 'COLLECTIVE'
+        ? {
+            OR: [
+              { cooperativeId: cooperativeId },
+              { farmer: { cooperativeId } }
+            ]
+          }
+        : { farmer: { cooperativeId } };
+
+      // For NON_COLLECTIVE we don't restrict by cooperativeCropRegistration, we aggregate
+      // across all crop types that have seasons for farmers in this cooperative.
+      const cropTypeWhere =
+        cooperative.collectiveType === 'COLLECTIVE'
+          ? {
+              id: { in: cropTypeIds },
+              seasons: {
+                some: seasonWhere,
+              },
+            }
+          : {
+              seasons: {
+                some: seasonWhere,
+              },
+            };
+
       const croptypesData = await this.databaseService.cropType.findMany({
-        where: { 
-          id: { in: cropTypeIds },
-          seasons: { 
-            some: { 
-              farmer: { cooperativeId }
-            } 
-          } 
-        },
+        where: cropTypeWhere,
         select: {
           id: true,
           crop: { select: { name: true } },
           name: true,
           seasons: {
-            where: { 
-              farmer: { cooperativeId }
-            },
+            where: seasonWhere,
             select: {
               produceHarvested: true,
               plantationArea: true,
               farmerId: true,
+              cooperativeId: true,
               seeds: true,
               farmer: {
                 select: {
@@ -1082,6 +1308,12 @@ export class CooperativeService {
                       lastName: true
                     }
                   }
+                }
+              },
+              cooperative: {
+                select: {
+                  id: true,
+                  name: true
                 }
               },
               cropFertilizerFarmerRegistrations: { 
@@ -1117,7 +1349,7 @@ export class CooperativeService {
           0
         );
 
-        // Get unique farmers for this crop type
+        // Get unique farmers for this crop type (only for farmer-level seasons)
         const farmerMap = new Map();
         croptype.seasons.forEach((season) => {
           if (season.farmer && !farmerMap.has(season.farmerId)) {
@@ -1135,6 +1367,8 @@ export class CooperativeService {
             farmer.area += Number(season.plantationArea) || 0;
             farmer.seeds += Number(season.seeds) || 0;
           }
+          // For collective cooperatives, also include cooperative-level seasons (no farmer)
+          // These are already included in the totals above
         });
 
         // Fertilizer aggregation

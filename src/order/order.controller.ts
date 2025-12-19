@@ -22,6 +22,7 @@ import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { Role_Enum } from '../enums/role.enum';
 import { RecordPaymentDto } from './dto/record-payment.dto';
+import { ApiResponse } from '../responses/api.response';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,8 +38,13 @@ export class OrderController {
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
   )
   async getMyCropListings(@Request() req: any) {
-    const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
-    return this.orderService.getMyCropListings(req.user.id, userRole);
+    try {
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.orderService.getMyCropListings(req.user.id, userRole);
+      return new ApiResponse(true, 'My crop listings retrieved successfully', data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Post('crop-listings')
@@ -52,12 +58,17 @@ export class OrderController {
     @Body() createCropListingDto: CreateCropListingDto,
     @Request() req: any,
   ) {
-    const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
-    return this.orderService.createCropListing(
-      createCropListingDto,
-      req.user.id,
-      userRole,
-    );
+    try {
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.orderService.createCropListing(
+        createCropListingDto,
+        req.user.id,
+        userRole,
+      );
+      return new ApiResponse(true, 'Crop listing created successfully', data, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get('crop-listings')

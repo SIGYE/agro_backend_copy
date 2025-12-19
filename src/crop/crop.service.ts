@@ -970,15 +970,9 @@ export class CropService {
       throw new ForbiddenException('You do not have permission to import crops');
     }
 
-  ];
-
-  if (!user.role || !allowedImportRoles.includes(user.role.name)) {
-    throw new ForbiddenException('You do not have permission to import crops');
-  }
-
-  if (!file) {
-    throw new BadRequestException('No file uploaded');
-  }
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
 
   const workbook = XLSX.read(file.buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];

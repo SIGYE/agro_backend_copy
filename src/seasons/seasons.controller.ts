@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiResponse as SwaggerApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SeasonsService } from './seasons.service';
 import { CreateSeasonDto } from './dto/create-season.dto';
 import { UpdateSeasonDto } from './dto/update-season.dto';
@@ -24,6 +25,7 @@ import { ApiResponse } from 'src/responses/api.response';
 @Controller('seasons')
 @UseGuards(AuthGuard, RolesGuard)
 @ApiTags('Seasons')
+@ApiBearerAuth()
 export class SeasonsController {
   constructor(private readonly seasonsService: SeasonsService) {}
 
@@ -34,9 +36,9 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 201, description: 'Season created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - Invalid data or crop not registered' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 201, description: 'Season created successfully' })
+  @SwaggerApiResponse({ status: 400, description: 'Bad request - Invalid data or crop not registered' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async create(@Body() createSeasonDto: CreateSeasonDto, @Request() req) {
     try {
       const userId = req.user.id;
@@ -55,8 +57,8 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'List of seasons' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 200, description: 'List of seasons' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async findAll(@Request() req) {
     try {
       const userId = req.user.id;
@@ -75,8 +77,8 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'List of farmer seasons' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 200, description: 'List of farmer seasons' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async findAllByFarmerId(@Param('farmerId') farmerId: string, @Request() req) {
     try {
       if (!farmerId) throw new BadRequestException('farmerId is required');
@@ -94,9 +96,9 @@ export class SeasonsController {
     Role_Enum.UMUFASHAMYUMVIRE,
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'List of cooperative seasons' })
-  @ApiResponse({ status: 400, description: 'Bad request - Non-collective cooperatives do not have cooperative-level seasons' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 200, description: 'List of cooperative seasons' })
+  @SwaggerApiResponse({ status: 400, description: 'Bad request - Non-collective cooperatives do not have cooperative-level seasons' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async findAllByCooperativeId(@Param('cooperativeId') cooperativeId: string, @Request() req) {
     try {
       if (!cooperativeId) throw new BadRequestException('cooperativeId is required');
@@ -115,9 +117,9 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'Comprehensive list of cooperative seasons with context' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
-  @ApiResponse({ status: 404, description: 'Cooperative not found' })
+  @SwaggerApiResponse({ status: 200, description: 'Comprehensive list of cooperative seasons with context' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 404, description: 'Cooperative not found' })
   async findAllByCooperativeIdComprehensive(
     @Param('cooperativeId') cooperativeId: string, 
     @Request() req
@@ -135,8 +137,8 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'List of seasons for crop type' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 200, description: 'List of seasons for crop type' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async findAllByCropTypeId(@Param('cropTypeId') cropTypeId: string, @Request() req) {
     try {
       if (!cropTypeId) throw new BadRequestException('cropTypeId is required');
@@ -156,8 +158,8 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'List of seasons' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 200, description: 'List of seasons' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async findAllByFarmerIdAndCropTypeId(
     @Param('farmerId') farmerId: string,
     @Param('cropTypeId') cropTypeId: string,
@@ -178,9 +180,9 @@ export class SeasonsController {
     Role_Enum.UMUFASHAMYUMVIRE,
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'List of cooperative seasons for crop type' })
-  @ApiResponse({ status: 400, description: 'Bad request - Non-collective cooperatives do not have cooperative-level seasons' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 200, description: 'List of cooperative seasons for crop type' })
+  @SwaggerApiResponse({ status: 400, description: 'Bad request - Non-collective cooperatives do not have cooperative-level seasons' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
   async findAllByCooperativeIdAndCropTypeId(
     @Param('cooperativeId') cooperativeId: string,
     @Param('cropTypeId') cropTypeId: string,
@@ -208,9 +210,9 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'Season details' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
-  @ApiResponse({ status: 404, description: 'Season not found' })
+  @SwaggerApiResponse({ status: 200, description: 'Season details' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 404, description: 'Season not found' })
   async findOne(@Param('id') id: string, @Request() req) {
     try {
       const userId = req.user.id;
@@ -229,10 +231,10 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'Season updated successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
-  @ApiResponse({ status: 404, description: 'Season not found' })
+  @SwaggerApiResponse({ status: 200, description: 'Season updated successfully' })
+  @SwaggerApiResponse({ status: 400, description: 'Bad request' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 404, description: 'Season not found' })
   async update(
     @Param('id') id: string,
     @Body() updateSeasonDto: UpdateSeasonDto,
@@ -256,9 +258,9 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
-  @ApiResponse({ status: 200, description: 'Season deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
-  @ApiResponse({ status: 404, description: 'Season not found' })
+  @SwaggerApiResponse({ status: 200, description: 'Season deleted successfully' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized' })
+  @SwaggerApiResponse({ status: 404, description: 'Season not found' })
   async remove(@Param('id') id: string, @Request() req) {
     try {
       const userId = req.user.id;

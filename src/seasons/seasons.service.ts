@@ -17,7 +17,8 @@ export class SeasonsService {
   private async checkSeasonAuthorization(
     seasonId: string,
     userId: string,
-    userRole: string
+    userRole: string,
+    operation: 'read' | 'write' = 'read',
   ) {
     const season = await this.databaseService.season.findUnique({
       where: { id: seasonId },
@@ -56,6 +57,14 @@ export class SeasonsService {
     // Check if user is the farmer who owns the season
     if (season.farmerId) {
       if (season.farmer.user.id === userId) {
+        const coop = season.farmer.cooperative;
+        // Farmers in NON_COLLECTIVE cooperatives can only VIEW their seasons.
+        // All modifications (closing, editing, deleting) must be done by the non-collective leader.
+        if (coop?.collectiveType === 'NON_COLLECTIVE' && operation === 'write') {
+          throw new ForbiddenException(
+            'Only the non-collective group leader can modify these seasons',
+          );
+        }
         return season;
       }
       
@@ -432,7 +441,7 @@ export class SeasonsService {
             }
           },
           include: {
-            croType: {
+            cropType: {
               include: {
                 crop: true,
               },
@@ -500,7 +509,7 @@ export class SeasonsService {
             cooperativeId: cooperativeId
           },
           include: {
-            croType: {
+            cropType: {
               include: {
                 crop: true,
               },
@@ -530,7 +539,7 @@ export class SeasonsService {
             }
           },
           include: {
-            croType: {
+            cropType: {
               include: {
                 crop: true,
               },
@@ -857,7 +866,7 @@ export class SeasonsService {
 
   async findOne(id: string, userId?: string, userRole?: string) {
     try {
-      await this.checkSeasonAuthorization(id, userId, userRole);
+      await this.checkSeasonAuthorization(id, userId, userRole, 'read');
       
       return await this.databaseService.season.findUnique({
         where: {
@@ -928,7 +937,7 @@ export class SeasonsService {
     userRole?: string
   ) {
     try {
-      await this.checkSeasonAuthorization(id, userId, userRole);
+      await this.checkSeasonAuthorization(id, userId, userRole, 'write');
       
       return await this.databaseService.season.update({
         where: {
@@ -955,7 +964,7 @@ export class SeasonsService {
 
   async remove(id: string, userId?: string, userRole?: string) {
     try {
-      await this.checkSeasonAuthorization(id, userId, userRole);
+      await this.checkSeasonAuthorization(id, userId, userRole, 'write');
       
       return await this.databaseService.season.delete({
         where: {

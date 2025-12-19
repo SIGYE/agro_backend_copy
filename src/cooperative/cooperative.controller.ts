@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -24,6 +25,8 @@ import { CreateCooperativeFarmerDto } from './dto/create-farmer-cooperative';
 import { CooperativeType } from '@prisma/client';
 import { CreateCollectiveCooperativeDto } from './dto/create-collective-cooperative.dto';
 import { CreateNonCollectiveCooperativeDto } from './dto/create-non-collective-cooperative.dto';
+import { AssignCropsToCooperativeDto } from './dto/assign-crops-to-cooperative.dto';
+import { AssignAnimalsToCooperativeDto } from './dto/assign-animals-to-cooperative.dto';
 import { AuthGuard } from '../guards/auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
@@ -46,10 +49,16 @@ export class CooperativeController {
   )
   @ApiOperation({ summary: 'Get cooperative crop data (legacy mobile path)' })
   async cooperativeCropData(@Param('id') id: string, @Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
-    const data = await this.cooperativeService.findAllCooperativeCropsProduceAndArea(id, userId, userRole);
-    return { success: true, message: 'Cooperative Crop Data', data, status: 200 };
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.cooperativeService.findAllCooperativeCropsProduceAndArea(id, userId, userRole);
+      // Return crops array directly for frontend compatibility
+      const crops = data?.crops || [];
+      return new ApiResponse(true, data?.message || 'Cooperative Crop Data', crops, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Post()
@@ -213,9 +222,16 @@ export class CooperativeController {
   @SwaggerApiResponse({ status: 404, description: 'Cooperative not found' })
   @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized to view cooperative crops' })
   async findAllCooperativeCrops(@Param('id') id: string, @Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
-    return this.cooperativeService.findAllCooperativeCrops(id, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.cooperativeService.findAllCooperativeCrops(id, userId, userRole);
+      // Return crops array directly - service now returns correct structure
+      const crops = data?.crops || [];
+      return new ApiResponse(true, data?.message || 'Cooperative crops retrieved successfully', crops, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id/crops-summary')
@@ -245,9 +261,14 @@ export class CooperativeController {
   @SwaggerApiResponse({ status: 404, description: 'Cooperative not found' })
   @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized to view cooperative animals' })
   async findAnimals(@Param('id') id: string, @Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
-    return this.cooperativeService.findAllCooperativeAnimals(id, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.cooperativeService.findAllCooperativeAnimals(id, userId, userRole);
+      return new ApiResponse(true, 'Cooperative animals retrieved successfully', data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Patch(':id')
@@ -301,6 +322,48 @@ export class CooperativeController {
     const userId = req.user.id;
     const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
     return this.cooperativeService.assignCreateFarmerToCooperative(dto, userId, userRole);
+  }
+
+  @Put('assign-crops-to-cooperative')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE, 
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, 
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  @ApiOperation({ summary: 'Assign multiple crops to cooperative' })
+  @SwaggerApiResponse({ status: 200, description: 'Crops assigned successfully' })
+  @SwaggerApiResponse({ status: 404, description: 'Cooperative not found' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized to assign crops' })
+  async assignCropsToCooperative(@Body() dto: AssignCropsToCooperativeDto, @Request() req) {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.cooperativeService.assignCropsToCooperative(dto, userId, userRole);
+      return new ApiResponse(true, data.message || 'Crops assigned successfully', data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Put('assign-animals-to-cooperative')
+  @Roles(
+    Role_Enum.UMUFASHAMYUMVIRE, 
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, 
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+  )
+  @ApiOperation({ summary: 'Assign multiple animals to cooperative' })
+  @SwaggerApiResponse({ status: 200, description: 'Animals assigned successfully' })
+  @SwaggerApiResponse({ status: 404, description: 'Cooperative not found' })
+  @SwaggerApiResponse({ status: 403, description: 'Forbidden - Not authorized to assign animals' })
+  async assignAnimalsToCooperative(@Body() dto: AssignAnimalsToCooperativeDto, @Request() req) {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.cooperativeService.assignAnimalsToCooperative(dto, userId, userRole);
+      return new ApiResponse(true, data.message || 'Animals assigned successfully', data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Post(':id/add-crop/:cropTypeId')

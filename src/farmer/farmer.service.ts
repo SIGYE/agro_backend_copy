@@ -47,35 +47,35 @@ export class FarmerService {
   ) { }
   async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
     try {
+      // Check if creator is Umufashamyumvire
+      let isUmufashamyumvire = false;
+      if (loggedInUser) {
+        const creatorRole = await this.databaseService.role.findUnique({
+          where: { id: loggedInUser.roleId }
+        });
+        isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
+      }
+
+      // Validate location (double-check)
+      if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
+        throw new BadRequestException("Location is required");
+      }
+
+      // If Umufashamyumvire and still no location, use theirs
+      if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
+        CreateFarmerDto.locationId = loggedInUser.locationId;
+      }
+
       let role = await this.databaseService.role.findFirst({
         where: {
           name: "FARMER"
         }
       });
-      isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
-    }
-
-    // NEW: Validate location (double-check)
-    if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
-      throw new BadRequestException("Location is required");
-    }
-
-    // NEW: If Umufashamyumvire and still no location, use theirs
-    if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
-      CreateFarmerDto.locationId = loggedInUser.locationId;
-    }
-
-    // ORIGINAL CODE BELOW (with small fix)
-    let role = await this.databaseService.role.findFirst({
-      where: {
-        name: "FARMER"
-      }
-    });
     
-    let user = await this.userServcice.create({ 
-      roleId: role.id, 
-      ...CreateFarmerDto 
-    }, loggedInUser);
+      let user = await this.userServcice.create({ 
+        roleId: role.id, 
+        ...CreateFarmerDto 
+      }, loggedInUser);
 
     let farmer = await this.databaseService.farmer.create({
       data: {
@@ -132,8 +132,9 @@ export class FarmerService {
 
     return farmer;
 
-  } catch (e) {
-    throw new BadRequestException(e.message);
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
   }
 
   private normalizeProfileChanges(changes: FarmerProfileChangesDto): Record<string, any> {

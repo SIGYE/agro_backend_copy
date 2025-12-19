@@ -79,9 +79,14 @@ export class OrderService {
       let cooperativeId: string | null = null;
 
       if (userRole === Role_Enum.FARMER) {
-        // Get farmer for this user
+        // Get farmer for this user (including cooperative info)
         const farmer = await this.databaseService.farmer.findFirst({
           where: { userId },
+          include: {
+            cooperative: {
+              select: { collectiveType: true },
+            },
+          },
         });
         
         if (!farmer) {
@@ -89,6 +94,15 @@ export class OrderService {
         }
         
         farmerId = farmer.id;
+
+        // Farmers who belong to a NON_COLLECTIVE cooperative should not create
+        // their own marketplace listings. The non-collective leader manages
+        // listings on behalf of the group.
+        if (farmer.cooperative?.collectiveType === 'NON_COLLECTIVE') {
+          throw new ForbiddenException(
+            'Farmers in a non-collective group cannot create marketplace listings. Ask your group leader to list crops.',
+          );
+        }
         
         // Check if farmer already has a listing for this crop type
         const existingListing = await this.databaseService.cropListing.findUnique({
