@@ -222,7 +222,7 @@ export class PestsService {
             include: {
               season: {
                 include: {
-                  croType: {
+                  cropType: {
                     include: {
                       crop: true
                     }
@@ -247,7 +247,7 @@ export class PestsService {
 
         // Get additional crops from farming activities
         pest.farmingActivities.forEach(activity => {
-          const cropId = activity.season.croType.crop.id;
+          const cropId = activity.season.cropType.crop.id;
           cropSet.add(cropId);
         });
 
@@ -275,8 +275,8 @@ export class PestsService {
         // Get top 5 most affected crops
         const cropOccurrences = new Map<string, { id: string, name: string, count: number }>();
         pest.farmingActivities.forEach(activity => {
-          const cropId = activity.season.croType.crop.id;
-          const cropName = activity.season.croType.crop.name;
+          const cropId = activity.season.cropType.crop.id;
+          const cropName = activity.season.cropType.crop.name;
 
           if (!cropOccurrences.has(cropId)) {
             cropOccurrences.set(cropId, { id: cropId, name: cropName, count: 0 });
@@ -353,7 +353,7 @@ export class PestsService {
             include: {
               season: {
                 include: {
-                  croType: {
+                  cropType: {
                     include: {
                       crop: true
                     }
@@ -378,7 +378,7 @@ export class PestsService {
 
         // Get additional crops from farming activities
         disease.farmingActivities.forEach(activity => {
-          const cropId = activity.season.croType.crop.id;
+          const cropId = activity.season.cropType.crop.id;
           cropSet.add(cropId);
         });
 
@@ -406,8 +406,8 @@ export class PestsService {
         // Get top 5 most affected crops
         const cropOccurrences = new Map<string, { id: string, name: string, count: number }>();
         disease.farmingActivities.forEach(activity => {
-          const cropId = activity.season.croType.crop.id;
-          const cropName = activity.season.croType.crop.name;
+          const cropId = activity.season.cropType.crop.id;
+          const cropName = activity.season.cropType.crop.name;
 
           if (!cropOccurrences.has(cropId)) {
             cropOccurrences.set(cropId, { id: cropId, name: cropName, count: 0 });
@@ -649,7 +649,7 @@ export class PestsService {
             include: {
               season: {
                 include: {
-                  croType: {
+                  cropType: {
                     include: {
                       crop: true
                     }
@@ -674,8 +674,8 @@ export class PestsService {
         }>();
 
         pest.farmingActivities.forEach(activity => {
-          const cropId = activity.season.croType.crop.id;
-          const cropName = activity.season.croType.crop.name;
+          const cropId = activity.season.cropType.crop.id;
+          const cropName = activity.season.cropType.crop.name;
 
           if (!cropStats.has(cropId)) {
             cropStats.set(cropId, {
@@ -777,7 +777,7 @@ export class PestsService {
             include: {
               season: {
                 include: {
-                  croType: {
+                  cropType: {
                     include: {
                       crop: true
                     }
@@ -802,8 +802,8 @@ export class PestsService {
         }>();
 
         disease.farmingActivities.forEach(activity => {
-          const cropId = activity.season.croType.crop.id;
-          const cropName = activity.season.croType.crop.name;
+          const cropId = activity.season.cropType.crop.id;
+          const cropName = activity.season.cropType.crop.name;
 
           if (!cropStats.has(cropId)) {
             cropStats.set(cropId, {

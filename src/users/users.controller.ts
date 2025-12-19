@@ -53,6 +53,7 @@ export class UsersController {
   }
 
   @Put('/update/:id')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @ApiParam({ name: "id", type: String })
   @ApiBody({ type: UpdateUserDto })
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto): Promise<ApiResponse<User>> {
@@ -64,6 +65,7 @@ export class UsersController {
   }
 
   @Delete('/delete/:id')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN)
   @ApiParam({ name: "id", type: String })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<ApiResponse<User>> {
     try {
@@ -74,7 +76,6 @@ export class UsersController {
   }
 
   @Post('change-password')
-  @Allow()
   async changePassword(@Req() request: AuthRequest, @Body() changePasswordDTO: ChangePasswordDTO): Promise<ApiResponse<User>> {
     try {
       if (!request.user) {

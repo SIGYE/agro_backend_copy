@@ -440,7 +440,7 @@ export class FarmingActivityService {
       const whereClause: any = {
         season: {
           harvestSeasonId: harvestSeasonId,
-          croType: {
+          cropType: {
             crop: {
               id: cropId
             }
@@ -482,7 +482,7 @@ export class FarmingActivityService {
         include: {
           season: {
             include: {
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }

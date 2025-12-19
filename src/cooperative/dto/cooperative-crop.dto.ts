@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger"
-import { IsNotEmpty, IsNumber, IsString, IsUUID, ValidateNested } from "class-validator"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
+import { IsNotEmpty, IsOptional, IsString, IsUUID, IsArray } from "class-validator"
 import { Type } from "class-transformer"
 
 export class cooperativeCropDto {
@@ -8,9 +8,14 @@ export class cooperativeCropDto {
     @IsString()
     @IsUUID()
     cropTypesId: string
-    // @ApiProperty()
-    // @IsNotEmpty()
-    // @IsString()
-    // measurementUnit: string
-
+    
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsArray()
+    fertilisers?: any[]
+    
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    measurementUnit?: string
 }   

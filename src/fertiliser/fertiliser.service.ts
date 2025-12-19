@@ -115,7 +115,7 @@ export class FertiliserService {
               season: {
                 include: {
                   farmer: true, // Include farmer to access location data
-                  croType: {
+                  cropType: {
                     include: {
                       crop: true,
                     },
@@ -137,7 +137,7 @@ export class FertiliserService {
         // Get unique crops and count them
         const cropMap = new Map();
         fertilizer.farmingActivities.forEach((activity) => {
-          const crop = activity.season.croType.crop;
+          const crop = activity.season.cropType.crop;
           if (crop) {
             if (!cropMap.has(crop.id)) {
               cropMap.set(crop.id, {

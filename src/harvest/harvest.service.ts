@@ -82,7 +82,7 @@ export class HarvestService {
                   collectiveType: true
                 }
               },
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -199,7 +199,7 @@ export class HarvestService {
                     collectiveType: true
                   }
                 },
-                croType: {
+                cropType: {
                   include: {
                     crop: true
                   }
@@ -257,7 +257,7 @@ export class HarvestService {
                     collectiveType: true
                   }
                 },
-                croType: {
+                cropType: {
                   include: {
                     crop: true
                   }
@@ -296,7 +296,7 @@ export class HarvestService {
                     collectiveType: true
                   }
                 },
-                croType: {
+                cropType: {
                   include: {
                     crop: true
                   }
@@ -371,7 +371,7 @@ export class HarvestService {
                   collectiveType: true
                 }
               },
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -438,9 +438,6 @@ export class HarvestService {
                     }
                   },
                   cooperative: {
-                    include: {
-                      cooperativeManager: true
-                    },
                     select: {
                       id: true,
                       name: true,
@@ -451,9 +448,6 @@ export class HarvestService {
                 }
               },
               cooperative: {
-                include: {
-                  cooperativeManager: true
-                },
                 select: {
                   id: true,
                   name: true,
@@ -461,7 +455,7 @@ export class HarvestService {
                   cooperativeManager: true
                 }
               },
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -576,7 +570,7 @@ export class HarvestService {
                   collectiveType: true
                 }
               },
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -679,7 +673,7 @@ export class HarvestService {
           include: {
             season: {
               include: {
-                croType: {
+                cropType: {
                   include: {
                     crop: true
                   }
@@ -721,7 +715,7 @@ export class HarvestService {
                     }
                   }
                 },
-                croType: {
+                cropType: {
                   include: {
                     crop: true
                   }

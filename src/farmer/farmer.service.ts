@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { LocationService } from 'src/location/location.service';
-import { Farmer, User } from '@prisma/client';
+import { Farmer, FarmerProfileChangeRequestStatus, NotificationType, Status, User } from '@prisma/client';
 import { UsersService } from 'src/users/users.service';
 import { AssignCropToFarmerDto } from './dto/assign-crop-to-farmerDto';
 import * as XLSX from 'xlsx';
@@ -12,42 +12,70 @@ import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
 import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import e from 'express';
 import { Gender } from '@prisma/client';
+import { CreateFarmerProfileChangeRequestDto } from './dto/create-farmer-profile-change-request.dto';
+import { FarmerProfileChangesDto } from './dto/farmer-profile-changes.dto';
+import { NotificationService } from 'src/notification/notification.service';
+
+const SAFE_USER_SELECT = {
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  username: true,
+  email: true,
+  telephone: true,
+  firstName: true,
+  lastName: true,
+  gender: true,
+  dob: true,
+  nationalId: true,
+  isDefaultPassword: true,
+  roleId: true,
+  status: true,
+  locationId: true,
+  locationChildrenIds: true,
+  role: true,
+  location: true,
+} as const;
 
 @Injectable()
 export class FarmerService {
-  constructor(private readonly databaseService: DatabaseService, private readonly locationService: LocationService, private readonly userServcice: UsersService) { }
-async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
-  try {
-    // NEW: Check if creator is Umufashamyumvire
-    let isUmufashamyumvire = false;
-    if (loggedInUser) {
-      const creatorRole = await this.databaseService.role.findUnique({
-        where: { id: loggedInUser.roleId }
-      });
-      isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
-    }
-
-    // NEW: Validate location (double-check)
-    if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
-      throw new BadRequestException("Location is required");
-    }
-
-    // NEW: If Umufashamyumvire and still no location, use theirs
-    if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
-      CreateFarmerDto.locationId = loggedInUser.locationId;
-    }
-
-    // ORIGINAL CODE BELOW (with small fix)
-    let role = await this.databaseService.role.findFirst({
-      where: {
-        name: "FARMER"
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly locationService: LocationService,
+    private readonly userServcice: UsersService,
+    private readonly notificationService: NotificationService,
+  ) { }
+  async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
+    try {
+      // Check if creator is Umufashamyumvire
+      let isUmufashamyumvire = false;
+      if (loggedInUser) {
+        const creatorRole = await this.databaseService.role.findUnique({
+          where: { id: loggedInUser.roleId }
+        });
+        isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
       }
-    });
+
+      // Validate location (double-check)
+      if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
+        throw new BadRequestException("Location is required");
+      }
+
+      // If Umufashamyumvire and still no location, use theirs
+      if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
+        CreateFarmerDto.locationId = loggedInUser.locationId;
+      }
+
+      let role = await this.databaseService.role.findFirst({
+        where: {
+          name: "FARMER"
+        }
+      });
     
-    let user = await this.userServcice.create({ 
-      roleId: role.id, 
-      ...CreateFarmerDto 
-    }, loggedInUser);
+      let user = await this.userServcice.create({ 
+        roleId: role.id, 
+        ...CreateFarmerDto 
+      }, loggedInUser);
 
     let farmer = await this.databaseService.farmer.create({
       data: {
@@ -104,10 +132,325 @@ async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Pro
 
     return farmer;
 
-  } catch (e) {
-    throw new BadRequestException(e.message);
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
   }
-}
+
+  private normalizeProfileChanges(changes: FarmerProfileChangesDto): Record<string, any> {
+    const cleaned: Record<string, any> = {};
+
+    const setIfDefined = (key: string, value: any) => {
+      if (value === undefined || value === null) return;
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        cleaned[key] = trimmed;
+        return;
+      }
+      cleaned[key] = value;
+    }
+
+    setIfDefined('firstName', changes.firstName);
+    setIfDefined('lastName', changes.lastName);
+    setIfDefined('gender', changes.gender);
+    setIfDefined('dob', changes.dob);
+    setIfDefined('email', changes.email);
+    setIfDefined('telephone', changes.telephone);
+    setIfDefined('nationalId', changes.nationalId);
+    setIfDefined('locationId', changes.locationId);
+
+    return cleaned;
+  }
+
+  private async resolveApproverUserId(locationId: number, cooperativeId?: string | null): Promise<string | null> {
+    if (cooperativeId) {
+      const cooperative = await this.databaseService.cooperative.findUnique({
+        where: { id: cooperativeId },
+        select: { cooperativeManagerId: true }
+      });
+      if (cooperative?.cooperativeManagerId) return cooperative.cooperativeManagerId;
+    }
+
+    // Try to find an Umufasha Myumvire whose location scope contains the farmer location
+    const abafasha = await this.databaseService.user.findMany({
+      where: {
+        status: Status.ACTIVE,
+        role: { name: "UMUFASHAMYUMVIRE" }
+      },
+      select: { id: true, locationChildrenIds: true }
+    });
+
+    const matchedUmufasha = abafasha.find((u) => {
+      try {
+        const ids = JSON.parse(u.locationChildrenIds ?? '[]');
+        return Array.isArray(ids) && ids.includes(locationId);
+      } catch {
+        return false;
+      }
+    });
+
+    if (matchedUmufasha) return matchedUmufasha.id;
+
+    // Fallback to any active ADMIN/DEV_ADMIN
+    const admin = await this.databaseService.user.findFirst({
+      where: {
+        status: Status.ACTIVE,
+        role: { name: { in: ["ADMIN", "DEV_ADMIN"] } }
+      },
+      select: { id: true }
+    });
+
+    return admin?.id ?? null;
+  }
+
+  async getMyProfile(userId: string) {
+    const farmer = await this.databaseService.farmer.findUnique({
+      where: { userId },
+      include: {
+        user: { select: SAFE_USER_SELECT },
+        cooperative: {
+          select: {
+            id: true,
+            name: true,
+            registrationNumber: true,
+            telephone: true,
+            type: true,
+            collectiveType: true,
+            cooperativeManager: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                telephone: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!farmer) {
+      throw new NotFoundException("Farmer profile not found");
+    }
+    return farmer;
+  }
+
+  async createMyProfileChangeRequest(userId: string, dto: CreateFarmerProfileChangeRequestDto) {
+    const farmer = await this.databaseService.farmer.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { id: true, locationId: true } },
+        cooperative: { select: { id: true } },
+      }
+    });
+
+    if (!farmer) {
+      throw new NotFoundException("Farmer profile not found");
+    }
+    if (!farmer.user.locationId) {
+      throw new BadRequestException("Farmer location is missing");
+    }
+
+    const requestedChanges = this.normalizeProfileChanges(dto.changes);
+    if (Object.keys(requestedChanges).length === 0) {
+      throw new BadRequestException("No changes provided");
+    }
+
+    const approverUserId = await this.resolveApproverUserId(farmer.user.locationId, farmer.cooperativeId);
+
+    const created = await this.databaseService.farmerProfileChangeRequest.create({
+      data: {
+        farmer: { connect: { id: farmer.id } },
+        requester: { connect: { id: userId } },
+        ...(approverUserId ? { approver: { connect: { id: approverUserId } } } : {}),
+        requestedChanges,
+        reason: dto.reason,
+      },
+      include: {
+        farmer: { include: { user: { select: SAFE_USER_SELECT }, cooperative: true } },
+        requester: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+        approver: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+      }
+    });
+
+    if (approverUserId) {
+      await this.notificationService.create({
+        recipientUserId: approverUserId,
+        actorUserId: userId,
+        type: NotificationType.PROFILE_CHANGE_REQUESTED,
+        title: 'Profile change request',
+        message: 'A farmer requested changes to their profile. Review and approve or reject.',
+        data: {
+          profileChangeRequestId: created.id,
+          farmerId: farmer.id,
+        },
+      });
+    }
+
+    return created;
+  }
+
+  async listMyProfileChangeRequests(userId: string) {
+    return await this.databaseService.farmerProfileChangeRequest.findMany({
+      where: { requesterUserId: userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        farmer: { include: { user: { select: SAFE_USER_SELECT }, cooperative: true } },
+        approver: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+      }
+    });
+  }
+
+  async listPendingProfileChangeRequests(actingUser: any) {
+    const roleName = actingUser?.role?.name;
+    const isAdmin = roleName === 'ADMIN' || roleName === 'DEV_ADMIN';
+
+    return await this.databaseService.farmerProfileChangeRequest.findMany({
+      where: isAdmin
+        ? { status: FarmerProfileChangeRequestStatus.PENDING }
+        : { status: FarmerProfileChangeRequestStatus.PENDING, approverUserId: actingUser.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        farmer: { include: { user: { select: SAFE_USER_SELECT }, cooperative: true } },
+        requester: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+      }
+    });
+  }
+
+  async approveProfileChangeRequest(actingUser: any, requestId: string, note?: string) {
+    const changeRequest = await this.databaseService.farmerProfileChangeRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        farmer: { include: { user: true } },
+      }
+    });
+
+    if (!changeRequest) {
+      throw new NotFoundException("Change request not found");
+    }
+    if (changeRequest.status !== FarmerProfileChangeRequestStatus.PENDING) {
+      throw new BadRequestException("Change request already resolved");
+    }
+
+    const roleName = actingUser?.role?.name;
+    const isAdmin = roleName === 'ADMIN' || roleName === 'DEV_ADMIN';
+    if (!isAdmin && changeRequest.approverUserId !== actingUser.id) {
+      throw new UnauthorizedException("You are not allowed to approve this request");
+    }
+
+    const changes = (changeRequest.requestedChanges ?? {}) as Record<string, any>;
+    const userUpdate: Record<string, any> = {};
+
+    if (typeof changes.firstName === 'string' && changes.firstName.trim()) userUpdate.firstName = changes.firstName.trim();
+    if (typeof changes.lastName === 'string' && changes.lastName.trim()) userUpdate.lastName = changes.lastName.trim();
+    if (typeof changes.email === 'string' && changes.email.trim()) userUpdate.email = changes.email.trim();
+    if (typeof changes.telephone === 'string' && changes.telephone.trim()) userUpdate.telephone = changes.telephone.trim();
+    if (typeof changes.nationalId === 'string' && changes.nationalId.trim()) userUpdate.nationalId = changes.nationalId.trim();
+    if (changes.gender) userUpdate.gender = changes.gender;
+    if (typeof changes.dob === 'string' && changes.dob.trim()) userUpdate.dob = new Date(changes.dob);
+
+    if (changes.locationId) {
+      const locationId = Number(changes.locationId);
+      const location = await this.databaseService.location.findUnique({ where: { id: locationId } });
+      if (!location) {
+        throw new BadRequestException(`Location with id ${locationId} does not exist`);
+      }
+      const children = await this.locationService.getAllChildrenLocations(location.id);
+      userUpdate.location = { connect: { id: location.id } };
+      userUpdate.locationChildrenIds = JSON.stringify(children);
+    }
+
+    const approverUserId = changeRequest.approverUserId ?? actingUser.id;
+
+    const updated = await this.databaseService.$transaction(async (tx) => {
+      if (Object.keys(userUpdate).length > 0) {
+        await tx.user.update({
+          where: { id: changeRequest.farmer.userId },
+          data: userUpdate,
+        });
+      }
+
+      return await tx.farmerProfileChangeRequest.update({
+        where: { id: changeRequest.id },
+        data: {
+          status: FarmerProfileChangeRequestStatus.APPROVED,
+          resolvedAt: new Date(),
+          resolutionNote: note ?? null,
+          approverUserId,
+        },
+        include: {
+          farmer: { include: { user: { select: SAFE_USER_SELECT }, cooperative: true } },
+          requester: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+          approver: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+        }
+      });
+    });
+
+    await this.notificationService.create({
+      recipientUserId: changeRequest.requesterUserId,
+      actorUserId: actingUser.id,
+      type: NotificationType.PROFILE_CHANGE_APPROVED,
+      title: 'Profile change approved',
+      message: 'Your profile change request was approved.',
+      data: {
+        profileChangeRequestId: updated.id,
+        status: FarmerProfileChangeRequestStatus.APPROVED,
+      },
+    });
+
+    return updated;
+  }
+
+  async rejectProfileChangeRequest(actingUser: any, requestId: string, note?: string) {
+    const changeRequest = await this.databaseService.farmerProfileChangeRequest.findUnique({
+      where: { id: requestId }
+    });
+
+    if (!changeRequest) {
+      throw new NotFoundException("Change request not found");
+    }
+    if (changeRequest.status !== FarmerProfileChangeRequestStatus.PENDING) {
+      throw new BadRequestException("Change request already resolved");
+    }
+
+    const roleName = actingUser?.role?.name;
+    const isAdmin = roleName === 'ADMIN' || roleName === 'DEV_ADMIN';
+    if (!isAdmin && changeRequest.approverUserId !== actingUser.id) {
+      throw new UnauthorizedException("You are not allowed to reject this request");
+    }
+
+    const approverUserId = changeRequest.approverUserId ?? actingUser.id;
+
+    const updated = await this.databaseService.farmerProfileChangeRequest.update({
+      where: { id: changeRequest.id },
+      data: {
+        status: FarmerProfileChangeRequestStatus.REJECTED,
+        resolvedAt: new Date(),
+        resolutionNote: note ?? null,
+        approverUserId,
+      },
+      include: {
+        farmer: { include: { user: { select: SAFE_USER_SELECT }, cooperative: true } },
+        requester: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+        approver: { select: { id: true, firstName: true, lastName: true, telephone: true } },
+      }
+    });
+
+    await this.notificationService.create({
+      recipientUserId: changeRequest.requesterUserId,
+      actorUserId: actingUser.id,
+      type: NotificationType.PROFILE_CHANGE_REJECTED,
+      title: 'Profile change rejected',
+      message: 'Your profile change request was rejected.',
+      data: {
+        profileChangeRequestId: updated.id,
+        status: FarmerProfileChangeRequestStatus.REJECTED,
+      },
+    });
+
+    return updated;
+  }
   async assignCropsToFarmers(assignCropsToFarmers: AssignCropToFarmerDto) {
     try {
       let farmer = await this.databaseService.farmer.findUnique({
@@ -644,7 +987,7 @@ async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Pro
           // Seasons for harvest data
           seasons: {
             include: {
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -700,11 +1043,11 @@ async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Pro
 
         // Aggregate harvest data by crop type
         const harvestStats = farmer.seasons.reduce((acc, season) => {
-          const key = `${season.croType.crop.name}-${season.croType.name}`;
+          const key = `${season.cropType.crop.name}-${season.cropType.name}`;
           if (!acc[key]) {
             acc[key] = {
-              cropName: season.croType.crop.name,
-              cropType: season.croType.name,
+              cropName: season.cropType.crop.name,
+              cropType: season.cropType.name,
               totalHarvested: 0,
               totalArea: 0,
               totalSeeds: 0,

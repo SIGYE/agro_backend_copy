@@ -7,19 +7,63 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-import { OrderStatus, OrderType } from '@prisma/client';
+import {
+  NotificationType,
+  OrderStatus,
+  OrderType,
+  PaymentMethod,
+  PaymentStatus,
+} from '@prisma/client';
 import { CreateCropListingDto } from './dto/create-crop-listing.dto';
+import { UpdateCropListingDto } from './dto/update-crop-listing.dto';
 import { Role_Enum } from '../enums/role.enum';
+import { NotificationService } from 'src/notification/notification.service';
+import { PaymentOutcome, RecordPaymentDto } from './dto/record-payment.dto';
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // Helper to generate order number
   private generateOrderNumber(): string {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
     return `ORD-${timestamp}-${random}`;
+  }
+
+  private parseNumberEnv(name: string, fallback: number) {
+    const raw = process.env[name];
+    if (raw === undefined || raw === null || raw === '') return fallback;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  private roundMoney(value: number) {
+    return Math.round(value * 100) / 100;
+  }
+
+  private computePricing(itemsSubtotal: number) {
+    const deliveryFee = this.parseNumberEnv('DELIVERY_FEE', 0);
+    const platformFeePercent = this.parseNumberEnv('PLATFORM_FEE_PERCENT', 0);
+    const taxPercent = this.parseNumberEnv('TAX_PERCENT', 0);
+
+    const platformFee = this.roundMoney(itemsSubtotal * (platformFeePercent / 100));
+    const taxBase = itemsSubtotal + deliveryFee + platformFee;
+    const taxAmount = this.roundMoney(taxBase * (taxPercent / 100));
+    const totalAmount = this.roundMoney(itemsSubtotal + deliveryFee + platformFee + taxAmount);
+
+    return {
+      itemsSubtotal: this.roundMoney(itemsSubtotal),
+      deliveryFee: this.roundMoney(deliveryFee),
+      platformFee,
+      taxAmount,
+      totalAmount,
+      platformFeePercent,
+      taxPercent,
+    };
   }
 
   // ---------------- CROP LISTINGS ----------------
@@ -35,9 +79,14 @@ export class OrderService {
       let cooperativeId: string | null = null;
 
       if (userRole === Role_Enum.FARMER) {
-        // Get farmer for this user
+        // Get farmer for this user (including cooperative info)
         const farmer = await this.databaseService.farmer.findFirst({
           where: { userId },
+          include: {
+            cooperative: {
+              select: { collectiveType: true },
+            },
+          },
         });
         
         if (!farmer) {
@@ -45,6 +94,15 @@ export class OrderService {
         }
         
         farmerId = farmer.id;
+
+        // Farmers who belong to a NON_COLLECTIVE cooperative should not create
+        // their own marketplace listings. The non-collective leader manages
+        // listings on behalf of the group.
+        if (farmer.cooperative?.collectiveType === 'NON_COLLECTIVE') {
+          throw new ForbiddenException(
+            'Farmers in a non-collective group cannot create marketplace listings. Ask your group leader to list crops.',
+          );
+        }
         
         // Check if farmer already has a listing for this crop type
         const existingListing = await this.databaseService.cropListing.findUnique({
@@ -141,7 +199,7 @@ export class OrderService {
 
   async updateCropListing(
     listingId: string,
-    updateData: Partial<CreateCropListingDto>,
+    updateData: UpdateCropListingDto,
     userId: string,
     userRole: string
   ) {
@@ -172,13 +230,25 @@ export class OrderService {
         throw new ForbiddenException('Not authorized to update crop listings');
       }
 
-      // If updating available quantity, ensure it doesn't exceed total available
-      if (updateData.totalAvailableKg !== undefined) {
-        if (updateData.totalAvailableKg < listing.availableKg) {
-          throw new BadRequestException(
-            `New total available (${updateData.totalAvailableKg}) cannot be less than currently available (${listing.availableKg})`
-          );
-        }
+      const nextTotal =
+        updateData.totalAvailableKg !== undefined
+          ? updateData.totalAvailableKg
+          : listing.totalAvailableKg;
+
+      if (
+        updateData.totalAvailableKg !== undefined &&
+        updateData.availableKg === undefined &&
+        updateData.totalAvailableKg < listing.availableKg
+      ) {
+        throw new BadRequestException(
+          `New total available (${updateData.totalAvailableKg}) cannot be less than currently available (${listing.availableKg})`,
+        );
+      }
+
+      if (updateData.availableKg !== undefined && updateData.availableKg > nextTotal) {
+        throw new BadRequestException(
+          `availableKg (${updateData.availableKg}) cannot be greater than totalAvailableKg (${nextTotal})`,
+        );
       }
 
       return await this.databaseService.cropListing.update({
@@ -198,6 +268,53 @@ export class OrderService {
       }
       throw new BadRequestException('Error updating crop listing: ' + error.message);
     }
+  }
+
+  async getMyCropListings(userId: string, userRole: string) {
+    if (userRole === Role_Enum.FARMER) {
+      const farmer = await this.databaseService.farmer.findFirst({
+        where: { userId },
+        select: { id: true },
+      });
+
+      if (!farmer) {
+        throw new ForbiddenException('User is not registered as a farmer');
+      }
+
+      return this.databaseService.cropListing.findMany({
+        where: { farmerId: farmer.id },
+        include: {
+          cropType: { include: { crop: true } },
+          location: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+
+    if (
+      userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER ||
+      userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+    ) {
+      const cooperative = await this.databaseService.cooperative.findFirst({
+        where: { cooperativeManagerId: userId },
+        select: { id: true },
+      });
+
+      if (!cooperative) {
+        throw new ForbiddenException('User is not a cooperative manager');
+      }
+
+      return this.databaseService.cropListing.findMany({
+        where: { cooperativeId: cooperative.id },
+        include: {
+          cropType: { include: { crop: true } },
+          location: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+
+    throw new ForbiddenException('Not authorized to view crop listings');
   }
 
   async getCropListings(
@@ -288,7 +405,7 @@ export class OrderService {
 
   async createOrder(
     createOrderDto: CreateOrderDto,
-    buyerId: string,
+    userId: string,
     userRole: string
   ) {
     try {
@@ -297,9 +414,27 @@ export class OrderService {
         throw new ForbiddenException('Only buyers can create orders');
       }
 
+      const buyerProfile = await this.databaseService.buyer.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              telephone: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (!buyerProfile) {
+        throw new ForbiddenException('Buyer profile not found');
+      }
+
       // Validate seller exists and get type
-      let sellerType: OrderType;
       let sellerName: string;
+      let sellerUserId: string;
 
       if (createOrderDto.orderType === OrderType.FARMER) {
         const farmer = await this.databaseService.farmer.findUnique({
@@ -312,6 +447,7 @@ export class OrderService {
         }
         
         sellerName = `${farmer.user.firstName} ${farmer.user.lastName}`;
+        sellerUserId = farmer.userId;
         
         // If farmer is in a non-collective cooperative, seller becomes the cooperative
         if (farmer.cooperative && farmer.cooperative.collectiveType === 'NON_COLLECTIVE') {
@@ -330,6 +466,7 @@ export class OrderService {
         }
         
         sellerName = cooperative.name;
+        sellerUserId = cooperative.cooperativeManagerId;
         
         // Validate cooperative type matches order type
         if ((cooperative.collectiveType === 'COLLECTIVE' && 
@@ -344,7 +481,7 @@ export class OrderService {
 
       return await this.databaseService.$transaction(async (prisma) => {
         const orderItems = [];
-        let totalAmount = 0;
+        let itemsSubtotal = 0;
 
         // Process each order item
         for (const itemDto of createOrderDto.items) {
@@ -417,7 +554,7 @@ export class OrderService {
 
           // Calculate item total
           const itemTotal = itemDto.quantityKg * cropListing.pricePerKg;
-          totalAmount += itemTotal;
+          itemsSubtotal += itemTotal;
 
           // Prepare order item
           orderItems.push({
@@ -443,15 +580,21 @@ export class OrderService {
           });
         }
 
+        const pricing = this.computePricing(itemsSubtotal);
+
         // Create order
         const order = await prisma.order.create({
           data: {
             orderNumber: this.generateOrderNumber(),
-            buyerId,
+            buyerId: buyerProfile.id,
             farmerId: createOrderDto.orderType === OrderType.FARMER ? createOrderDto.sellerId : null,
             cooperativeId: createOrderDto.orderType !== OrderType.FARMER ? createOrderDto.sellerId : null,
             orderType: createOrderDto.orderType,
-            totalAmount,
+            itemsSubtotal: pricing.itemsSubtotal,
+            deliveryFee: pricing.deliveryFee,
+            platformFee: pricing.platformFee,
+            taxAmount: pricing.taxAmount,
+            totalAmount: pricing.totalAmount,
             currency: 'RWF',
             status: OrderStatus.PENDING,
             deliveryAddress: createOrderDto.deliveryAddress,
@@ -496,9 +639,26 @@ export class OrderService {
             orderId: order.id,
             status: OrderStatus.PENDING,
             notes: 'Order created',
-            changedByUserId: buyerId,
+            changedByUserId: userId,
           },
         });
+
+        await this.notificationService.create(
+          {
+            recipientUserId: sellerUserId,
+            actorUserId: userId,
+            type: NotificationType.ORDER_REQUEST,
+            title: 'New purchase request',
+            message: `${buyerProfile.user.firstName} ${buyerProfile.user.lastName} placed an order request (${order.orderNumber}).`,
+            data: {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              orderType: order.orderType,
+              status: order.status,
+            },
+          },
+          prisma,
+        );
 
         return order;
       });
@@ -550,12 +710,19 @@ export class OrderService {
         throw new NotFoundException('Order not found');
       }
 
+      const buyerUserId = order.buyer.user.id;
+      const sellerUserId = order.farmer
+        ? order.farmer.userId
+        : order.cooperative
+          ? order.cooperative.cooperativeManagerId
+          : null;
+
       // Check authorization
       let isAuthorized = false;
       
       if (userRole === Role_Enum.BUYER) {
         // Buyers can only cancel their own orders
-        if (order.buyerId === userId && 
+        if (buyerUserId === userId && 
             updateOrderStatusDto.status === OrderStatus.CANCELLED &&
             order.status === OrderStatus.PENDING) {
           isAuthorized = true;
@@ -597,50 +764,116 @@ export class OrderService {
         );
       }
 
-      // If cancelling, restore crop listing quantities
-      if (updateOrderStatusDto.status === OrderStatus.CANCELLED) {
-        const orderItems = await this.databaseService.orderItem.findMany({
-          where: { orderId },
-          include: { cropListing: true },
-        });
+      const nextStatus = updateOrderStatusDto.status;
 
-        for (const item of orderItems) {
-          await this.databaseService.cropListing.update({
-            where: { id: item.cropListingId },
-            data: {
-              availableKg: item.cropListing.availableKg + item.quantityKg,
-            },
+      const updatedOrder = await this.databaseService.$transaction(async (prisma) => {
+        // If cancelling, restore crop listing quantities
+        if (nextStatus === OrderStatus.CANCELLED) {
+          const orderItems = await prisma.orderItem.findMany({
+            where: { orderId },
+            include: { cropListing: true },
           });
-        }
-      }
 
-      // Update order status
-      const updatedOrder = await this.databaseService.order.update({
-        where: { id: orderId },
-        data: { status: updateOrderStatusDto.status },
-        include: {
-          orderItems: {
-            include: {
-              cropListing: {
-                include: {
-                  cropType: {
-                    include: { crop: true },
+          for (const item of orderItems) {
+            await prisma.cropListing.update({
+              where: { id: item.cropListingId },
+              data: {
+                availableKg: item.cropListing.availableKg + item.quantityKg,
+              },
+            });
+          }
+        }
+
+        const updatedOrder = await prisma.order.update({
+          where: { id: orderId },
+          data: { status: nextStatus },
+          include: {
+            orderItems: {
+              include: {
+                cropListing: {
+                  include: {
+                    cropType: {
+                      include: { crop: true },
+                    },
                   },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      // Create status history record
-      await this.databaseService.orderStatusHistory.create({
-        data: {
-          orderId,
-          status: updateOrderStatusDto.status,
-          notes: updateOrderStatusDto.notes,
-          changedByUserId: userId,
-        },
+        await prisma.orderStatusHistory.create({
+          data: {
+            orderId,
+            status: nextStatus,
+            notes: updateOrderStatusDto.notes,
+            changedByUserId: userId,
+          },
+        });
+
+        const notificationData = {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          orderType: order.orderType,
+          status: nextStatus,
+        };
+
+        if (nextStatus === OrderStatus.CONFIRMED) {
+          await this.notificationService.create(
+            {
+              recipientUserId: buyerUserId,
+              actorUserId: userId,
+              type: NotificationType.PAYMENT_REQUIRED,
+              title: 'Request accepted',
+              message: `Your order ${order.orderNumber} was accepted. Please proceed to payment.`,
+              data: notificationData,
+            },
+            prisma,
+          );
+        } else if (nextStatus === OrderStatus.REJECTED) {
+          await this.notificationService.create(
+            {
+              recipientUserId: buyerUserId,
+              actorUserId: userId,
+              type: NotificationType.ORDER_REJECTED,
+              title: 'Request rejected',
+              message: `Your order ${order.orderNumber} was rejected.`,
+              data: notificationData,
+            },
+            prisma,
+          );
+        } else if (nextStatus === OrderStatus.CANCELLED) {
+          const recipientUserId =
+            userId === buyerUserId ? sellerUserId : buyerUserId;
+
+          if (recipientUserId) {
+            await this.notificationService.create(
+              {
+                recipientUserId,
+                actorUserId: userId,
+                type: NotificationType.ORDER_STATUS_CHANGED,
+                title: 'Order cancelled',
+                message: `Order ${order.orderNumber} was cancelled.`,
+                data: notificationData,
+              },
+              prisma,
+            );
+          }
+        } else {
+          await this.notificationService.create(
+            {
+              recipientUserId: buyerUserId,
+              actorUserId: userId,
+              type: NotificationType.ORDER_STATUS_CHANGED,
+              title: 'Order updated',
+              message: `Order ${order.orderNumber} status changed to ${nextStatus}.`,
+              data: notificationData,
+            },
+            prisma,
+          );
+        }
+
+        return updatedOrder;
       });
 
       return updatedOrder;
@@ -651,6 +884,219 @@ export class OrderService {
         throw error;
       }
       throw new BadRequestException('Error updating order status: ' + error.message);
+    }
+  }
+
+  async recordPaymentOutcome(
+    orderId: string,
+    dto: RecordPaymentDto,
+    userId: string,
+    userRole: string,
+  ) {
+    try {
+      if (userRole !== Role_Enum.BUYER) {
+        throw new ForbiddenException('Only buyers can record payment outcomes');
+      }
+
+      if (dto.method === PaymentMethod.MOMO && !dto.momoPhoneNumber) {
+        throw new BadRequestException('momoPhoneNumber is required for MOMO payments');
+      }
+
+      if (dto.method === PaymentMethod.CARD) {
+        if (!dto.cardLast4) {
+          throw new BadRequestException('cardLast4 is required for CARD payments');
+        }
+        if (!/^[0-9]{4}$/.test(dto.cardLast4)) {
+          throw new BadRequestException('cardLast4 must be exactly 4 digits');
+        }
+      }
+
+      const order = await this.databaseService.order.findUnique({
+        where: { id: orderId },
+        include: {
+          buyer: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+          farmer: { select: { userId: true } },
+          cooperative: { select: { cooperativeManagerId: true } },
+        },
+      });
+
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+
+      if (order.buyer.user.id !== userId) {
+        throw new ForbiddenException('You can only record payment for your own order');
+      }
+
+      if (order.status !== OrderStatus.CONFIRMED) {
+        throw new BadRequestException(
+          `Payment can only be recorded for confirmed orders. Current status: ${order.status}`,
+        );
+      }
+
+      const sellerUserId = order.farmer
+        ? order.farmer.userId
+        : order.cooperative
+          ? order.cooperative.cooperativeManagerId
+          : null;
+
+      if (!sellerUserId) {
+        throw new BadRequestException('Order seller not found');
+      }
+
+      const baseData = {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        orderType: order.orderType,
+      };
+
+      return await this.databaseService.$transaction(async (prisma) => {
+        const attemptNumber =
+          (await prisma.paymentTransaction.count({ where: { orderId } })) + 1;
+
+        const transactionStatus: PaymentStatus =
+          dto.outcome === PaymentOutcome.SUCCESS
+            ? PaymentStatus.SUCCESS
+            : dto.outcome === PaymentOutcome.FAILED
+              ? PaymentStatus.FAILED
+              : PaymentStatus.CANCELLED;
+
+        await prisma.paymentTransaction.create({
+          data: {
+            orderId,
+            attemptNumber,
+            status: transactionStatus,
+            method: dto.method,
+            amount: order.totalAmount,
+            currency: order.currency,
+            momoPhoneNumber:
+              dto.method === PaymentMethod.MOMO ? dto.momoPhoneNumber : null,
+            cardLast4: dto.method === PaymentMethod.CARD ? dto.cardLast4 : null,
+            notes: dto.notes,
+            recordedByUserId: userId,
+            metadata: {
+              pricing: {
+                itemsSubtotal: order.itemsSubtotal,
+                deliveryFee: order.deliveryFee,
+                platformFee: order.platformFee,
+                taxAmount: order.taxAmount,
+                totalAmount: order.totalAmount,
+              },
+            },
+          },
+        });
+
+        if (dto.outcome === PaymentOutcome.SUCCESS) {
+          const updated = await prisma.order.update({
+            where: { id: orderId },
+            data: { status: OrderStatus.PROCESSING },
+          });
+
+          await prisma.orderStatusHistory.create({
+            data: {
+              orderId,
+              status: OrderStatus.PROCESSING,
+              notes: dto.notes ? `Payment successful: ${dto.notes}` : 'Payment successful',
+              changedByUserId: userId,
+            },
+          });
+
+          const data = {
+            ...baseData,
+            status: OrderStatus.PROCESSING,
+            outcome: dto.outcome,
+          };
+
+          await this.notificationService.create(
+            {
+              recipientUserId: userId,
+              actorUserId: userId,
+              type: NotificationType.PAYMENT_SUCCESS,
+              title: 'Payment successful',
+              message: `Payment successful for order ${order.orderNumber}.`,
+              data,
+            },
+            prisma,
+          );
+
+          await this.notificationService.create(
+            {
+              recipientUserId: sellerUserId,
+              actorUserId: userId,
+              type: NotificationType.PAYMENT_SUCCESS,
+              title: 'Payment received',
+              message: `Payment received for order ${order.orderNumber}.`,
+              data,
+            },
+            prisma,
+          );
+
+          return updated;
+        }
+
+        const outcomeText =
+          dto.outcome === PaymentOutcome.CANCELLED ? 'cancelled' : 'failed';
+
+        await prisma.orderStatusHistory.create({
+          data: {
+            orderId,
+            status: order.status,
+            notes: dto.notes ? `Payment ${outcomeText}: ${dto.notes}` : `Payment ${outcomeText}`,
+            changedByUserId: userId,
+          },
+        });
+
+        const data = {
+          ...baseData,
+          status: order.status,
+          outcome: dto.outcome,
+        };
+
+        await this.notificationService.create(
+          {
+            recipientUserId: userId,
+            actorUserId: userId,
+            type: NotificationType.PAYMENT_FAILED,
+            title: 'Payment not completed',
+            message: `Payment ${outcomeText} for order ${order.orderNumber}.`,
+            data,
+          },
+          prisma,
+        );
+
+        await this.notificationService.create(
+          {
+            recipientUserId: sellerUserId,
+            actorUserId: userId,
+            type: NotificationType.PAYMENT_FAILED,
+            title: 'Payment not completed',
+            message: `Buyer payment ${outcomeText} for order ${order.orderNumber}.`,
+            data,
+          },
+          prisma,
+        );
+
+        return order;
+      });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Error recording payment: ' + error.message);
     }
   }
 
@@ -669,7 +1115,16 @@ export class OrderService {
 
       // Apply role-based filtering
       if (userRole === Role_Enum.BUYER) {
-        whereClause.buyerId = userId;
+        const buyer = await this.databaseService.buyer.findUnique({
+          where: { userId },
+          select: { id: true },
+        });
+
+        if (!buyer) {
+          return [];
+        }
+
+        whereClause.buyerId = buyer.id;
       } else if (userRole === Role_Enum.FARMER) {
         const farmer = await this.databaseService.farmer.findFirst({
           where: { userId },
@@ -718,6 +1173,7 @@ export class OrderService {
             include: {
               user: {
                 select: {
+                  id: true,
                   firstName: true,
                   lastName: true,
                   telephone: true,
@@ -770,6 +1226,7 @@ export class OrderService {
             include: {
               user: {
                 select: {
+                  id: true,
                   firstName: true,
                   lastName: true,
                   telephone: true,
@@ -824,7 +1281,7 @@ export class OrderService {
       // Check authorization
       let isAuthorized = false;
       
-      if (userRole === Role_Enum.BUYER && order.buyerId === userId) {
+      if (userRole === Role_Enum.BUYER && order.buyer.user.id === userId) {
         isAuthorized = true;
       } else if (userRole === Role_Enum.FARMER && order.farmer?.user.id === userId) {
         isAuthorized = true;
@@ -847,5 +1304,464 @@ export class OrderService {
       }
       throw new BadRequestException('Error fetching order: ' + error.message);
     }
+  }
+
+  async getSalesSummary(
+    userId: string,
+    userRole: string,
+    filters?: { startDate?: Date; endDate?: Date },
+  ) {
+    if (
+      userRole !== Role_Enum.FARMER &&
+      userRole !== Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER &&
+      userRole !== Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+    ) {
+      throw new ForbiddenException('Not authorized to view sales summary');
+    }
+
+    const whereClause: any = {};
+
+    if (userRole === Role_Enum.FARMER) {
+      const farmer = await this.databaseService.farmer.findFirst({
+        where: { userId },
+        select: { id: true },
+      });
+      if (!farmer) {
+        return {
+          totalOrders: 0,
+          pendingOrders: 0,
+          confirmedUnpaidOrders: 0,
+          paidOrders: 0,
+          totalRevenue: 0,
+        };
+      }
+      whereClause.farmerId = farmer.id;
+    } else {
+      const cooperative = await this.databaseService.cooperative.findFirst({
+        where: { cooperativeManagerId: userId },
+        select: { id: true },
+      });
+      if (!cooperative) {
+        return {
+          totalOrders: 0,
+          pendingOrders: 0,
+          confirmedUnpaidOrders: 0,
+          paidOrders: 0,
+          totalRevenue: 0,
+        };
+      }
+      whereClause.cooperativeId = cooperative.id;
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+      whereClause.createdAt = {};
+      if (filters.startDate) whereClause.createdAt.gte = filters.startDate;
+      if (filters.endDate) whereClause.createdAt.lte = filters.endDate;
+    }
+
+    const [totalOrders, pendingOrders, confirmedUnpaidOrders, paidAgg] =
+      await this.databaseService.$transaction([
+        this.databaseService.order.count({ where: whereClause }),
+        this.databaseService.order.count({
+          where: { ...whereClause, status: OrderStatus.PENDING },
+        }),
+        this.databaseService.order.count({
+          where: { ...whereClause, status: OrderStatus.CONFIRMED },
+        }),
+        this.databaseService.order.aggregate({
+          where: {
+            ...whereClause,
+            status: { in: [OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+          },
+          _count: { id: true },
+          _sum: { totalAmount: true },
+        }),
+      ]);
+
+    return {
+      totalOrders,
+      pendingOrders,
+      confirmedUnpaidOrders,
+      paidOrders: paidAgg?._count?.id ?? 0,
+      totalRevenue: paidAgg?._sum?.totalAmount ?? 0,
+    };
+  }
+
+  async listTransactions(
+    userId: string,
+    userRole: string,
+    filters?: {
+      status?: PaymentStatus;
+      method?: PaymentMethod;
+      startDate?: Date;
+      endDate?: Date;
+      search?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    if (
+      userRole !== Role_Enum.ADMIN &&
+      userRole !== Role_Enum.DEV_ADMIN &&
+      userRole !== Role_Enum.UMUFASHAMYUMVIRE
+    ) {
+      throw new ForbiddenException('Not authorized to view transactions');
+    }
+
+    const page = Math.max(1, filters?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, filters?.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const whereClause: any = {};
+    if (filters?.status) whereClause.status = filters.status;
+    if (filters?.method) whereClause.method = filters.method;
+    if (filters?.startDate || filters?.endDate) {
+      whereClause.createdAt = {};
+      if (filters.startDate) whereClause.createdAt.gte = filters.startDate;
+      if (filters.endDate) whereClause.createdAt.lte = filters.endDate;
+    }
+
+    if (filters?.search) {
+      const search = filters.search.trim();
+      whereClause.OR = [
+        { order: { orderNumber: { contains: search, mode: 'insensitive' } } },
+        {
+          order: {
+            buyer: {
+              user: {
+                OR: [
+                  { firstName: { contains: search, mode: 'insensitive' } },
+                  { lastName: { contains: search, mode: 'insensitive' } },
+                  { telephone: { contains: search, mode: 'insensitive' } },
+                  { email: { contains: search, mode: 'insensitive' } },
+                ],
+              },
+            },
+          },
+        },
+      ];
+    }
+
+    const [items, total] = await this.databaseService.$transaction([
+      this.databaseService.paymentTransaction.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          order: {
+            include: {
+              buyer: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      telephone: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+              farmer: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      telephone: true,
+                    },
+                  },
+                },
+              },
+              cooperative: true,
+              orderItems: true,
+            },
+          },
+          recordedByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+        },
+      }),
+      this.databaseService.paymentTransaction.count({ where: whereClause }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getInvoice(orderId: string, userId: string, userRole: string) {
+    const order = await this.databaseService.order.findUnique({
+      where: { id: orderId },
+      include: {
+        buyer: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                telephone: true,
+                email: true,
+              },
+            },
+          },
+        },
+        farmer: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                telephone: true,
+              },
+            },
+          },
+        },
+        cooperative: {
+          include: {
+            cooperativeManager: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                telephone: true,
+                email: true,
+              },
+            },
+          },
+        },
+        orderItems: true,
+        paymentTransactions: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const buyerUserId = order.buyer.user.id;
+    const sellerUserId = order.farmer
+      ? order.farmer.user.id
+      : order.cooperative
+        ? order.cooperative.cooperativeManagerId
+        : null;
+
+    const isAdminLike =
+      userRole === Role_Enum.ADMIN ||
+      userRole === Role_Enum.DEV_ADMIN ||
+      userRole === Role_Enum.UMUFASHAMYUMVIRE;
+
+    const isBuyer = userRole === Role_Enum.BUYER && userId === buyerUserId;
+    const isSeller =
+      (userRole === Role_Enum.FARMER ||
+        userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER ||
+        userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) &&
+      sellerUserId === userId;
+
+    if (!isAdminLike && !isBuyer && !isSeller) {
+      throw new ForbiddenException('Not authorized to view invoice');
+    }
+
+    const successfulPayment = order.paymentTransactions.find(
+      (t) => t.status === PaymentStatus.SUCCESS,
+    );
+
+    if (!successfulPayment) {
+      throw new BadRequestException('Invoice is available after a successful payment');
+    }
+
+    const seller =
+      order.farmer
+        ? {
+            type: 'FARMER',
+            name: `${order.farmer.user.firstName} ${order.farmer.user.lastName}`,
+            telephone: order.farmer.user.telephone,
+          }
+        : order.cooperative
+          ? {
+              type: order.orderType,
+              name: order.cooperative.name,
+              telephone: order.cooperative.telephone ?? order.cooperative.cooperativeManager?.telephone,
+            }
+          : { type: order.orderType, name: 'Unknown', telephone: null };
+
+    return {
+      invoiceNumber: `INV-${order.orderNumber}`,
+      issuedAt: successfulPayment.createdAt,
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        createdAt: order.createdAt,
+      },
+      buyer: {
+        name: `${order.buyer.user.firstName} ${order.buyer.user.lastName}`,
+        telephone: order.buyer.user.telephone,
+        email: order.buyer.user.email,
+      },
+      seller,
+      items: order.orderItems.map((it) => ({
+        cropName: it.cropName,
+        cropTypeName: it.cropTypeName,
+        quantityKg: it.quantityKg,
+        unitPrice: it.unitPrice,
+        totalPrice: it.totalPrice,
+      })),
+      pricing: {
+        itemsSubtotal: order.itemsSubtotal,
+        deliveryFee: order.deliveryFee,
+        platformFee: order.platformFee,
+        taxAmount: order.taxAmount,
+        totalAmount: order.totalAmount,
+        currency: order.currency,
+      },
+      payment: {
+        status: successfulPayment.status,
+        method: successfulPayment.method,
+        momoPhoneNumber: successfulPayment.momoPhoneNumber,
+        cardLast4: successfulPayment.cardLast4,
+        amount: successfulPayment.amount,
+        currency: successfulPayment.currency,
+        paidAt: successfulPayment.createdAt,
+      },
+      pickup: {
+        buyerPickupConfirmedAt: order.buyerPickupConfirmedAt,
+        sellerPickupConfirmedAt: order.sellerPickupConfirmedAt,
+      },
+    };
+  }
+
+  async confirmPickup(orderId: string, userId: string, userRole: string) {
+    const order = await this.databaseService.order.findUnique({
+      where: { id: orderId },
+      include: {
+        buyer: { select: { userId: true, user: { select: { id: true } } } },
+        farmer: { select: { userId: true } },
+        cooperative: { select: { cooperativeManagerId: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const buyerUserId = order.buyer.user.id;
+    const sellerUserId = order.farmer
+      ? order.farmer.userId
+      : order.cooperative
+        ? order.cooperative.cooperativeManagerId
+        : null;
+
+    const isBuyer = userRole === Role_Enum.BUYER && userId === buyerUserId;
+    const isSeller =
+      (userRole === Role_Enum.FARMER ||
+        userRole === Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER ||
+        userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) &&
+      sellerUserId === userId;
+
+    if (!isBuyer && !isSeller) {
+      throw new ForbiddenException('Not authorized to confirm pickup');
+    }
+
+    if (order.status !== OrderStatus.SHIPPED && order.status !== OrderStatus.DELIVERED) {
+      throw new BadRequestException(
+        `Pickup can only be confirmed when order is SHIPPED (or already DELIVERED). Current status: ${order.status}`,
+      );
+    }
+
+    const now = new Date();
+
+    return await this.databaseService.$transaction(async (prisma) => {
+      const updateData: any = {};
+      let actor: 'BUYER' | 'SELLER';
+
+      if (isBuyer) {
+        actor = 'BUYER';
+        if (!order.buyerPickupConfirmedAt) {
+          updateData.buyerPickupConfirmedAt = now;
+        }
+      } else {
+        actor = 'SELLER';
+        if (!order.sellerPickupConfirmedAt) {
+          updateData.sellerPickupConfirmedAt = now;
+        }
+      }
+
+      const updated = await prisma.order.update({
+        where: { id: orderId },
+        data: updateData,
+      });
+
+      const otherUserId = actor === 'BUYER' ? sellerUserId : buyerUserId;
+      if (otherUserId) {
+        await this.notificationService.create(
+          {
+            recipientUserId: otherUserId,
+            actorUserId: userId,
+            type: NotificationType.ORDER_STATUS_CHANGED,
+            title: 'Pickup confirmation',
+            message:
+              actor === 'BUYER'
+                ? `Buyer confirmed pickup for order ${updated.orderNumber}.`
+                : `Seller confirmed pickup for order ${updated.orderNumber}.`,
+            data: { orderId: updated.id, orderNumber: updated.orderNumber, status: updated.status },
+          },
+          prisma,
+        );
+      }
+
+      const bothConfirmed =
+        (updated.buyerPickupConfirmedAt ?? order.buyerPickupConfirmedAt) &&
+        (updated.sellerPickupConfirmedAt ?? order.sellerPickupConfirmedAt);
+
+      if (bothConfirmed && updated.status === OrderStatus.SHIPPED) {
+        const delivered = await prisma.order.update({
+          where: { id: orderId },
+          data: { status: OrderStatus.DELIVERED },
+        });
+
+        await prisma.orderStatusHistory.create({
+          data: {
+            orderId,
+            status: OrderStatus.DELIVERED,
+            notes: 'Pickup confirmed by both parties',
+            changedByUserId: userId,
+          },
+        });
+
+        await Promise.all(
+          [buyerUserId, sellerUserId].filter(Boolean).map((recipientUserId) =>
+            this.notificationService.create(
+              {
+                recipientUserId,
+                actorUserId: userId,
+                type: NotificationType.ORDER_STATUS_CHANGED,
+                title: 'Order delivered',
+                message: `Order ${delivered.orderNumber} marked as delivered.`,
+                data: { orderId: delivered.id, orderNumber: delivered.orderNumber, status: delivered.status },
+              },
+              prisma,
+            ),
+          ),
+        );
+
+        return delivered;
+      }
+
+      return updated;
+    });
   }
 }

@@ -15,6 +15,19 @@ import * as bcrypt from 'bcrypt';
 export class BuyerService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private async requireBuyerProfile(userId: string) {
+    const buyer = await this.databaseService.buyer.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!buyer) {
+      throw new ForbiddenException('Buyer profile not found');
+    }
+
+    return buyer;
+  }
+
   // ============== BUYER REGISTRATION (CREATE USER + BUYER PROFILE) ==============
 
   async registerBuyer(dto: CreateBuyerWithUserDto) {
@@ -397,8 +410,9 @@ async getProfile(userId: string) {
     }
   ) {
     try {
+      const buyer = await this.requireBuyerProfile(userId);
       const whereClause: any = {
-        buyerId: userId,
+        buyerId: buyer.id,
       };
 
       if (filters?.status) {
@@ -460,6 +474,7 @@ async getProfile(userId: string) {
 
   async getOrderDetails(orderId: string, userId: string) {
     try {
+      const buyer = await this.requireBuyerProfile(userId);
       const order = await this.databaseService.order.findUnique({
         where: { id: orderId },
         include: {
@@ -510,7 +525,7 @@ async getProfile(userId: string) {
         throw new NotFoundException('Order not found');
       }
 
-      if (order.buyerId !== userId) {
+      if (order.buyerId !== buyer.id) {
         throw new ForbiddenException('You can only view your own orders');
       }
 
@@ -525,6 +540,7 @@ async getProfile(userId: string) {
 
   async cancelOrder(orderId: string, userId: string, reason?: string) {
     try {
+      const buyer = await this.requireBuyerProfile(userId);
       const order = await this.databaseService.order.findUnique({
         where: { id: orderId },
       });
@@ -533,7 +549,7 @@ async getProfile(userId: string) {
         throw new NotFoundException('Order not found');
       }
 
-      if (order.buyerId !== userId) {
+      if (order.buyerId !== buyer.id) {
         throw new ForbiddenException('You can only cancel your own orders');
       }
 
@@ -591,6 +607,7 @@ async getProfile(userId: string) {
 
   async getOrderStatistics(userId: string) {
     try {
+      const buyer = await this.requireBuyerProfile(userId);
       const [
         totalOrders,
         pendingOrders,
@@ -601,28 +618,28 @@ async getProfile(userId: string) {
         cancelledOrders,
         totalSpent,
       ] = await Promise.all([
-        this.databaseService.order.count({ where: { buyerId: userId } }),
+        this.databaseService.order.count({ where: { buyerId: buyer.id } }),
         this.databaseService.order.count({
-          where: { buyerId: userId, status: OrderStatus.PENDING },
+          where: { buyerId: buyer.id, status: OrderStatus.PENDING },
         }),
         this.databaseService.order.count({
-          where: { buyerId: userId, status: OrderStatus.CONFIRMED },
+          where: { buyerId: buyer.id, status: OrderStatus.CONFIRMED },
         }),
         this.databaseService.order.count({
-          where: { buyerId: userId, status: OrderStatus.PROCESSING },
+          where: { buyerId: buyer.id, status: OrderStatus.PROCESSING },
         }),
         this.databaseService.order.count({
-          where: { buyerId: userId, status: OrderStatus.SHIPPED },
+          where: { buyerId: buyer.id, status: OrderStatus.SHIPPED },
         }),
         this.databaseService.order.count({
-          where: { buyerId: userId, status: OrderStatus.DELIVERED },
+          where: { buyerId: buyer.id, status: OrderStatus.DELIVERED },
         }),
         this.databaseService.order.count({
-          where: { buyerId: userId, status: OrderStatus.CANCELLED },
+          where: { buyerId: buyer.id, status: OrderStatus.CANCELLED },
         }),
         this.databaseService.order.aggregate({
           where: {
-            buyerId: userId,
+            buyerId: buyer.id,
             status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
           },
           _sum: { totalAmount: true },
@@ -648,8 +665,9 @@ async getProfile(userId: string) {
 
   async getFavoriteListings(userId: string) {
     try {
+      const buyer = await this.requireBuyerProfile(userId);
       const recentOrders = await this.databaseService.order.findMany({
-        where: { buyerId: userId },
+        where: { buyerId: buyer.id },
         include: {
           orderItems: {
             include: {
@@ -684,4 +702,3 @@ async getProfile(userId: string) {
     }
   }
 }
-

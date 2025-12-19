@@ -18,10 +18,16 @@ export class RolesGuard implements CanActivate {
     }
     
     const { user } = context.switchToHttp().getRequest();
-    const roleName = user.role.name; // Assuming roles is now a single object
+    // Support Umufasha mode switching - check activeRole first, then effectiveRole, then role.name
+    const roleName = user?.activeRole ?? user?.effectiveRole ?? user?.role?.name ?? user?.role;
     
     // Check if the roleName matches any of the requiredRoles
-    return requiredRoles.includes(roleName);
+    const isAllowed = requiredRoles.includes(roleName);
     
+    if (!isAllowed) {
+      console.log(`RolesGuard DENIED: User role "${roleName}" not in required roles [${requiredRoles.join(', ')}]`);
+    }
+    
+    return isAllowed;
   }
 }

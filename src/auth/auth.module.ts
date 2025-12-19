@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { DatabaseModule } from 'src/database/database.module';
 import { MailModule } from 'src/mail/mail.module';
+import { OnboardingGuard } from 'src/guards/onboarding.guard';
 
 @Module({
   imports: [MailModule, JwtModule.register({
@@ -12,7 +13,7 @@ import { MailModule } from 'src/mail/mail.module';
     signOptions: { expiresIn: '2d' }
   }), UsersModule, DatabaseModule],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, OnboardingGuard],
   exports: [JwtModule, AuthService]
 })
 export class AuthModule { }

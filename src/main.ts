@@ -6,6 +6,23 @@ import { ValidationError } from 'class-validator'
 import { AppExceptionFilter } from './filter/exception.filter'
 import { WinstonModule } from 'nest-winston'
 import { winstonLoggerConfig } from './logs/winston-logger.config'
+import * as os from 'os'
+
+function getLanUrls(port: number) {
+  const urls = new Set<string>()
+  const nets = os.networkInterfaces()
+
+  for (const name of Object.keys(nets)) {
+    const addrs = nets[name] ?? []
+    for (const addr of addrs) {
+      if (addr.family !== 'IPv4') continue
+      if (addr.internal) continue
+      urls.add(`http://${addr.address}:${port}`)
+    }
+  }
+
+  return Array.from(urls)
+}
 
 
 async function bootstrap() {
@@ -91,8 +108,16 @@ async function bootstrap() {
       docExpansion: 'none',
     },
   });
-  await app.listen(process.env.PORT || 8000, () => {
-    console.log(`Application is running on: ${process.env.PORT || 8000}`)
-  })
+  const port = Number(process.env.PORT) || 8000
+  const host = process.env.HOST || '0.0.0.0'
+
+  await app.listen(port, host)
+
+  console.log(`Application is running on: http://localhost:${port}`)
+  const lanUrls = getLanUrls(port)
+  if (lanUrls.length > 0) {
+    console.log('LAN URLs:')
+    for (const url of lanUrls) console.log(`- ${url}`)
+  }
 }
 bootstrap()

@@ -7,6 +7,7 @@ export class LoginPayload {
     token: string
     isDefaultPassword: boolean
     role: Role
+    activeRole?: string
     status: Status
     locationId: number
     fullName?: string
@@ -19,4 +20,5 @@ export class LoginPayload {
     cooperativePhoneNumber?: string
     registrationNumber?: string
     cooperativeType?: string
+    cooperativeCollectiveType?: string
 }

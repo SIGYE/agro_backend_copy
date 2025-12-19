@@ -129,7 +129,7 @@ export class SeedStrainService {
           seasons: {
             include: {
               farmer: true,
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -229,7 +229,7 @@ export class SeedStrainService {
       const seasons = await this.databaseService.season.findMany({
         where: whereClause,
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true
             }
@@ -242,8 +242,8 @@ export class SeedStrainService {
       const cropMap = new Map();
 
       seasons.forEach(season => {
-        const cropId = season.croType.crop.id;
-        const cropName = season.croType.crop.name;
+        const cropId = season.cropType.crop.id;
+        const cropName = season.cropType.crop.name;
 
         if (!cropMap.has(cropId)) {
           cropMap.set(cropId, {

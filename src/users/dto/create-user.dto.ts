@@ -41,8 +41,10 @@ export class CreateUserDto {
     @IsNotEmpty()
     dob: string;
 
-    @ApiProperty()
-    @IsNotEmpty()
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    @MinLength(8, { message: 'Password must be at least 8 characters long' })
     password?: string
 
     @ApiProperty({ required: false })

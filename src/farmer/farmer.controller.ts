@@ -12,52 +12,114 @@ import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import { Allow } from 'src/decorators/allow.decorator';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { User } from '@prisma/client';
-import { DatabaseService } from 'src/database/database.service';
+import { Roles } from 'src/decorators/roles.decorator';
+import { Role_Enum } from 'src/enums/role.enum';
+import { CreateFarmerProfileChangeRequestDto } from './dto/create-farmer-profile-change-request.dto';
+import { ResolveFarmerProfileChangeRequestDto } from './dto/resolve-farmer-profile-change-request.dto';
 
 @Controller('farmer')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @ApiTags('Farmer')
 export class FarmerController {
-  constructor(private readonly farmerService: FarmerService, private readonly databaseService: DatabaseService) { }
+  constructor(private readonly farmerService: FarmerService) { }
 
-@Post('register-farmer')
-@ApiBody({ type: CreateFarmerDto })
-@Allow()
-async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user?: User) {
-  try {
-    // Check if user is authenticated and has Umufashamyumvire role
-    if (user) {
-      const userRole = await this.databaseService.role.findUnique({
-        where: { id: user.roleId }
-      });
-      
-      // If user is Umufashamyumvire and didn't provide location, use theirs
-      if (userRole && userRole.name === 'UMUFASHAMYUMVIRE') {
-        if (!createFarmerDto.locationId && user.locationId) {
-          // Create a new object with the updated locationId
-          const farmerData = {
-            ...createFarmerDto,
-            locationId: user.locationId
-          };
-          const data = await this.farmerService.registerFarmer(farmerData, user);
-          return new ApiResponse(true, "Farmer Created by Umufashamyumvire", data, 201);
-        }
-      }
+  @Get('me')
+  @Roles(Role_Enum.FARMER)
+  async me(@CurrentUser() user: User) {
+    try {
+      const data = await this.farmerService.getMyProfile(user.id);
+      return new ApiResponse(true, "My Farmer Profile", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
     }
-    
-    // For farmers self-registering or when location is provided
-    if (!createFarmerDto.locationId) {
-      return new ApiResponse(false, "Location is required", null, 400);
-    }
-    
-    const data = await this.farmerService.registerFarmer(createFarmerDto, user);
-    const message = user ? "Farmer Created" : "Farmer Self-Registered Successfully";
-    return new ApiResponse(true, message, data, 201);
-  } catch (e) {
-    return new ApiResponse(false, e.message, null, 400);
   }
-}
+
+  @Post('me/change-requests')
+  @Roles(Role_Enum.FARMER)
+  async createMyChangeRequest(@CurrentUser() user: User, @Body() dto: CreateFarmerProfileChangeRequestDto) {
+    try {
+      const data = await this.farmerService.createMyProfileChangeRequest(user.id, dto);
+      return new ApiResponse(true, "Change Request Created", data, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Get('me/change-requests')
+  @Roles(Role_Enum.FARMER)
+  async listMyChangeRequests(@CurrentUser() user: User) {
+    try {
+      const data = await this.farmerService.listMyProfileChangeRequests(user.id);
+      return new ApiResponse(true, "My Change Requests", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Get('change-requests/pending')
+  @Roles(
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.ADMIN,
+    Role_Enum.DEV_ADMIN
+  )
+  async listPendingChangeRequests(@CurrentUser() user: User) {
+    try {
+      const data = await this.farmerService.listPendingProfileChangeRequests(user as any);
+      return new ApiResponse(true, "Pending Change Requests", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Put('change-requests/:id/approve')
+  @Roles(
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.ADMIN,
+    Role_Enum.DEV_ADMIN
+  )
+  async approveChangeRequest(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: ResolveFarmerProfileChangeRequestDto) {
+    try {
+      const data = await this.farmerService.approveProfileChangeRequest(user as any, id, dto?.note);
+      return new ApiResponse(true, "Change Request Approved", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Put('change-requests/:id/reject')
+  @Roles(
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.UMUFASHAMYUMVIRE,
+    Role_Enum.ADMIN,
+    Role_Enum.DEV_ADMIN
+  )
+  async rejectChangeRequest(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: ResolveFarmerProfileChangeRequestDto) {
+    try {
+      const data = await this.farmerService.rejectProfileChangeRequest(user as any, id, dto?.note);
+      return new ApiResponse(true, "Change Request Rejected", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Post('register-farmer')
+  @ApiBody({ type: CreateFarmerDto })
+  @Allow()
+  async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user: User) {
+    try {
+      const data = await this.farmerService.registerFarmer(createFarmerDto, user);
+      const message = user ? "Farmer Created" : "Farmer Self-Registered Successfully";
+      return new ApiResponse(true, message, data, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
 
   @Get()
   async findAll() {

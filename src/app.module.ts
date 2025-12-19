@@ -38,10 +38,11 @@ import { HarvestModule } from './harvest/harvest.module';
 import { LocationLevelNameModule } from './location_level_name/location_level_name.module';
 import { OrderModule } from './order/order.module';
 import { BuyerModule } from './buyer/buyer.module';
+import { NotificationModule } from './notification/notification.module';
 
 
 @Module({
-  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule, FertiliserModule, DiseaseModule, PestsModule, SeasonsModule, ProduceModule, ReportsModule, HarvestSeasonModule, SeedStrainModule, MetricModule, FarmingActivityModule, HarvestModule, LocationLevelNameModule, OrderModule, BuyerModule],
+  imports: [ConfigModule.forRoot(), DatabaseModule, MailModule, AuthModule, RolesModule, UsersModule, LocationModule, MailModule, UploadModule, SettingsModule, BreedModule, LiveStockRegistrationModule, CooperativeModule, SlaughterHouseModule, CropModule, AnimalModule, FarmerModule, AnalyticsModule, FertiliserModule, DiseaseModule, PestsModule, SeasonsModule, ProduceModule, ReportsModule, HarvestSeasonModule, SeedStrainModule, MetricModule, FarmingActivityModule, HarvestModule, LocationLevelNameModule, OrderModule, BuyerModule, NotificationModule],
   controllers: [AppController],
   providers: [AppService, {
     provide: APP_GUARD,

@@ -39,6 +39,7 @@ export class AnimalNameDto {
     languageName: string
     @IsString()
     languageCode: string
+    @IsOptional()
     @IsString()
     animalId?: string
 

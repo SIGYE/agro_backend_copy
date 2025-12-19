@@ -21,12 +21,9 @@ const ALLOWED_CROP_ROLES = [
   Role_Enum.UMUFASHAMYUMVIRE
 ];
 
-// Extended User type to include role and cooperativeId
+// Extended User type to include computed effectiveRole from AuthGuard
 type ExtendedUser = User & {
-  role?: {
-    name: Role_Enum;
-  };
-  cooperativeId?: string;
+  effectiveRole?: string;
 };
 
 @Controller('crop')
@@ -41,11 +38,6 @@ export class CropController {
   @ApiBody({ type: CreateCropDto })
   async create(@Body() createCropDto: CreateCropDto, @CurrentUser() user: ExtendedUser): Promise<ApiResponse<Crop>> {
     try {
-      // Additional validation for farmers: must have cooperativeId if farmer
-      if (user.role?.name === Role_Enum.FARMER && !user.cooperativeId) {
-        throw new BadRequestException('Farmers must be associated with a cooperative to create crops');
-      }
-      
       const data = await this.cropService.create(createCropDto, user as any);
       return new ApiResponse<Crop>(true, "Crop Created", data, 200);
     } catch (e) {
