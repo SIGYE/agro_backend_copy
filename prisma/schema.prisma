@@ -36,21 +36,21 @@ enum Purpose {
   OTHER
 }
 
-enum PestType {
-  LIVESTOCK
-  CROP
-  FUNGAL
-  VIRAL
-  BACTERIAL
-  OTHER
-}
-
 enum DiseaseType {
   LIVESTOCK
   CROP
-  INSECT
-  NEMATODE
-  OTHER
+  FUNGAL     
+  VIRAL      
+  BACTERIAL   
+  OTHER     
+}
+
+enum PestType {
+  LIVESTOCK
+  CROP
+  INSECT     
+  NEMATODE    
+  OTHER      
 }
 
 enum AnimalState {
@@ -280,8 +280,6 @@ model Disease {
   specificType   String?
   causativeAgent String?
   animals        Animal[]
-  creator           User              @relation("DiseaseCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
-  animals           Animal[]
   crops             Crop[]
   seasons           Season[]
   type              DiseaseType
@@ -390,8 +388,8 @@ model Season {
   seeds                             Float
   produceHarvested                  Float
   expectedYield                     Float
-  startDate                         DateTime
-  endDate                           DateTime
+  startDate                         String
+  endDate                           String
   seasonStatus                      SeasonStatus                       @default(ON_GOING)
   cropTypeId                        String
   cropType                          CropType                           @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)

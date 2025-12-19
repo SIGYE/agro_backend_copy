@@ -45,38 +45,51 @@ export class FarmerService {
     private readonly userServcice: UsersService,
     private readonly notificationService: NotificationService,
   ) { }
-  async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
-    try {
-      // Check if creator is Umufashamyumvire
-      let isUmufashamyumvire = false;
-      if (loggedInUser) {
-        const creatorRole = await this.databaseService.role.findUnique({
-          where: { id: loggedInUser.roleId }
-        });
-        isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
-      }
-
-      // Validate location (double-check)
-      if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
-        throw new BadRequestException("Location is required");
-      }
-
-      // If Umufashamyumvire and still no location, use theirs
-      if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
-        CreateFarmerDto.locationId = loggedInUser.locationId;
-      }
-
-      let role = await this.databaseService.role.findFirst({
-        where: {
-          name: "FARMER"
-        }
+async registerFarmer(CreateFarmerDto: CreateFarmerDto, loggedInUser?: User): Promise<Farmer> {
+  try {
+    // Check if creator is Umufashamyumvire
+    let isUmufashamyumvire = false;
+    if (loggedInUser) {
+      const creatorRole = await this.databaseService.role.findUnique({
+        where: { id: loggedInUser.roleId }
       });
-    
-      let user = await this.userServcice.create({ 
-        roleId: role.id, 
-        ...CreateFarmerDto 
-      }, loggedInUser);
+      isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
+    }
 
+    // Create a copy of the DTO to modify
+    const userData = { ...CreateFarmerDto };
+
+    // Handle location logic
+    if (!userData.locationId && isUmufashamyumvire && loggedInUser) {
+      // Use Umufashamyumvire's location
+      userData.locationId = loggedInUser.locationId;
+    } else if (!userData.locationId && !isUmufashamyumvire) {
+      throw new BadRequestException("Location is required");
+    }
+
+    // Validate location exists
+    if (userData.locationId) {
+      const location = await this.databaseService.location.findUnique({
+        where: { id: userData.locationId }
+      });
+      if (!location) {
+        throw new BadRequestException(`Location with id ${userData.locationId} does not exist`);
+      }
+    }
+
+    let role = await this.databaseService.role.findFirst({
+      where: {
+        name: "FARMER"
+      }
+    });
+    
+    // Pass the modified data to user service
+    let user = await this.userServcice.create({ 
+      roleId: role.id, 
+      ...userData 
+    }, loggedInUser);
+
+    // Create farmer record
     let farmer = await this.databaseService.farmer.create({
       data: {
         user: {
@@ -132,10 +145,10 @@ export class FarmerService {
 
     return farmer;
 
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
+  } catch (e) {
+    throw new BadRequestException(e.message);
   }
+}
 
   private normalizeProfileChanges(changes: FarmerProfileChangesDto): Record<string, any> {
     const cleaned: Record<string, any> = {};

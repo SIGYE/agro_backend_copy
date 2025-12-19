@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { SeasonStatus } from "@prisma/client"
 import { Type } from "class-transformer"
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator"
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from "class-validator"
 
 export class CreateSeasonDto {
     @ApiProperty()
@@ -36,11 +36,13 @@ export class CreateSeasonDto {
 
     @ApiProperty()
     @IsNotEmpty()
-    startDate: Date
+    @IsDateString()
+    startDate: string
 
     @ApiProperty()
     @IsNotEmpty()
-    endDate: Date
+    @IsDateString()
+    endDate: string
 
     @ApiProperty({
         enum: SeasonStatus

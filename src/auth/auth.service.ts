@@ -271,45 +271,149 @@ export class AuthService {
 
   }
 
-  async requestFarmerOnboardingOtp(telephone: string): Promise<string> {
-    const user = await this.databaseService.user.findUnique({
-      where: { telephone },
-      include: { role: true },
-    })
+async requestFarmerOnboardingOtp(telephone: string): Promise<string> {
+  const user = await this.databaseService.user.findUnique({
+    where: { telephone },
+    include: { role: true },
+  });
 
-    if (!user) {
-      throw new UnauthorizedException("The user with the given phone number was not found")
+  if (!user) {
+    throw new UnauthorizedException("The user with the given phone number was not found");
+  }
+  if (user.role?.name !== 'FARMER') {
+    throw new UnauthorizedException("OTP onboarding is only available for farmers");
+  }
+  if (!user.isDefaultPassword) {
+    throw new BadRequestException("Password already set. Please login with your password.");
+  }
+
+  const ttlMinutes = this.otpTtlMinutes();
+  const otp = this.generateOtpCode();
+  const otpHash = await bcrypt.hash(otp, 10);
+
+  await this.databaseService.user.update({
+    where: { id: user.id },
+    data: {
+      otp: otpHash,
+      otpExpiresAt: new Date(Date.now() + ttlMinutes * 60_000),
+      otpUsedAt: null,
     }
-    if (user.role?.name !== 'FARMER') {
-      throw new UnauthorizedException("OTP onboarding is only available for farmers")
-    }
-    if (!user.isDefaultPassword) {
-      throw new BadRequestException("Password already set. Please login with your password.")
-    }
+  });
 
-    const ttlMinutes = this.otpTtlMinutes();
-    const otp = this.generateOtpCode();
-    const otpHash = await bcrypt.hash(otp, 10);
+  // Check if we should send via SMS or Email
+  const otpDevMode = process.env.OTP_DEV_MODE === 'true';
+  
+  if (otpDevMode) {
+    // Development mode: log OTP to console
+    console.log(`[DEV MODE] OTP for ${telephone} (${user.email || 'no email'}): ${otp}`);
+    return 'OTP generated (check console for development)';
+  }
 
-    await this.databaseService.user.update({
-      where: { id: user.id },
-      data: {
-        otp: otpHash,
-        otpExpiresAt: new Date(Date.now() + ttlMinutes * 60_000),
-        otpUsedAt: null,
-      }
-    })
+  let smsSent = false;
+  let emailSent = false;
 
+  // Try SMS first
+  try {
     const message: Message = {
       id: user.id,
-      content: `Your Agro OTP is ${otp}. It expires in ${ttlMinutes} minutes.`
+      content: `Your Agro App OTP is ${otp}. It expires in ${ttlMinutes} minutes.`
+    };
+    const smsResult = await sendSms(telephone, message);
+    if (smsResult === 'SMS Sent Successfully') {
+      smsSent = true;
+      console.log(`SMS OTP sent to ${telephone}`);
     }
-    const smsResult = await sendSms(telephone, message)
-    if (smsResult !== 'SMS Sent Successfully' && process.env.NODE_ENV !== 'production') {
-      console.log(`[DEV] Farmer OTP for ${telephone}: ${otp}`)
-    }
-    return 'OTP Sent Successfully'
+  } catch (smsError) {
+    console.warn(`Failed to send SMS OTP to ${telephone}:`, smsError.message);
   }
+
+  // If SMS failed, try email as fallback
+  if (!smsSent && user.email) {
+    try {
+      emailSent = await this.mailService.sendOtpEmail(
+        user.email, 
+        otp, 
+        user.firstName, 
+        ttlMinutes
+      );
+      
+      if (emailSent) {
+        console.log(`Email OTP sent to ${user.email} as SMS fallback`);
+        return `OTP sent to your email (${user.email})`;
+      }
+    } catch (emailError) {
+      console.error(`Failed to send email OTP to ${user.email}:`, emailError.message);
+    }
+  }
+
+  // If both SMS and email failed, check if we're in development
+  if (!smsSent && !emailSent) {
+    if (process.env.NODE_ENV !== 'production') {
+      // In development, log the OTP
+      console.log(`[DEV] OTP for ${telephone}: ${otp}`);
+      return 'OTP generated (check console for development)';
+    } else {
+      // In production, throw error
+      throw new BadRequestException(
+        'Failed to send OTP via SMS or Email. Please contact support.'
+      );
+    }
+  }
+
+  return smsSent ? 'OTP sent via SMS' : 'OTP sent via Email';
+}
+
+async verifyOtpByEmail(email: string, otp: string): Promise<{ onboardingToken: string }> {
+  const user = await this.databaseService.user.findUnique({
+    where: { email },
+    include: { role: true },
+  });
+
+  if (!user) {
+    throw new UnauthorizedException("The user with the given email was not found");
+  }
+  
+  if (user.role?.name !== 'FARMER') {
+    throw new UnauthorizedException("OTP onboarding is only available for farmers");
+  }
+  
+  if (!user.isDefaultPassword) {
+    throw new BadRequestException("Password already set. Please login with your password.");
+  }
+  
+  if (user.status === Status.INACTIVE) {
+    throw new UnauthorizedException('User Account not active contact support for help');
+  }
+
+  if (!user.otp || user.otpUsedAt) {
+    throw new UnauthorizedException("No active OTP session found for this user");
+  }
+  
+  if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+    throw new UnauthorizedException("OTP expired. Please request a new OTP.");
+  }
+
+  const isValid = await bcrypt.compare(otp, user.otp);
+  if (!isValid) {
+    throw new UnauthorizedException("Invalid OTP");
+  }
+
+  await this.databaseService.user.update({
+    where: { id: user.id },
+    data: {
+      otp: null,
+      otpExpiresAt: null,
+      otpUsedAt: new Date(),
+    }
+  });
+
+  const onboardingToken = this.jwtService.sign(
+    { id: user.id, tokenType: 'ONBOARDING' },
+    { expiresIn: '15m' }
+  );
+
+  return { onboardingToken };
+}
 
   async verifyFarmerOnboardingOtp(otpLogin: OtpLoginDto): Promise<{ onboardingToken: string }> {
     const user = await this.databaseService.user.findUnique({
@@ -523,6 +627,55 @@ export class AuthService {
     return true;
   }
 
+  async requestFarmerOnboardingOtpByEmail(email: string): Promise<string> {
+  const user = await this.databaseService.user.findUnique({
+    where: { email },
+    include: { role: true },
+  });
+
+  if (!user) {
+    throw new UnauthorizedException("The user with the given email was not found");
+  }
+  
+  if (user.role?.name !== 'FARMER') {
+    throw new UnauthorizedException("Email OTP is only available for farmers");
+  }
+  
+  if (!user.isDefaultPassword) {
+    throw new BadRequestException("Password already set. Please login with your password.");
+  }
+
+  const ttlMinutes = this.otpTtlMinutes();
+  const otp = this.generateOtpCode();
+  const otpHash = await bcrypt.hash(otp, 10);
+
+  await this.databaseService.user.update({
+    where: { id: user.id },
+    data: {
+      otp: otpHash,
+      otpExpiresAt: new Date(Date.now() + ttlMinutes * 60_000),
+      otpUsedAt: null,
+    }
+  });
+
+  // Send OTP via Email
+  const emailSent = await this.mailService.sendOtpEmail(
+    user.email, 
+    otp, 
+    user.firstName, 
+    ttlMinutes
+  );
+
+  if (!emailSent) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Email OTP for ${email}: ${otp}`);
+      return 'OTP generated (check console for development)';
+    }
+    throw new BadRequestException('Failed to send OTP email');
+  }
+
+  return 'OTP sent to your email successfully';
+}
 
   async validateUsername(username: string, password: string): Promise<UserWithRoles> {
     let user: UserWithRoles = await this.userService.findUserByUsername(username)

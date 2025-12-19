@@ -53,8 +53,8 @@ export class CreateUserDto {
     roleId?: string
 
     @ApiProperty()
-    @IsNotEmpty()
-    locationId: number
+    @IsOptional()
+    locationId?: number
     
     // @ApiProperty()
     // @IsOptional()

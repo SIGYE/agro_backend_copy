@@ -108,18 +108,30 @@ export class FarmerController {
     }
   }
 
-  @Post('register-farmer')
-  @ApiBody({ type: CreateFarmerDto })
-  @Allow()
-  async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user: User) {
-    try {
-      const data = await this.farmerService.registerFarmer(createFarmerDto, user);
-      const message = user ? "Farmer Created" : "Farmer Self-Registered Successfully";
-      return new ApiResponse(true, message, data, 201);
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400);
-    }
+@Post('register-farmer')
+@ApiBody({ type: CreateFarmerDto })
+@Roles(Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.ADMIN, Role_Enum.DEV_ADMIN) // REPLACE @Allow() with this
+async create(@Body() createFarmerDto: CreateFarmerDto, @CurrentUser() user: User) {
+  try {
+    const data = await this.farmerService.registerFarmer(createFarmerDto, user);
+    return new ApiResponse(true, "Farmer Created", data, 201);
+  } catch (e) {
+    return new ApiResponse(false, e.message, null, 400);
   }
+}
+
+@Post('self-register')
+@ApiBody({ type: CreateFarmerDto })
+@Allow()
+async selfRegister(@Body() createFarmerDto: CreateFarmerDto) {
+  try {
+    // Pass null for loggedInUser since it's self-registration
+    const data = await this.farmerService.registerFarmer(createFarmerDto, null);
+    return new ApiResponse(true, "Farmer Self-Registered Successfully", data, 201);
+  } catch (e) {
+    return new ApiResponse(false, e.message, null, 400);
+  }
+}
 
   @Get()
   async findAll() {

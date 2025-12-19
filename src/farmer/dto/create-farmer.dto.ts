@@ -7,7 +7,7 @@ import { cropFarmerDto } from "./crop-farmer.dto";
 import { animalFarmerDto } from "./animal-famer.dto";
 import { Type } from "class-transformer";
 
-export class CreateFarmerDto extends CreateUserDto {
+export class CreateFarmerDto extends CreateUserDto {  
     @ApiProperty({
         isArray: true,
         type: cropFarmerDto

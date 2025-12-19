@@ -8,6 +8,7 @@ import { promises as fs } from 'fs';
 @Injectable()
 export class MailService {
   private transporter;
+  private otpTransporter;
 
   constructor(private readonly configService: ConfigService) {
 
@@ -22,6 +23,24 @@ export class MailService {
         pass: this.configService.get('EMAIL_PASSWORD'), // Your email password
       },
     });
+
+        const otpEmailUser = this.configService.get('OTP_EMAIL_SENDER');
+    const otpEmailPass = this.configService.get('OTP_EMAIL_PASSWORD');
+    
+    if (otpEmailUser && otpEmailPass) {
+      this.otpTransporter = nodemailer.createTransport({
+        service: this.configService.get('OTP_EMAIL_SERVICE') || 'gmail',
+        host: 'smtp.gmail.com',
+        port: parseInt(this.configService.get('OTP_EMAIL_PORT') || '587'),
+        secure: this.configService.get('OTP_EMAIL_SECURE') === 'true',
+        auth: {
+          user: otpEmailUser,
+          pass: otpEmailPass,
+        },
+      });
+    } else {
+      console.warn('OTP email credentials not configured. OTP emails will not work.');
+    }
   }
 
   /**
@@ -150,6 +169,108 @@ export class MailService {
       });
     } catch (error) {
       console.log(error)
+    }
+  }
+
+   async sendOtpEmail(to: string, otp: string, userName: string, expiryMinutes: number = 10): Promise<boolean> {
+    // Check if OTP transporter is configured
+    if (!this.otpTransporter) {
+      console.warn('OTP email transporter not configured. Cannot send OTP email.');
+      return false;
+    }
+
+    const subject = 'Your OTP Code for Agro App';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+          .otp-code { 
+            font-size: 32px; 
+            font-weight: bold; 
+            text-align: center; 
+            letter-spacing: 5px;
+            color: #4CAF50;
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            border: 2px dashed #4CAF50;
+          }
+          .warning { 
+            background-color: #fff3cd; 
+            border: 1px solid #ffeaa7; 
+            color: #856404; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 20px 0;
+          }
+          .footer { margin-top: 30px; font-size: 12px; color: #666; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Agro App</h1>
+            <p>Farmer Onboarding OTP</p>
+          </div>
+          <div class="content">
+            <h2>Hello ${userName},</h2>
+            <p>Your One-Time Password (OTP) for farmer account verification is:</p>
+            <div class="otp-code">${otp}</div>
+            <p>This code will expire in <strong>${expiryMinutes} minutes</strong>.</p>
+            
+            <div class="warning">
+              <p><strong>Important:</strong> Do not share this OTP with anyone. Agro App team will never ask for your OTP.</p>
+            </div>
+            
+            <p>If you didn't request this OTP, please ignore this email or contact support if you're concerned.</p>
+            
+            <div class="footer">
+              <p>Best regards,<br><strong>The Agro App Team</strong></p>
+              <p>This is an automated message, please do not reply to this email.</p>
+              <p>Need help? Contact support at developers@ohereza.rw</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      const mailOptions = {
+        from: `"Agro App" <${this.configService.get('OTP_EMAIL_SENDER')}>`,
+        to: to,
+        subject: subject,
+        html: html,
+      };
+
+      const info = await this.otpTransporter.sendMail(mailOptions);
+      console.log(`OTP email sent to ${to}: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send OTP email:', error);
+      return false;
+    }
+  }
+
+  async testOtpEmailConfig(): Promise<boolean> {
+    if (!this.otpTransporter) {
+      console.error('OTP transporter not configured');
+      return false;
+    }
+
+    try {
+      await this.otpTransporter.verify();
+      console.log('✅ OTP email configuration is valid');
+      return true;
+    } catch (error) {
+      console.error('❌ OTP email configuration error:', error.message);
+      return false;
     }
   }
 
