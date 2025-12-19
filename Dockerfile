@@ -24,7 +24,7 @@ RUN npx prisma generate
 
 # Run database migrations 
 
-RUN npx prisma migrate deploy
+# RUN npx prisma migrate deploy
 
 
 # Build the application
