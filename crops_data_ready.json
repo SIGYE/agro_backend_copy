@@ -1,0 +1,2033 @@
+{
+  "crops": [
+    {
+      "names": [
+        {
+          "name": "Maize",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "SC301",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC403",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC529",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC637",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC545 (10C844)",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC 537",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC608",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC 533",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC719",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "H-628",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "H-629",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "DH-04",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "H-513",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHM104",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHM1402",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHM1407",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHM1409",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMH1520",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMH1521",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMH1601",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMH1611",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMM1709",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMM1710",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RHMH1707",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RAHA02 (HP942-15)",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RAHA03 (ST-50-13)",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "RAHA04 (HP 942-12)",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "PAN_4m21",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "PAN 53",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "PAN 67",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "PAN 691",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC 513",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "WH 505",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "WH507",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "WH 403",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "WH 403",
+              "seedType": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "Open_pollinated",
+          "seedStrains": [
+            {
+              "name": "ISARM101",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "ISARM104 (Karama 1)",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "ZM 607 (Kigega)",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "Pool-132 (Ndaruhutse)",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "Pool-9A (Tamira)",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "Pool-8A (Mamesa)",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "ISAR H071",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "ISAR M081",
+              "seedType": "Open_pollinated"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "DAP (18-46-0) is mixed with urea (46-0-0)",
+        "NPK (17-17-17)",
+        "CEREALS (23-10-5+2Mg+3S+0.3Zn)"
+      ],
+      "diseases": [
+        {
+          "name": "Maize Lethal Necrosis",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust",
+          "specificType": "Maize chlorotic mottle virus (MCMV)",
+          "causativeAgent": "Exserohilum turcicum [(Pass.) K.J. Leonard & Suggs]"
+        },
+        {
+          "name": "Maize streak virus",
+          "type": "VIRAL",
+          "medication": "Malathion 2% w/w, Dust",
+          "specificType": "Sugarcane mosaic virus (SCMV)",
+          "causativeAgent": "Stenocarpella maydis (Berk.) B. Sutton"
+        },
+        {
+          "name": "Turcicum Leaf Blight or Northern Leaf Blight",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust",
+          "specificType": "Wheat Streak Mosaic Virus (WSMV)",
+          "causativeAgent": "Fusarium verticillioides J. Sheld."
+        },
+        {
+          "name": "Stalk rot",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust",
+          "specificType": "Dwarf Mosaic Virus (MDM V)",
+          "causativeAgent": "Stenocarpella maydis (Berk.) B. Sutton"
+        },
+        {
+          "name": "maize ear rot",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust",
+          "specificType": "Diplodia stalk rot",
+          "causativeAgent": "Gibberella zeae (Schwein.) Petch"
+        },
+        {
+          "name": "Striga spp(parasite plant)",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust",
+          "specificType": "Fusarium stalk rot",
+          "causativeAgent": "(also known as Fusarium graminearum)"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Cicadulina mbila (Naude)",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust"
+        },
+        {
+          "name": "Busseola fusca(larvae)",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust"
+        },
+        {
+          "name": "FallArmyworm Spodoptera frugiperda (J.E. Smith)",
+          "type": "INSECT",
+          "medication": "Malathion 2% w/w, Dust"
+        },
+        {
+          "name": "maize weevil ,Sitophilus zeamais (Motschulsky)",
+          "type": "OTHER",
+          "medication": "Malathion 2% w/w, Dust"
+        },
+        {
+          "name": "Angoumois grain moth",
+          "type": "INSECT",
+          "medication": "Malathion 2% w/w, Dust"
+        }
+      ],
+      "medicines": [
+        "Malathion 2% w/w, Dust",
+        "Malathion 2.0% w/w + Permethrin 0.3% w/w",
+        "Profenofos, 40%EC; 50%EC",
+        "Pyrethrins, 75%w/w EC",
+        "Pyrimiphos-Methyl 400g/l + 75g/l Permethrin, EC",
+        "Pyrimiphos-methyl, 2 % PP Dust",
+        "Aluminium phosphide (PH3), 56%, 57% pills, tablets and plates for",
+        "fumigation"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Soybean",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "SC. Sequel",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC. Squire",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC. Safari",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC.Saga",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "SC.Squire",
+              "seedType": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "Improved Variety",
+          "seedStrains": [
+            {
+              "name": "RW SOY 20-1",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-3",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-4",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-5",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-6",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-7",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW SOY 20-8",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Peka6",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "SB24",
+              "seedType": "Improved Variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "DAP (18-46-0)",
+        "NPK17-17-17"
+      ],
+      "diseases": [
+        {
+          "name": "Rasting",
+          "type": "OTHER",
+          "medication": "1.1.Azoxystrobin:",
+          "causativeAgent": "Phakosporapachyrhizi."
+        },
+        {
+          "name": "MosaicVirus",
+          "type": "VIRAL",
+          "medication": "1.1.Azoxystrobin:"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Cutworm/stem borer",
+          "type": "INSECT",
+          "medication": "1.1.Azoxystrobin:"
+        },
+        {
+          "name": "Lamprosemaindicata",
+          "type": "OTHER",
+          "medication": "1.1.Azoxystrobin:"
+        },
+        {
+          "name": "dove/pigeon",
+          "type": "OTHER",
+          "medication": "1.1.Azoxystrobin:"
+        },
+        {
+          "name": "chicken",
+          "type": "OTHER",
+          "medication": "1.1.Azoxystrobin:"
+        }
+      ],
+      "medicines": [
+        "1.1.Azoxystrobin:",
+        "1.2.Benomyl",
+        "1,3.Tebuconazole",
+        "1.4.Copperhydroxide",
+        "2.Lambda-Cyhalothrin and Azadiractin",
+        "3.a.Cypermethrin",
+        "b.Lamda-Cyhalothrin",
+        "c.Azadirachtin",
+        "d.Acetamiprid"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Rice",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved Variety",
+          "seedStrains": [
+            {
+              "name": "RW-RCE80-01/AGASARO80-L1",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-RCE89-01/KIGORI89-H1",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-RCE89-02/KIGORI89-H2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-RCE89-03/KIGORI89-H3",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-RCE89-04/KIGORI89-H4",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-RCE03-01/TETA03-HM1",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-RCE03-02/TETA03-HM2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Zhong Geng",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Yun Keng",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Yunerthian",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Basmati",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Facagro",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Tox4331-Wat 86--3-42-2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Tox 4331-Wat 91-3-1-1-1",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Wat1276–22-2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Wat 1395B-24-2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Rumbuka",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Nemeyubutaka",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Ndamirabahinzi",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Mpembuke",
+              "seedType": "Improved Variety"
+            }
+          ]
+        },
+        {
+          "name": "Local Variety",
+          "seedStrains": [
+            {
+              "name": "Buryohe",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Muturage",
+              "seedType": "Local Variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17",
+        "urea"
+      ],
+      "diseases": [
+        {
+          "name": "Rice blast",
+          "type": "OTHER",
+          "medication": "1.Tricyclazole, Tebuconazole, Benomyl.",
+          "causativeAgent": "Pyricularia Oryzae"
+        },
+        {
+          "name": "Flowering stage of rice",
+          "type": "OTHER",
+          "medication": "1.Tricyclazole, Tebuconazole, Benomyl.",
+          "causativeAgent": "Helminthosporium oryzae"
+        },
+        {
+          "name": "Rice Yellow Mottle Virus",
+          "type": "VIRAL",
+          "medication": "1.Tricyclazole, Tebuconazole, Benomyl."
+        }
+      ],
+      "pests": [
+        {
+          "name": "mouse/rat and moles",
+          "type": "OTHER",
+          "medication": "1.Tricyclazole, Tebuconazole, Benomyl."
+        },
+        {
+          "name": "Diopsis Thoracica(Isazi y'umuceri)",
+          "type": "OTHER",
+          "medication": "1.Tricyclazole, Tebuconazole, Benomyl."
+        },
+        {
+          "name": "Birds",
+          "type": "OTHER",
+          "medication": "1.Tricyclazole, Tebuconazole, Benomyl."
+        }
+      ],
+      "medicines": [
+        "1.Tricyclazole, Tebuconazole, Benomyl.",
+        "4.Deltamethrine, Cypermethrine,Imidachloprid"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Potato",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Local Variety",
+          "seedStrains": [
+            {
+              "name": "Kinigi",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Kirundo",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Ndinamagara",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Mabondo",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Gikungu",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Kigega",
+              "seedType": "Local Variety"
+            }
+          ]
+        },
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "Cruza",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "Victoria",
+              "seedType": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "Standard",
+          "seedStrains": [
+            {
+              "name": "Nkunnganire",
+              "seedType": ""
+            },
+            {
+              "name": "Kazeneza",
+              "seedType": ""
+            },
+            {
+              "name": "Ndeze",
+              "seedType": ""
+            },
+            {
+              "name": "Twihanze",
+              "seedType": ""
+            },
+            {
+              "name": "Izihirwe",
+              "seedType": ""
+            },
+            {
+              "name": "Cyerekezo",
+              "seedType": ""
+            },
+            {
+              "name": "Jyambere",
+              "seedType": ""
+            },
+            {
+              "name": "Twigire",
+              "seedType": ""
+            },
+            {
+              "name": "Gisubizo",
+              "seedType": ""
+            },
+            {
+              "name": "Seka",
+              "seedType": ""
+            },
+            {
+              "name": "Ndamirabahinzi",
+              "seedType": ""
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17"
+      ],
+      "diseases": [
+        {
+          "name": "Mildiou",
+          "type": "OTHER",
+          "medication": "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)",
+          "causativeAgent": "Phytophtora infestans"
+        },
+        {
+          "name": "Bacteriose",
+          "type": "OTHER",
+          "medication": "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)",
+          "causativeAgent": "Ralstonia solanacearum"
+        },
+        {
+          "name": "Early blight(Imfunyarazi)",
+          "type": "OTHER",
+          "medication": "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)",
+          "causativeAgent": "Alternaria solani"
+        },
+        {
+          "name": "Galle poudreuse",
+          "type": "OTHER",
+          "medication": "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)",
+          "causativeAgent": "Spongospora subterranea"
+        },
+        {
+          "name": "Pourriture sèche",
+          "type": "OTHER",
+          "medication": "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)",
+          "causativeAgent": "Fusarium spp"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Liriomyza sp.",
+          "type": "OTHER",
+          "medication": "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)"
+        }
+      ],
+      "medicines": [
+        "3.1.Rocket 44EC (Profenofos 40% + cypermethrin 4% EC)",
+        "3.2.Imidachloprid",
+        "3.3.Abamectin"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Wheat",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved Variety",
+          "seedStrains": [
+            {
+              "name": "Njoro BW II",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Njoro BW I",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "PBW 343",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Kwikanga",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Enzani",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-O15-O1",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-015-02",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-015-03",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-015-04",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-015-05",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-015-06",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-WHT-015-07",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Chozi",
+              "seedType": "Improved Variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [],
+      "diseases": [
+        {
+          "name": "Wheat yellow/stripe rust",
+          "type": "FUNGAL",
+          "medication": "1.Tebuconazole nka Orius",
+          "causativeAgent": "puccinia striiformis"
+        },
+        {
+          "name": "Wheat black/stem rust",
+          "type": "FUNGAL",
+          "medication": "1.Tebuconazole nka Orius",
+          "causativeAgent": "puccinia graminis f.sp.tritici"
+        },
+        {
+          "name": "Wheat powdery mildew",
+          "type": "FUNGAL",
+          "medication": "1.Tebuconazole nka Orius",
+          "causativeAgent": "Blumeria graminis"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Termite(imungu)",
+          "type": "OTHER",
+          "medication": "1.Tebuconazole nka Orius"
+        },
+        {
+          "name": "Birds(In Field)",
+          "type": "OTHER",
+          "medication": "1.Tebuconazole nka Orius"
+        }
+      ],
+      "medicines": [
+        "1.Tebuconazole nka Orius",
+        "1.2.Copper Oxychloride (Nordox, Funguran)",
+        "2.tebuconazole",
+        "4.Malathion + Permethrin such as Super Skana,(Malathion + Permethrin)"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Beans",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved Variety",
+          "seedStrains": [
+            {
+              "name": "RW-BB181",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-BB183",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-BB184",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-BB186",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-CB184",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-CB186",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RW-CB189",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "CAB2",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "MAC44",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV1129",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV3316",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV3317",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV2887",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV3006",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "Gasilida",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV2070",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWV2872",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWR2245",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWR2154",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWR1668",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWK10.",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "RWR2091",
+              "seedType": "Improved Variety"
+            }
+          ]
+        },
+        {
+          "name": "Local Variety",
+          "seedStrains": [
+            {
+              "name": "Mwirasi",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Kigondo",
+              "seedType": "Local Variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "DAP(18-46-0)",
+        "NPK17-17-17"
+      ],
+      "diseases": [
+        {
+          "name": "Anthrachnose",
+          "type": "OTHER",
+          "medication": "1.Benomyl",
+          "causativeAgent": "Colletotrim lindemuthianuum"
+        },
+        {
+          "name": "Leak( Caused by Bean Common Mosaic Virus)",
+          "type": "VIRAL",
+          "medication": "1.Benomyl",
+          "causativeAgent": "Ascochytaphaseoli"
+        },
+        {
+          "name": "Angularleafspot",
+          "type": "OTHER",
+          "medication": "1.Benomyl"
+        },
+        {
+          "name": "Ascochytose",
+          "type": "OTHER",
+          "medication": "1.Benomyl"
+        },
+        {
+          "name": "Bacteriose",
+          "type": "OTHER",
+          "medication": "1.Benomyl"
+        },
+        {
+          "name": "Root rots",
+          "type": "OTHER",
+          "medication": "1.Benomyl"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Malanagromyzaphaseoli",
+          "type": "OTHER",
+          "medication": "1.Benomyl"
+        },
+        {
+          "name": "Aphisfabae",
+          "type": "OTHER",
+          "medication": "1.Benomyl"
+        }
+      ],
+      "medicines": [
+        "1.Benomyl",
+        "2.Cypermethrin",
+        "3.lambdacyhalothrin",
+        "4.imidacloprid",
+        "6.Profenofos 40g + Cypermethrin 4g:1ml/1Litir",
+        "of water"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Sorghum",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Standard",
+          "seedStrains": [
+            {
+              "name": "ISAR-S621",
+              "seedType": ""
+            },
+            {
+              "name": "ISAR-S652",
+              "seedType": ""
+            },
+            {
+              "name": "ISAR-S725",
+              "seedType": ""
+            }
+          ]
+        }
+      ],
+      "fertilizers": [],
+      "diseases": [],
+      "pests": []
+    },
+    {
+      "names": [
+        {
+          "name": "Sunflower",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Standard",
+          "seedStrains": [
+            {
+              "name": "PAN 7351",
+              "seedType": ""
+            },
+            {
+              "name": "Hysun 33",
+              "seedType": ""
+            },
+            {
+              "name": "PAN 7033",
+              "seedType": ""
+            }
+          ]
+        }
+      ],
+      "fertilizers": [],
+      "diseases": [],
+      "pests": []
+    },
+    {
+      "names": [
+        {
+          "name": "Sweet Potato",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved variety",
+          "seedStrains": [
+            {
+              "name": "Kabode",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "Ejumula",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "NASPOT 11",
+              "seedType": "Improved variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [],
+      "diseases": [],
+      "pests": []
+    },
+    {
+      "names": [
+        {
+          "name": "Cassava",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved variety",
+          "seedStrains": [
+            {
+              "name": "Rweru",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "NAROCASS 1",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "Gitamo",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "NASE14",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "RWACASS17-2",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "RWACASS17-1",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "RWACASS18-1)",
+              "seedType": "Improved variety"
+            },
+            {
+              "name": "RWACASS18-2)",
+              "seedType": "Improved variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "DAP(18-46-0)",
+        "NPK17-17-17"
+      ],
+      "diseases": [
+        {
+          "name": "Numbness of cassava/rotting of cassava",
+          "type": "OTHER",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Cassava root rot",
+          "type": "OTHER",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Anthracnose",
+          "type": "OTHER",
+          "medication": "Not specified"
+        }
+      ],
+      "pests": [
+        {
+          "name": "WHITEFLY",
+          "type": "OTHER",
+          "medication": "Not specified"
+        },
+        {
+          "name": "Leafhooper",
+          "type": "OTHER",
+          "medication": "Not specified"
+        }
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Banana",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Standard",
+          "seedStrains": [
+            {
+              "name": "Injagi",
+              "seedType": ""
+            }
+          ]
+        },
+        {
+          "name": "Local Variety",
+          "seedStrains": [
+            {
+              "name": "Mporogoma",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Injogo",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Barabeshya",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "ingaju",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Mbwaziruma",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Cyerwa",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Poyo",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Kamaramasenge",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Gros Michel",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Ikinyangurube",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Igisukari",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "intuntu",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "intokatoke",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "ingoromoka",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "indenge",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Muzuzu",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "Tsambunu",
+              "seedType": "Local Variety"
+            },
+            {
+              "name": "umushaba1",
+              "seedType": "Local Variety"
+            }
+          ]
+        },
+        {
+          "name": "Improved Variety",
+          "seedStrains": [
+            {
+              "name": "Fhia 17",
+              "seedType": "Improved Variety"
+            },
+            {
+              "name": "FHIA 25",
+              "seedType": "Improved Variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "DAP(18-46-0)",
+        "NPK17-17-17"
+      ],
+      "diseases": [
+        {
+          "name": "Banana Xanthomonas Wilt",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Xanthomonas campestris pv musacearum"
+        },
+        {
+          "name": "Fusarium wilt",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Fusarium oxysporum f.sp. cubens"
+        },
+        {
+          "name": "Cercosporiose",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Mycosphaerella Fijiensis"
+        },
+        {
+          "name": "Pseudocercospora musae",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Mycosphaerella musicola"
+        },
+        {
+          "name": "Periconiellasapientumicola",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Armillaria sp"
+        },
+        {
+          "name": "Banana Bunchy Top Virus(Pentalonia nigronervosa)",
+          "type": "VIRAL",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Colletotrichum musae"
+        },
+        {
+          "name": "Banana Streak Virus (BSV)",
+          "type": "VIRAL",
+          "medication": "3.1.Nimbecidine",
+          "causativeAgent": "Stachylidium theobromae"
+        },
+        {
+          "name": "Banana Bunch Top Virus",
+          "type": "VIRAL",
+          "medication": "3.1.Nimbecidine"
+        },
+        {
+          "name": "Anthracnose",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine"
+        },
+        {
+          "name": "Cigar end rot",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Aphis gossypii (insecte)",
+          "type": "INSECT",
+          "medication": "3.1.Nimbecidine"
+        },
+        {
+          "name": "Banana weevils",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine"
+        },
+        {
+          "name": "Nematodes",
+          "type": "NEMATODE",
+          "medication": "3.1.Nimbecidine"
+        },
+        {
+          "name": "Thrips(Chaetanaphothrips signipennis)",
+          "type": "OTHER",
+          "medication": "3.1.Nimbecidine"
+        }
+      ],
+      "medicines": [
+        "3.1.Nimbecidine"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Bell Pepper",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "Superbelle F1",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "Kimbo F1",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "Jaguar F1",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "Orange Bell F1",
+              "seedType": "Hybrid"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17",
+        "KCl",
+        "Urea"
+      ],
+      "diseases": [
+        {
+          "name": "Anthracnose",
+          "type": "OTHER",
+          "medication": "1.1.chlorothalonil"
+        },
+        {
+          "name": "bacterial wilt(coused by bacteri)",
+          "type": "BACTERIAL",
+          "medication": "1.1.chlorothalonil"
+        },
+        {
+          "name": "Blossom end rot (It’s a physiological disorder)",
+          "type": "OTHER",
+          "medication": "1.1.chlorothalonil"
+        },
+        {
+          "name": "Bell pepper viruses (Stunting, mosaic, …)",
+          "type": "VIRAL",
+          "medication": "1.1.chlorothalonil"
+        }
+      ],
+      "pests": [],
+      "medicines": [
+        "1.1.chlorothalonil",
+        "4.1,Rocket 1ML/1L."
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Chili Pepper",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "F1 Hybrid",
+              "seedType": "Hybrid"
+            }
+          ]
+        },
+        {
+          "name": "Open_pollinated",
+          "seedStrains": [
+            {
+              "name": "Open-Pollinated",
+              "seedType": "Open_pollinated"
+            }
+          ]
+        },
+        {
+          "name": "Local_variety",
+          "seedStrains": [
+            {
+              "name": "Local Variety",
+              "seedType": "Local_variety"
+            }
+          ]
+        },
+        {
+          "name": "Improved_variety",
+          "seedStrains": [
+            {
+              "name": "Improved Variety",
+              "seedType": "Improved_variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17",
+        "KCl",
+        "Urea"
+      ],
+      "diseases": [
+        {
+          "name": "Rainy season disease (Kababu)",
+          "type": "OTHER",
+          "medication": "1.FUGURAN"
+        },
+        {
+          "name": "Early Blight",
+          "type": "OTHER",
+          "medication": "1.FUGURAN"
+        },
+        {
+          "name": "Stunting, mosaic( coused by virus)",
+          "type": "VIRAL",
+          "medication": "1.FUGURAN"
+        },
+        {
+          "name": "Blossom end rot",
+          "type": "OTHER",
+          "medication": "1.FUGURAN"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Powdery mildew",
+          "type": "OTHER",
+          "medication": "1.FUGURAN"
+        },
+        {
+          "name": "Aphids, Whitefly, and Thrips",
+          "type": "INSECT",
+          "medication": "1.FUGURAN"
+        }
+      ],
+      "medicines": [
+        "1.FUGURAN",
+        "1.1.Mancozeb+ Metalaxyl(Ridomyl,Victory,..)",
+        "5.1.abamectin",
+        "5.2.imidacloprid",
+        "6.1.abamectin",
+        "6.2.Cypermethrin"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Tomato",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "Hybrid",
+              "seedType": "Hybrid"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17",
+        "Urea"
+      ],
+      "diseases": [
+        {
+          "name": "Late blight",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb",
+          "causativeAgent": "Alternaria solani"
+        },
+        {
+          "name": "Early Blight",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        },
+        {
+          "name": "Bacterial wilt",
+          "type": "BACTERIAL",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        },
+        {
+          "name": "Viral diseases",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        },
+        {
+          "name": "Blossom End Rot",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Tuta absoluta (Leafminer)",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        },
+        {
+          "name": "Whiteflies",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        },
+        {
+          "name": "Thrips",
+          "type": "OTHER",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        },
+        {
+          "name": "Aphids",
+          "type": "INSECT",
+          "medication": "1. Mancozeb, Ridomyl, Victory, Safari-Zeb"
+        }
+      ],
+      "medicines": [
+        "1. Mancozeb, Ridomyl, Victory, Safari-Zeb",
+        "2.Carbendazim, Chlorothalonil, Beem, Thiovit",
+        "3.Avermectin (Abamectin), Imidacloprid",
+        "4.Cypermethrin, Profenofos + Cypermethrin"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Onion",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Hybrid",
+          "seedStrains": [
+            {
+              "name": "Red hybrid bulb",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "Red hybrid bulb",
+              "seedType": "Hybrid"
+            },
+            {
+              "name": "Short-day red hybrid",
+              "seedType": "Hybrid"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17",
+        "Urea",
+        "KCl"
+      ],
+      "diseases": [
+        {
+          "name": "Downy Mildew",
+          "type": "FUNGAL",
+          "medication": "1.Mancozeb + Metalaxyl"
+        },
+        {
+          "name": "Powdery Mildew",
+          "type": "FUNGAL",
+          "medication": "1.Mancozeb + Metalaxyl"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Thrips",
+          "type": "OTHER",
+          "medication": "1.Mancozeb + Metalaxyl"
+        }
+      ],
+      "medicines": [
+        "1.Mancozeb + Metalaxyl",
+        "1.1.Copper oxychloride",
+        "3.1 Profenofos 40EC, Roket",
+        "2.1Copper oxychloride or Copper Oxide"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Garlic",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved_variety",
+          "seedStrains": [
+            {
+              "name": "Softneck",
+              "seedType": "Improved_variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [],
+      "diseases": [
+        {
+          "name": "White rot",
+          "type": "OTHER",
+          "medication": "1.1..Mancozeb, Diazinon",
+          "causativeAgent": "Sclerotium cepivorum"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Thrips, Nematodes",
+          "type": "NEMATODE",
+          "medication": "1.1..Mancozeb, Diazinon"
+        }
+      ],
+      "medicines": [
+        "1.1..Mancozeb, Diazinon"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Watermelon",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Open_pollinated",
+          "seedStrains": [
+            {
+              "name": "Sugar Baby",
+              "seedType": "Open_pollinated"
+            },
+            {
+              "name": "Crimson Sweet",
+              "seedType": "Open_pollinated"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17.17.17"
+      ],
+      "diseases": [
+        {
+          "name": "Fusarium wilt, Anthracnose, Powdery mildew, Mosaic virus",
+          "type": "VIRAL",
+          "medication": "1. Abamectin,Copper oxychloride,Mancozeb + Metalaxy,Lambda",
+          "causativeAgent": "Fusarium oxysporum, Colletotrichum,"
+        },
+        {
+          "name": "Fusarium wilt, Downy mildew, Gummy stem blight,",
+          "type": "FUNGAL",
+          "medication": "1. Imidacloprid,Copper oxychloride,Mancozeb + Metalaxy,",
+          "causativeAgent": "Fusarium, Pseudoperonospora, Didymella, Virus"
+        },
+        {
+          "name": "Mosaic virus",
+          "type": "VIRAL",
+          "medication": "1. Imidacloprid,Copper oxychloride,Mancozeb + Metalaxy,",
+          "causativeAgent": "(PRSV, ZYMV, WMV)"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Aphids, Whiteflies, Melonworms, Spider mites",
+          "type": "INSECT",
+          "medication": "1. Abamectin,Copper oxychloride,Mancozeb + Metalaxy,Lambda"
+        },
+        {
+          "name": "Aphids, Whiteflies, Thrips, Cutworms",
+          "type": "INSECT",
+          "medication": "1. Imidacloprid,Copper oxychloride,Mancozeb + Metalaxy,"
+        }
+      ],
+      "medicines": [
+        "1. Abamectin,Copper oxychloride,Mancozeb + Metalaxy,Lambda",
+        "Cyhalothrin, imidacloprid,acetamiprid,abamectin,nimbecidine (azadirachtin)",
+        "1. Imidacloprid,Copper oxychloride,Mancozeb + Metalaxy,"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Green Beans",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved_variety",
+          "seedStrains": [
+            {
+              "name": "Hybrid",
+              "seedType": "Improved_variety"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 20:10:10 + organic",
+        "manure."
+      ],
+      "diseases": [
+        {
+          "name": "Bean rust, Angular leaf spot, Powdery mildew, Anthracnose,",
+          "type": "FUNGAL",
+          "medication": "1.Lambda-cyhalothrin, Abamectin, Imidacloprid, Sulfur",
+          "causativeAgent": "Uromyces appendiculatus, Powdery mildew"
+        },
+        {
+          "name": "Viral diseases",
+          "type": "OTHER",
+          "medication": "1.Lambda-cyhalothrin, Abamectin, Imidacloprid, Sulfur",
+          "causativeAgent": "fungus,"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Thrips, Red spider mites, Whiteflies, Pod borers, Cutworm",
+          "type": "INSECT",
+          "medication": "1.Lambda-cyhalothrin, Abamectin, Imidacloprid, Sulfur"
+        }
+      ],
+      "medicines": [
+        "1.Lambda-cyhalothrin, Abamectin, Imidacloprid, Sulfur"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Mango",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved_variety/Grafted",
+          "seedStrains": [
+            {
+              "name": "Tommy Atkins, Kent, Bire",
+              "seedType": "Improved_variety/Grafted"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17-17-17",
+        "NPK 6-30-30 or 12-12-17+Mg",
+        "NPK 10-10-20 or 14-14-14"
+      ],
+      "diseases": [
+        {
+          "name": "Anthracnose (Akaribata)",
+          "type": "OTHER",
+          "medication": "- Carbendazim",
+          "causativeAgent": "Anthracnose fungus"
+        },
+        {
+          "name": "Powdery Mildew",
+          "type": "FUNGAL",
+          "medication": "- Carbendazim",
+          "causativeAgent": "Powdery mildew fungus"
+        },
+        {
+          "name": "Fruit Fly",
+          "type": "OTHER",
+          "medication": "- Carbendazim"
+        },
+        {
+          "name": "Mango Seed Weevil",
+          "type": "OTHER",
+          "medication": "- Carbendazim"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Fruit Fly",
+          "type": "OTHER",
+          "medication": "- Carbendazim"
+        },
+        {
+          "name": "Mango Seed Weevil",
+          "type": "OTHER",
+          "medication": "- Carbendazim"
+        }
+      ],
+      "medicines": [
+        "- Carbendazim",
+        "- Copper hydroxide",
+        "- Copper oxychloride",
+        "- Chlorothalonil",
+        "- Thiovit (Sulfur)",
+        "- Acetameprid",
+        "- Lambda-cyhalothrin",
+        "- Deltamethrin",
+        "- Abamectin"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Avocado",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved_variety/Grafted",
+          "seedStrains": [
+            {
+              "name": "All",
+              "seedType": "Improved_variety/Grafted"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 17-17-17"
+      ],
+      "diseases": [
+        {
+          "name": "Root Rot",
+          "type": "OTHER",
+          "medication": "1.Copper oxychloride/hydroxide, Ridomil, Daconil"
+        },
+        {
+          "name": "Anthracnose",
+          "type": "OTHER",
+          "medication": "1.Copper oxychloride/hydroxide, Ridomil, Daconil"
+        },
+        {
+          "name": "Scab",
+          "type": "OTHER",
+          "medication": "1.Copper oxychloride/hydroxide, Ridomil, Daconil"
+        },
+        {
+          "name": "Sericosporiosis Spots",
+          "type": "OTHER",
+          "medication": "1.Copper oxychloride/hydroxide, Ridomil, Daconil"
+        },
+        {
+          "name": "Thrips",
+          "type": "OTHER",
+          "medication": "1.Copper oxychloride/hydroxide, Ridomil, Daconil"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Thrips",
+          "type": "OTHER",
+          "medication": "1.Copper oxychloride/hydroxide, Ridomil, Daconil"
+        }
+      ],
+      "medicines": [
+        "1.Copper oxychloride/hydroxide, Ridomil, Daconil",
+        "2. Carbendazim, Copper hydroxide, Copper oxychloride, Chlorothalonil",
+        "3.oxychloride/hydroxide, Carbendazim",
+        "4.Lambda-cyhalothrin, Imidachloprid, Cypermethrin"
+      ]
+    },
+    {
+      "names": [
+        {
+          "name": "Coffee",
+          "languageCode": "en",
+          "languageName": "English"
+        }
+      ],
+      "cropTypes": [
+        {
+          "name": "Improved_variety/Grafted",
+          "seedStrains": [
+            {
+              "name": "Jackson 2/1257",
+              "seedType": "Improved_variety/Grafted"
+            },
+            {
+              "name": "BM 71",
+              "seedType": "Improved_variety/Grafted"
+            },
+            {
+              "name": "BM 139",
+              "seedType": "Improved_variety/Grafted"
+            },
+            {
+              "name": "RABC 15",
+              "seedType": "Improved_variety/Grafted"
+            }
+          ]
+        }
+      ],
+      "fertilizers": [
+        "NPK 22.6.12+3S"
+      ],
+      "diseases": [
+        {
+          "name": "Akaribata (caused by Colletotricum coffeanum)",
+          "type": "OTHER",
+          "medication": "1. Alphacypermethrin",
+          "causativeAgent": "Hemileia vastatrix (causes coffee leaf rust)"
+        },
+        {
+          "name": "Coffee Leaf Rust (Hemileia vastatrix)",
+          "type": "FUNGAL",
+          "medication": "1. Alphacypermethrin"
+        },
+        {
+          "name": "Dieback (caused by nutrient deficiency)",
+          "type": "OTHER",
+          "medication": "1. Alphacypermethrin"
+        }
+      ],
+      "pests": [
+        {
+          "name": "Antestia bug (Antestiopsis spp)",
+          "type": "OTHER",
+          "medication": "1. Alphacypermethrin"
+        },
+        {
+          "name": "Coffee berry borer",
+          "type": "OTHER",
+          "medication": "1. Alphacypermethrin"
+        },
+        {
+          "name": "Stem borers (white and orange types)",
+          "type": "OTHER",
+          "medication": "1. Alphacypermethrin"
+        }
+      ],
+      "medicines": [
+        "1. Alphacypermethrin",
+        "2.Pyrethrins (AgropyEWC Plus",
+        "3.Copper oxychloride",
+        "4.Pyraclostrobin (Cabri",
+        "250EC)"
+      ]
+    }
+  ]
+}

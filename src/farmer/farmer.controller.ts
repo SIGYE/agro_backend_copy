@@ -23,7 +23,7 @@ import { ResolveFarmerProfileChangeRequestDto } from './dto/resolve-farmer-profi
 @UseGuards(AuthGuard)
 @ApiTags('Farmer')
 export class FarmerController {
-  constructor(private readonly farmerService: FarmerService) { }
+  constructor(private readonly farmerService: FarmerService, private readonly databaseService: DatabaseService) { }
 
   @Get('me')
   @Roles(Role_Enum.FARMER)
@@ -119,17 +119,19 @@ export class FarmerController {
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
-  }
-  @Post('register-farmer-lite')
-  @ApiBody({ type: CreateFarmerLiteDto, description: 'Lightweight farmer registration for offline sync' })
-  async createLite(@Body() dto: CreateFarmerLiteDto, @CurrentUser() user: User) {
-    try {
-      const data = await this.farmerService.registerFarmerLite(dto, user);
-      return new ApiResponse(true, "Farmer Created", data, 201);
-    } catch (e) {
-      return new ApiResponse(false, e.message, null, 400);
+    
+    // For farmers self-registering or when location is provided
+    if (!createFarmerDto.locationId) {
+      return new ApiResponse(false, "Location is required", null, 400);
     }
+    
+    const data = await this.farmerService.registerFarmer(createFarmerDto, user);
+    const message = user ? "Farmer Created" : "Farmer Self-Registered Successfully";
+    return new ApiResponse(true, message, data, 201);
+  } catch (e) {
+    return new ApiResponse(false, e.message, null, 400);
   }
+}
 
   @Get()
   async findAll() {

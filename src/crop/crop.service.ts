@@ -404,33 +404,34 @@ export class CropService {
     });
 
     // 4. Prepare all seed strains for batch creation
-    const allSeedStrainsToCreate = [];
+  const allSeedStrainsToCreate = [];
 
-    for (const cropTypeDto of cropTypes) {
-      if (cropTypeDto.seedStrains && cropTypeDto.seedStrains.length > 0) {
-        const matchingCropType = allCropTypes.find(ct => ct.name === cropTypeDto.name);
-        if (matchingCropType) {
-          const existingSeedStrainNames = matchingCropType.seedStrains.map(ss => ss.name);
+  for (const cropTypeDto of cropTypes) {
+    if (cropTypeDto.seedStrains && cropTypeDto.seedStrains.length > 0) {
+      const matchingCropType = allCropTypes.find(ct => ct.name === cropTypeDto.name);
+      if (matchingCropType) {
+        const existingSeedStrainNames = matchingCropType.seedStrains.map(ss => ss.name);
 
-          for (const seedStrainDto of cropTypeDto.seedStrains) {
-            if (!existingSeedStrainNames.includes(seedStrainDto.name)) {
-              allSeedStrainsToCreate.push({
-                name: seedStrainDto.name,
-                cropTypeId: matchingCropType.id
-              });
-            }
+        for (const seedStrainDto of cropTypeDto.seedStrains) {
+          if (!existingSeedStrainNames.includes(seedStrainDto.name)) {
+            allSeedStrainsToCreate.push({
+              name: seedStrainDto.name,
+              seedType: seedStrainDto.seedType || null,  // New field
+              cropTypeId: matchingCropType.id
+            });
           }
         }
       }
     }
+  }
 
-    // 5. Create all seed strains in one batch operation
-    if (allSeedStrainsToCreate.length > 0) {
-      await prisma.seedStrain.createMany({
-        data: allSeedStrainsToCreate,
-        skipDuplicates: true
-      });
-    }
+  // 5. Create all seed strains in one batch operation - UPDATED
+  if (allSeedStrainsToCreate.length > 0) {
+    await prisma.seedStrain.createMany({
+      data: allSeedStrainsToCreate,
+      skipDuplicates: true
+    });
+  }
   }
 
   // Add a default crop type creation method
@@ -530,17 +531,19 @@ export class CropService {
     );
 
     // Create new diseases in batch
-    if (newDiseases.length > 0) {
-      await prisma.disease.createMany({
-        data: newDiseases.map(d => ({
-          name: d.name,
-          type: d.type,
-          medication: d.medication,
-          createdBy: user.id
-        })),
-        skipDuplicates: true
-      });
-    }
+   if (newDiseases.length > 0) {
+    await prisma.disease.createMany({
+      data: newDiseases.map(d => ({
+        name: d.name,
+        type: d.type,
+        medication: d.medication || null, 
+        specificType: d.specificType || null,  
+        causativeAgent: d.causativeAgent || null,  
+        createdBy: user.id
+      })),
+      skipDuplicates: true
+    });
+  }
 
     // Get all diseases for connection
     const allDiseases = await prisma.disease.findMany({
@@ -967,48 +970,56 @@ export class CropService {
       throw new ForbiddenException('You do not have permission to import crops');
     }
 
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+  ];
 
-    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    // Skip the first row (assuming it's the header row)
-    const rowsToProcess = data.slice(1);
-
-    let success = 0;
-    let failed = 0;
-    const errors = [];
-
-    for (const row of rowsToProcess) {
-      try {
-        // Map the row to a userDto-like object based on the cell index
-        let cropDto = {
-          name: row[0],
-          names: [{
-            name: row[0],
-            languageName: 'English',
-            languageCode: 'en'
-          }],
-          cropTypes: []
-        };
-
-        await this.create(cropDto, user);
-        success++;
-      } catch (error) {
-        failed++;
-        errors.push({
-          row: row,
-          error: error.message || 'Unknown error occurred',
-        });
-      }
-    }
-
-    return { success, failed, errors };
+  if (!user.role || !allowedImportRoles.includes(user.role.name)) {
+    throw new ForbiddenException('You do not have permission to import crops');
   }
+
+  if (!file) {
+    throw new BadRequestException('No file uploaded');
+  }
+
+  const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  // Skip the first row (header row)
+  const rowsToProcess = data.slice(1);
+
+  let success = 0;
+  let failed = 0;
+  const errors = [];
+
+  for (const row of rowsToProcess) {
+    try {
+      // Map the row to your crop DTO
+      const cropDto = {
+        names: [
+          {
+            name: row[0],
+            languageCode: 'en',
+            languageName: 'English',
+          },
+        ],
+        cropTypes: [],
+      };
+
+      await this.create(cropDto, user);
+      success++;
+    } catch (error) {
+      failed++;
+      errors.push({
+        row,
+        error: error.message || 'Unknown error occurred',
+      });
+    }
+  }
+
+  return { success, failed, errors };
+}
+
 
   async cropsCardData(locationId?: number, cooperativeId?: string) {
     try {

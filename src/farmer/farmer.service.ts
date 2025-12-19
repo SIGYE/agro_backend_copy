@@ -11,7 +11,6 @@ import { AssignAnimalToFarmerDto } from './dto/assign-animal-to-famer.dto';
 import { UpdateCropFarmerDto } from './dto/update-crop-farmer.dto';
 import { UpdateAnimalFarmerDto } from './dto/update-animal-farmer.dto';
 import e from 'express';
-import { CreateFarmerLiteDto } from './dto/create-farmer-lite.dto';
 import { Gender } from '@prisma/client';
 import { CreateFarmerProfileChangeRequestDto } from './dto/create-farmer-profile-change-request.dto';
 import { FarmerProfileChangesDto } from './dto/farmer-profile-changes.dto';
@@ -53,112 +52,88 @@ export class FarmerService {
           name: "FARMER"
         }
       });
-      let user = await this.userServcice.create({ roleId: role.id, ...CreateFarmerDto }, loggedInUser);
+      isUmufashamyumvire = creatorRole?.name === 'UMUFASHAMYUMVIRE';
+    }
 
-      let farmer = await this.databaseService.farmer.create({
-        data: {
-          user: {
-            connect: {
-              id: user.id
-            }
+    // NEW: Validate location (double-check)
+    if (!CreateFarmerDto.locationId && !isUmufashamyumvire) {
+      throw new BadRequestException("Location is required");
+    }
+
+    // NEW: If Umufashamyumvire and still no location, use theirs
+    if (!CreateFarmerDto.locationId && isUmufashamyumvire && loggedInUser) {
+      CreateFarmerDto.locationId = loggedInUser.locationId;
+    }
+
+    // ORIGINAL CODE BELOW (with small fix)
+    let role = await this.databaseService.role.findFirst({
+      where: {
+        name: "FARMER"
+      }
+    });
+    
+    let user = await this.userServcice.create({ 
+      roleId: role.id, 
+      ...CreateFarmerDto 
+    }, loggedInUser);
+
+    let farmer = await this.databaseService.farmer.create({
+      data: {
+        user: {
+          connect: {
+            id: user.id
           }
         }
-      });
+      }
+    });
 
-      // Assign crops to farmer if cropsId is present
-      if (CreateFarmerDto.crops) {
-        for (let crop of CreateFarmerDto.crops) {
-          let cropFarmer = await this.databaseService.cropFarmerRegistration.create({
-            data: {
-              farmer: {
-                connect: {
-                  id: farmer.id
-                }
-              },
-
-              cropType: {
-                connect: {
-                  id: crop.cropTypesId
-                }
+    // Assign crops to farmer if crops is present
+    if (CreateFarmerDto.crops) {
+      for (let crop of CreateFarmerDto.crops) {
+        await this.databaseService.cropFarmerRegistration.create({
+          data: {
+            farmer: {
+              connect: {
+                id: farmer.id
+              }
+            },
+            cropType: {
+              connect: {
+                id: crop.cropTypesId
               }
             }
-          })
-
-
-        }
+          }
+        });
       }
-
-      // Assign animals to farmer if animalIds is present
-      if (CreateFarmerDto.animals) {
-        for (let animal of CreateFarmerDto.animals) {
-          await this.databaseService.animalFarmerRegistration.create({
-            data: {
-              farmer: {
-                connect: {
-                  id: farmer.id
-                }
-              },
-              animal: {
-                connect: {
-                  id: animal.animalId
-                }
-              },
-              totalNumber: animal.totalNumber,
-              femaleNumber: animal.femaleNumber,
-              maleNumber: animal.maleNumber
-
-
-            }
-          });
-        }
-      }
-
-      return farmer;
-
-    } catch (e) {
-      throw new BadRequestException(e.message);
     }
-  }
 
-  async registerFarmerLite(dto: CreateFarmerLiteDto, loggedInUser?: User): Promise<Farmer> {
-    try {
-      const role = await this.databaseService.role.findFirst({
-        where: { name: "FARMER" }
-      });
-      if (!role) {
-        throw new NotFoundException("FARMER role not found");
+    // Assign animals to farmer if animals is present
+    if (CreateFarmerDto.animals) {
+      for (let animal of CreateFarmerDto.animals) {
+        await this.databaseService.animalFarmerRegistration.create({
+          data: {
+            farmer: {
+              connect: {
+                id: farmer.id
+              }
+            },
+            animal: {
+              connect: {
+                id: animal.animalId
+              }
+            },
+            totalNumber: animal.totalNumber,
+            femaleNumber: animal.femaleNumber,
+            maleNumber: animal.maleNumber
+          }
+        });
       }
-
-      // Derive dob from age (YYYY-01-01 in current year - age)
-      const now = new Date();
-      const birthYear = now.getFullYear() - dto.age;
-      const dob = new Date(`${birthYear}-01-01`).toISOString();
-
-      // Determine location: provided or fallback to logged-in user
-      const locationId = dto.locationId ?? loggedInUser?.locationId;
-      if (!locationId) {
-        throw new BadRequestException("Location is required to register a farmer");
-      }
-
-      // Gender fallback safety (should be validated already)
-      const gender = dto.gender ?? Gender.MALE;
-
-      const userDto = {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        nationalId: dto.nationalId,
-        telephone: dto.telephone,
-        email: dto.email,
-        gender,
-        dob,
-        roleId: role.id,
-        locationId,
-      } as any;
-
-      return await this.userServcice.registerFarmer(userDto, dto.cooperativeId, loggedInUser);
-    } catch (e) {
-      throw new BadRequestException(e.message);
     }
+
+    return farmer;
+
+  } catch (e) {
+    throw new BadRequestException(e.message);
   }
 
   private normalizeProfileChanges(changes: FarmerProfileChangesDto): Record<string, any> {

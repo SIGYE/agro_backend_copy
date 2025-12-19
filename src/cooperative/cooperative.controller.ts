@@ -92,7 +92,6 @@ export class CooperativeController {
     const createDto: CreateCooperativeDto = {
       ...dto,
       collectiveType: CollectiveType.NON_COLLECTIVE,
-      crops: [],
     };
     return this.cooperativeService.create(createDto, userId, userRole);
   }

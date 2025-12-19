@@ -18,6 +18,7 @@ const ALLOWED_CROP_ROLES = [
   Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
   Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
   Role_Enum.FARMER,
+  Role_Enum.UMUFASHAMYUMVIRE
 ];
 
 // Extended User type to include computed effectiveRole from AuthGuard
@@ -45,7 +46,7 @@ export class CropController {
   }
 
   @Post('bulk-create')
-  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER)
+  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.UMUFASHAMYUMVIRE)
   async bulkCreate(@Body() createCropDto: BulkCreateCropDto, @CurrentUser() user: ExtendedUser): Promise<ApiResponse<Crop>> {
     try {
       return new ApiResponse<any>(true, "Crop Created", await this.cropService.bulkCreate(createCropDto, user as any), 200);
@@ -147,7 +148,7 @@ export class CropController {
 
   @Post('upload-crops')
   @UseInterceptors(FileInterceptor('file'))
-  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER)
+  @Roles(Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER, Role_Enum.UMUFASHAMYUMVIRE)
   async uploadCrops(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: ExtendedUser) {
     try {
       if (!file) {
