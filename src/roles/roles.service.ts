@@ -20,9 +20,11 @@ export class RolesService {
         "VETERINARIAN",
         "FARMER",
         "ADMIN",
+        "BUTCHER",
         "BUYER",
         "DEV_ADMIN",
-        "COOPERATIVE_MANAGER"
+        "COLLECTIVE_COOPERATIVE_MANAGER",
+        "NON_COLLECTIVE_COOPERATIVE_MANAGER"
       ];
 
       // Create an array of promises for role creation

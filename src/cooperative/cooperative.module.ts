@@ -6,8 +6,10 @@ import { Reflector } from '@nestjs/core';
 import { UsersService } from 'src/users/users.service';
 import { LocationService } from 'src/location/location.service';
 import { FarmerService } from 'src/farmer/farmer.service';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
+  imports: [NotificationModule],
   controllers: [CooperativeController],
   providers: [CooperativeService, JwtService, Reflector, UsersService, LocationService, FarmerService],
 })

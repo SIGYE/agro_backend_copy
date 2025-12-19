@@ -14,8 +14,8 @@ import { Role_Enum } from '../enums/role.enum';
 
 // Extended User type
 type ExtendedUser = User & {
-  role?: Role_Enum;
-  cooperativeId?: string;
+  effectiveRole?: string;
+  role?: any;
 };
 
 @Injectable()
@@ -25,33 +25,44 @@ export class CropService {
     private readonly locationService: LocationService
   ) { }
 
+  private getRoleName(user: ExtendedUser): string {
+    return (user as any)?.effectiveRole ?? (user as any)?.role?.name ?? (user as any)?.role;
+  }
+
   // Helper method to check if user can manage crops
   private canManageCrops(user: ExtendedUser): boolean {
+    const roleName = this.getRoleName(user);
     const allowedRoles = [
       Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
       Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
       Role_Enum.FARMER,
     ];
-    return allowedRoles.includes(user.role);
+    return allowedRoles.includes(roleName as any);
   }
 
   // Helper method to check if user can delete crops
   private canDeleteCrops(user: ExtendedUser): boolean {
+    const roleName = this.getRoleName(user);
     const allowedRoles = [
       Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
       Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
       Role_Enum.FARMER,
     ];
-    return allowedRoles.includes(user.role);
+    return allowedRoles.includes(roleName as any);
   }
 
   // Helper method to get the cooperative ID for a user
   private async getUserCooperativeId(user: ExtendedUser): Promise<string | null> {
-    if (user.role?.toString().includes('COOPERATIVE_MANAGER')) {
-      return user.cooperativeId || null;
+    const roleName = this.getRoleName(user);
+    if (String(roleName).includes('COOPERATIVE_MANAGER')) {
+      const coop = await this.dataBaseService.cooperative.findFirst({
+        where: { cooperativeManagerId: user.id },
+        select: { id: true },
+      });
+      return coop?.id ?? null;
     }
     
-    if (user.role === Role_Enum.FARMER) {
+    if (roleName === Role_Enum.FARMER) {
       const farmer = await this.dataBaseService.farmer.findUnique({
         where: { userId: user.id },
         select: { cooperativeId: true }
@@ -67,19 +78,6 @@ export class CropService {
       // Check if user has permission to create crops
       if (!this.canManageCrops(user)) {
         throw new ForbiddenException('You do not have permission to create crops');
-      }
-
-      // Additional validation for farmers
-      if (user.role === Role_Enum.FARMER) {
-        // Check if farmer belongs to a cooperative
-        const farmer = await this.dataBaseService.farmer.findUnique({
-          where: { userId: user.id },
-          include: { cooperative: true }
-        });
-
-        if (!farmer?.cooperativeId) {
-          throw new BadRequestException('Farmers must be associated with a cooperative to create crops');
-        }
       }
 
       return await this.dataBaseService.$transaction(async (prisma) => {
@@ -219,7 +217,8 @@ export class CropService {
         Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
       ];
       
-      if (!allowedBulkRoles.includes(user.role)) {
+      const roleName = this.getRoleName(user);
+      if (!allowedBulkRoles.includes(roleName as any)) {
         throw new ForbiddenException('You do not have permission to bulk create crops');
       }
 
@@ -716,10 +715,10 @@ export class CropService {
       // Get user's cooperative ID to filter crops
       const userCooperativeId = await this.getUserCooperativeId(user);
 
-      // If user is a farmer or cooperative manager, only show crops from their cooperative
-      const cooperativeQuery = userCooperativeId ? {
-        cooperativeId: userCooperativeId
-      } : {};
+      // Cooperative users should see both global crops (no cooperativeId) and their cooperative crops
+      const cooperativeQuery = userCooperativeId
+        ? { OR: [{ cooperativeId: userCooperativeId }, { cooperativeId: null }] }
+        : {};
 
       return await this.dataBaseService.crop.findMany({
         where: {
@@ -871,8 +870,15 @@ export class CropService {
   async getCooperativeCrops(cooperativeId: string, user: ExtendedUser) {
     try {
       // Check permissions: cooperative managers can only see their own cooperative's crops
-      if (user.role?.toString().includes('COOPERATIVE_MANAGER') && 
-          user.cooperativeId !== cooperativeId) {
+      const roleName = this.getRoleName(user);
+      if (String(roleName).includes('COOPERATIVE_MANAGER')) {
+        const userCooperativeId = await this.getUserCooperativeId(user);
+        if (userCooperativeId !== cooperativeId) {
+          throw new ForbiddenException('You can only view your own cooperative\'s crops');
+        }
+      }
+
+      if (roleName === Role_Enum.FARMER) {
         throw new ForbiddenException('You can only view your own cooperative\'s crops');
       }
 
@@ -918,8 +924,13 @@ export class CropService {
       // Authorization checks
       if (user.id !== farmer.userId) {
         // If not the farmer, check if user is their cooperative manager
-        if (!user.role?.toString().includes('COOPERATIVE_MANAGER') || 
-            user.cooperativeId !== farmer.cooperativeId) {
+        const roleName = this.getRoleName(user);
+        if (!String(roleName).includes('COOPERATIVE_MANAGER')) {
+          throw new ForbiddenException('You can only view your own crops or crops from your cooperative');
+        }
+
+        const userCooperativeId = await this.getUserCooperativeId(user);
+        if (userCooperativeId !== farmer.cooperativeId) {
           throw new ForbiddenException('You can only view your own crops or crops from your cooperative');
         }
       }
@@ -951,7 +962,8 @@ export class CropService {
       Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER,
     ];
     
-    if (!allowedImportRoles.includes(user.role)) {
+    const roleName = this.getRoleName(user);
+    if (!allowedImportRoles.includes(roleName as any)) {
       throw new ForbiddenException('You do not have permission to import crops');
     }
 
@@ -1172,7 +1184,7 @@ export class CropService {
               cropTypeId: cropTypeId
             },
             include: {
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }

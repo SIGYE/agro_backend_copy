@@ -23,7 +23,12 @@ export class SeasonsService {
       where: { id: seasonId },
       include: {
         farmer: {
-          include: { user: true }
+          include: {
+            user: true,
+            cooperative: {
+              select: { id: true, cooperativeManagerId: true, collectiveType: true },
+            },
+          },
         },
         cooperative: {
           include: { cooperativeManager: { include: { role: true } } }
@@ -38,6 +43,14 @@ export class SeasonsService {
     // UmufashaMyumvire has full access
     if (userRole === Role_Enum.UMUFASHAMYUMVIRE) {
       return season;
+    }
+
+    // Non-collective cooperative managers can manage member farmer seasons
+    if (userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER && season.farmerId) {
+      const coop = season.farmer?.cooperative;
+      if (coop && coop.cooperativeManagerId === userId && coop.collectiveType === 'NON_COLLECTIVE') {
+        return season;
+      }
     }
     
     // Check if user is the farmer who owns the season
@@ -89,19 +102,35 @@ export class SeasonsService {
 
       // Authorization checks
       if (createSeasonDto.farmerId) {
-        // Check if user is creating season for themselves (farmers)
-        if (userRole !== Role_Enum.FARMER && userRole !== Role_Enum.UMUFASHAMYUMVIRE) {
-          throw new ForbiddenException('Only farmers can create seasons for themselves');
+        // Farmers can create for themselves. Non-collective leaders can create for member farmers.
+        if (
+          userRole !== Role_Enum.FARMER &&
+          userRole !== Role_Enum.UMUFASHAMYUMVIRE &&
+          userRole !== Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
+        ) {
+          throw new ForbiddenException('Not allowed to create seasons for a farmer');
         }
-        
+
         if (userRole === Role_Enum.FARMER) {
-          // Get farmer by user ID
           const farmer = await this.databaseService.farmer.findFirst({
-            where: { userId }
+            where: { userId },
+            select: { id: true },
           });
-          
+
           if (!farmer || farmer.id !== createSeasonDto.farmerId) {
             throw new ForbiddenException('You can only create seasons for yourself');
+          }
+        } else if (userRole === Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER) {
+          const member = await this.databaseService.farmer.findUnique({
+            where: { id: createSeasonDto.farmerId },
+            select: {
+              cooperative: { select: { cooperativeManagerId: true, collectiveType: true } },
+            },
+          });
+
+          const coop = member?.cooperative;
+          if (!coop || coop.cooperativeManagerId !== userId || coop.collectiveType !== 'NON_COLLECTIVE') {
+            throw new ForbiddenException('You can only create seasons for farmers in your non-collective');
           }
         }
       }
@@ -196,7 +225,7 @@ export class SeasonsService {
       return await this.databaseService.season.create({
         data,
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true,
             },
@@ -241,7 +270,7 @@ export class SeasonsService {
       if (userRole === Role_Enum.UMUFASHAMYUMVIRE) {
         return await this.databaseService.season.findMany({
           include: {
-            croType: {
+            cropType: {
               include: {
                 crop: true,
               },
@@ -285,7 +314,7 @@ export class SeasonsService {
             farmerId: farmer.id
           },
           include: {
-            croType: {
+            cropType: {
               include: {
                 crop: true,
               },
@@ -314,7 +343,7 @@ export class SeasonsService {
             cooperativeId: cooperative.id
           },
           include: {
-            croType: {
+            cropType: {
               include: {
                 crop: true,
               },
@@ -376,7 +405,7 @@ export class SeasonsService {
       return await this.databaseService.season.findMany({
         where: whereClause,
         include: {
-          croType: true,
+          cropType: true,
           farmer: true,
           cooperative: true,
         },
@@ -434,7 +463,7 @@ export class SeasonsService {
           farmerId,
         },
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true,
             },
@@ -480,7 +509,7 @@ export class SeasonsService {
           cooperativeId,
         },
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true,
             },
@@ -531,7 +560,7 @@ export class SeasonsService {
           cropTypeId,
         },
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true,
             },
@@ -586,7 +615,7 @@ export class SeasonsService {
           cropTypeId,
         },
         include: {
-          croType: true,
+          cropType: true,
         },
       });
     } catch (e) {
@@ -606,7 +635,7 @@ export class SeasonsService {
           id,
         },
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true,
             },

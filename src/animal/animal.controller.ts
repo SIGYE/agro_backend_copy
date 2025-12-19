@@ -6,24 +6,29 @@ import { Animal, User } from '@prisma/client';
 import { ApiResponse } from 'src/responses/api.response';
 import { ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { RolesGuard } from 'src/guards/roles.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateAnimalProductDto } from './dto/create-animal-product.dto';
 import { BulkAnimalDto, BulkCreateAnimalDto } from './dto/bulk-create.dtos';
+import { Roles } from 'src/decorators/roles.decorator';
+import { Role_Enum } from 'src/enums/role.enum';
 
 @Controller('animal')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @ApiTags('Animal')
 @ApiBearerAuth()
 export class AnimalController {
   constructor(private readonly animalService: AnimalService) { }
 
   @Post()
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN, Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.VETERINARIAN)
   @ApiBody({ type: CreateAnimalDto })
   async create(@Body() createAnimalDto: CreateAnimalDto, @CurrentUser() user: User): Promise<ApiResponse<Animal>> {
     return new ApiResponse<Animal>(true, "Animal Created", await this.animalService.create(createAnimalDto, user.id), 201);
   }
   @Post('/bulk-create')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN, Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.VETERINARIAN)
   async bulkCreate(@Body() createAnimalsDto: BulkCreateAnimalDto, @CurrentUser() user: User): Promise<ApiResponse<Animal>> {
     try {
       return new ApiResponse<any>(true, "Animals Created", await this.animalService.bulkCreateAnimals(createAnimalsDto, user), 200);
@@ -32,6 +37,7 @@ export class AnimalController {
     }
   }
   @Post('/create-product')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN, Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.VETERINARIAN)
   async createAnimalProduct(@Body() createAnimalProduct: CreateAnimalProductDto) {
     try {
       return new ApiResponse(true, "Animal Product Created", await this.animalService.createAnimalProduct(createAnimalProduct), 201);
@@ -108,16 +114,19 @@ export class AnimalController {
   }
 
   @Patch(':id')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN, Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.VETERINARIAN)
   async update(@Param('id') id: string, @Body() updateAnimalDto: UpdateAnimalDto) {
     return new ApiResponse<Animal>(true, "Animal Updated", await this.animalService.update(id, updateAnimalDto), null);
   }
 
   @Delete(':id')
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN, Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.VETERINARIAN)
   async remove(@Param('id') id: string) {
     return new ApiResponse<Animal>(true, "Animal Deleted", await this.animalService.remove(id), null);
   }
   @Post('upload-animals')
   @UseInterceptors(FileInterceptor('file'))
+  @Roles(Role_Enum.ADMIN, Role_Enum.DEV_ADMIN, Role_Enum.UMUFASHAMYUMVIRE, Role_Enum.VETERINARIAN)
   async uploadCrops(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: User) {
     if (!file) {
       throw new BadRequestException('No file uploaded');

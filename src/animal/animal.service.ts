@@ -16,15 +16,95 @@ export class AnimalService {
   }
   async create(createAnimalDto: CreateAnimalDto, userId: string) {
     try {
-      console.log('createAnimalDto : ' + createAnimalDto)
-      return await this.dataBaseService.animal.create({
-        data: {
-          // name: createAnimalDto.name,
-          createdBy: userId
+      if (!createAnimalDto.names || createAnimalDto.names.length === 0) {
+        throw new BadRequestException('At least one name is required');
+      }
+
+      const primaryName =
+        createAnimalDto.names.find((n) => n.languageCode === 'en')?.name ??
+        createAnimalDto.names[0].name;
+
+      return await this.dataBaseService.$transaction(async (prisma) => {
+        const nameLanguagePairs = createAnimalDto.names.map((n) => ({
+          name: n.name,
+          languageCode: n.languageCode,
+        }));
+
+        const existingAnimal = await prisma.animal.findFirst({
+          where: {
+            animalNames: {
+              some: {
+                OR: nameLanguagePairs,
+              },
+            },
+          },
+          include: {
+            animalNames: true,
+          },
+        });
+
+        if (existingAnimal) {
+          const existingLanguageCodes = new Set(
+            existingAnimal.animalNames.map((n) => n.languageCode),
+          );
+          const newNames = createAnimalDto.names.filter(
+            (n) => !existingLanguageCodes.has(n.languageCode),
+          );
+
+          if (newNames.length > 0) {
+            await prisma.animalNames.createMany({
+              data: newNames.map((n) => ({
+                name: n.name,
+                languageName: n.languageName,
+                languageCode: n.languageCode,
+                animalId: existingAnimal.id,
+              })),
+            });
+          }
+
+          if (!existingAnimal.name) {
+            await prisma.animal.update({
+              where: { id: existingAnimal.id },
+              data: { name: primaryName },
+            });
+          }
+
+          return await prisma.animal.findUnique({
+            where: { id: existingAnimal.id },
+            include: {
+              animalNames: true,
+              breeds: true,
+              animalProducts: true,
+            },
+          });
         }
-      })
+
+        const animal = await prisma.animal.create({
+          data: {
+            name: primaryName,
+            createdBy: userId,
+          },
+        });
+
+        await prisma.animalNames.createMany({
+          data: createAnimalDto.names.map((n) => ({
+            name: n.name,
+            languageName: n.languageName,
+            languageCode: n.languageCode,
+            animalId: animal.id,
+          })),
+        });
+
+        return await prisma.animal.findUnique({
+          where: { id: animal.id },
+          include: {
+            animalNames: true,
+            breeds: true,
+            animalProducts: true,
+          },
+        });
+      });
     } catch (error) {
-      console.log('error : ' + error)
       throw new BadRequestException(error.message);
     }
   }
@@ -74,20 +154,81 @@ export class AnimalService {
     return await this.dataBaseService.$transaction(async (prisma) => {
       try {
         // 1. Create or get existing animal
+        if (!animalDto.names || animalDto.names.length === 0) {
+          throw new BadRequestException('Each animal must have at least one name');
+        }
+
+        const primaryName =
+          animalDto.names.find((n) => n.languageCode === 'en')?.name ??
+          animalDto.names[0].name;
+
+        const nameLanguagePairs = animalDto.names.map((n) => ({
+          name: n.name,
+          languageCode: n.languageCode,
+        }));
+
         let animal = await prisma.animal.findFirst({
           where: {
-            // name: animalDto.name,
-            createdBy: user.id
-          }
+            OR: [
+              { name: primaryName },
+              {
+                animalNames: {
+                  some: {
+                    OR: nameLanguagePairs,
+                  },
+                },
+              },
+            ],
+          },
+          include: {
+            animalNames: true,
+          },
         });
 
         if (!animal) {
           animal = await prisma.animal.create({
             data: {
-              // name: animalDto.namesp,
-              createdBy: user.id
-            }
+              name: primaryName,
+              createdBy: user.id,
+            },
+            include: {
+              animalNames: true,
+            },
           });
+
+          await prisma.animalNames.createMany({
+            data: animalDto.names.map((n) => ({
+              name: n.name,
+              languageName: n.languageName,
+              languageCode: n.languageCode,
+              animalId: animal.id,
+            })),
+          });
+        } else {
+          const existingLanguageCodes = new Set(
+            animal.animalNames.map((n) => n.languageCode),
+          );
+          const newNames = animalDto.names.filter(
+            (n) => !existingLanguageCodes.has(n.languageCode),
+          );
+
+          if (newNames.length > 0) {
+            await prisma.animalNames.createMany({
+              data: newNames.map((n) => ({
+                name: n.name,
+                languageName: n.languageName,
+                languageCode: n.languageCode,
+                animalId: animal.id,
+              })),
+            });
+          }
+
+          if (!animal.name) {
+            await prisma.animal.update({
+              where: { id: animal.id },
+              data: { name: primaryName },
+            });
+          }
         }
 
         // 2. Handle all related data in parallel where possible
@@ -125,6 +266,7 @@ export class AnimalService {
         return await prisma.animal.findUnique({
           where: { id: animal.id },
           include: {
+            animalNames: true,
             breeds: true,
             animalProducts: true,
             animalVaccinations: {
@@ -450,7 +592,11 @@ export class AnimalService {
   }
   async findAll() {
     try {
-      return await this.dataBaseService.animal.findMany();
+      return await this.dataBaseService.animal.findMany({
+        include: {
+          animalNames: true,
+        },
+      });
     } catch (error) {
       throw new BadRequestException(error.message);
     }
@@ -801,7 +947,12 @@ export class AnimalService {
       return await this.dataBaseService.animal.findUnique({
         where: {
           id: id
-        }
+        },
+        include: {
+          animalNames: true,
+          breeds: true,
+          animalProducts: true,
+        },
       });
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -810,13 +961,52 @@ export class AnimalService {
 
   async update(id: string, updateAnimalDto: UpdateAnimalDto) {
     try {
-      return await this.dataBaseService.animal.update({
-        where: {
-          id: id
-        },
-        data: {
-          // name: updateAnimalDto.name
+      if (updateAnimalDto.names && updateAnimalDto.names.length === 0) {
+        throw new BadRequestException('names cannot be empty');
+      }
+
+      return await this.dataBaseService.$transaction(async (prisma) => {
+        const animal = await prisma.animal.findUnique({
+          where: { id },
+          include: { animalNames: true },
+        });
+
+        if (!animal) {
+          throw new NotFoundException('Animal not found');
         }
+
+        if (updateAnimalDto.names && updateAnimalDto.names.length > 0) {
+          const primaryName =
+            updateAnimalDto.names.find((n) => n.languageCode === 'en')?.name ??
+            updateAnimalDto.names[0].name;
+
+          await prisma.animal.update({
+            where: { id },
+            data: { name: primaryName },
+          });
+
+          await prisma.animalNames.deleteMany({
+            where: { animalId: id },
+          });
+
+          await prisma.animalNames.createMany({
+            data: updateAnimalDto.names.map((n) => ({
+              name: n.name,
+              languageName: n.languageName,
+              languageCode: n.languageCode,
+              animalId: id,
+            })),
+          });
+        }
+
+        return await prisma.animal.findUnique({
+          where: { id },
+          include: {
+            animalNames: true,
+            breeds: true,
+            animalProducts: true,
+          },
+        });
       });
     }
     catch (error) {

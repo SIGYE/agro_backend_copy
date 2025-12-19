@@ -10,7 +10,7 @@ import * as XLSX from 'xlsx';
 import { LocationService } from 'src/location/location.service';
 import { generatePassword } from 'src/utils/data.util';
 import { sendSms } from 'src/utils/sms.util';
-import { randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 
 export type UserWithRoles = Prisma.UserGetPayload<{
   include: {
@@ -24,14 +24,6 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto, loggedInUser?: User): Promise<User> {
     try {
-      if (createUserDto.password) {
-        createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
-      } else {
-        let password = "Test@12345";
-        console.log("password: ", password);
-        createUserDto.password = await bcrypt.hash(password, 10);
-      }
-
       let usersnumber = await this.databaseService.user.count();
       const username = createUserDto.firstName.toLowerCase() + usersnumber;
 
@@ -59,6 +51,12 @@ export class UsersService {
       if (!role) {
         throw new NotFoundException("The role does not exist");
       }
+
+      const isFarmer = role.name === 'FARMER';
+
+      const shouldGeneratePassword = isFarmer || !createUserDto.password;
+      const plainPassword = shouldGeneratePassword ? generatePassword() : createUserDto.password;
+      const passwordHash = await bcrypt.hash(plainPassword, 12);
 
       let locationId: number;
       
@@ -95,13 +93,14 @@ export class UsersService {
           firstName: createUserDto.firstName,
           lastName: createUserDto.lastName,
           email: createUserDto.email,
-          password: createUserDto.password,
+          password: passwordHash,
           nationalId: createUserDto.nationalId,
           username: username,
           telephone: createUserDto.telephone,
           gender: createUserDto.gender,
           dob: createUserDto.dob ? new Date(createUserDto.dob) : null,
           locationChildrenIds: JSON.stringify(childrenLocationsIds),
+          isDefaultPassword: isFarmer ? true : shouldGeneratePassword,
           role: {
             connect: {
               id: role.id
@@ -115,14 +114,41 @@ export class UsersService {
         }
       });
 
-      if (user) {
-        sendSms(user.telephone, { 
-          id: randomUUID(), 
-          content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Your username is ${user.username} and your password is Test@12345. Please change your password after logging in.` 
+      if (!user) return user;
+
+      if (isFarmer) {
+        const ttlMinutes = Number(process.env.OTP_TTL_MINUTES ?? '10') || 10;
+        const otp = randomInt(100000, 1000000).toString();
+        const otpHash = await bcrypt.hash(otp, 10);
+
+        await this.databaseService.user.update({
+          where: { id: user.id },
+          data: {
+            otp: otpHash,
+            otpExpiresAt: new Date(Date.now() + ttlMinutes * 60_000),
+            otpUsedAt: null,
+          }
+        })
+
+        const smsResult = await sendSms(user.telephone, {
+          id: randomUUID(),
+          content: `Hello ${user.firstName} ${user.lastName}, your Agro OTP is ${otp}. It expires in ${ttlMinutes} minutes.`
         });
-        console.log(createUserDto.password);
+        if (smsResult !== 'SMS Sent Successfully' && process.env.NODE_ENV !== 'production') {
+          console.log(`[DEV] Farmer OTP for ${user.telephone}: ${otp}`);
+        }
+
         return user;
       }
+
+      if (shouldGeneratePassword) {
+        await sendSms(user.telephone, {
+          id: randomUUID(),
+          content: `Hello ${user.firstName} ${user.lastName}, your account has been created successfully. Username: ${user.username}. Temporary password: ${plainPassword}. Please change your password after logging in.`
+        });
+      }
+
+      return user;
     } catch (e) {
       throw e;
     }

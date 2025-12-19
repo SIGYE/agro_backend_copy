@@ -13,6 +13,8 @@ import { MailService } from 'src/mail/mail.service';
 import { OtpLoginDto } from './dto/otp-login.dto';
 import { Message, sendSms } from 'src/utils/sms.util';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { randomInt } from 'crypto';
+import { SetPasswordDto } from './dto/set-password.dto';
 
 
 
@@ -22,6 +24,7 @@ export type TokenProps = {
   userName: string
   role: Role
   status: Status
+  activeRole?: string
 }
 
 type UserWithRoles = Prisma.UserGetPayload<{
@@ -33,6 +36,82 @@ type UserWithRoles = Prisma.UserGetPayload<{
 @Injectable()
 export class AuthService {
   constructor(private readonly mailService: MailService, private readonly databaseService: DatabaseService, private readonly userService: UsersService, private readonly jwtService: JwtService) { }
+
+  private otpTtlMinutes(): number {
+    const value = Number(process.env.OTP_TTL_MINUTES ?? '10');
+    if (Number.isFinite(value) && value > 0) return value;
+    return 10;
+  }
+
+  private generateOtpCode(): string {
+    return randomInt(100000, 1000000).toString();
+  }
+
+  private buildLoginPayload(user: any): LoginPayload {
+    const activeRole = user.activeRole || user.role?.name || 'FARMER';
+    const tokenProps: TokenProps = {
+      id: user.id,
+      email: user.email,
+      userName: user.firstName,
+      status: user.status,
+      role: user.role,
+      activeRole,
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      userName: user.firstName,
+      fullName: user.firstName + " " + user.lastName,
+      status: user.status,
+      role: user.role,
+      activeRole,
+      isDefaultPassword: user.isDefaultPassword,
+      token: this.jwtService.sign(tokenProps),
+      locationId: user.locationId,
+      cooperativeId: user?.farmer?.[0]?.cooperative?.id ?? user?.cooperativeManager?.[0]?.id,
+      cooperativeName: user?.farmer?.[0]?.cooperative?.name ?? user?.cooperativeManager?.[0]?.name,
+      registrationNumber: user?.farmer?.[0]?.cooperative?.registrationNumber,
+      cooperativePhoneNumber: user?.farmer?.[0]?.cooperative?.telephone,
+      cooperativeType: user?.farmer?.[0]?.cooperative?.type ?? user?.cooperativeManager?.[0]?.type,
+      cooperativeCollectiveType: user?.farmer?.[0]?.cooperative?.collectiveType ?? user?.cooperativeManager?.[0]?.collectiveType,
+      farmerId: user?.farmer?.[0]?.id
+    };
+  }
+
+  private async getUserForLoginPayload(userId: string): Promise<any> {
+    return await this.databaseService.user.findUnique({
+      where: { id: userId },
+      include: {
+        role: true,
+        farmer: {
+          select: {
+            id: true,
+            cooperative: {
+              select: {
+                id: true,
+                name: true,
+                registrationNumber: true,
+                telephone: true,
+                type: true,
+                collectiveType: true,
+              }
+            }
+          }
+        },
+        cooperativeManager: {
+          select: {
+            id: true,
+            name: true,
+            registrationNumber: true,
+            telephone: true,
+            type: true,
+            collectiveType: true,
+          }
+        }
+      }
+    })
+  }
 
   validateAll = async (credential: string): Promise<number> => {
     // Check if the credential is a valid email address
@@ -192,124 +271,164 @@ export class AuthService {
 
   }
 
-  async sendOtp(telephone: string): Promise<string> {
-    let user = await this.databaseService.user.findUnique({
-      where: {
-        telephone: telephone
-      }
+  async requestFarmerOnboardingOtp(telephone: string): Promise<string> {
+    const user = await this.databaseService.user.findUnique({
+      where: { telephone },
+      include: { role: true },
     })
 
     if (!user) {
       throw new UnauthorizedException("The user with the given phone number was not found")
     }
+    if (user.role?.name !== 'FARMER') {
+      throw new UnauthorizedException("OTP onboarding is only available for farmers")
+    }
+    if (!user.isDefaultPassword) {
+      throw new BadRequestException("Password already set. Please login with your password.")
+    }
 
-    // send the otp 
-    let otp = codeGenerator()
+    const ttlMinutes = this.otpTtlMinutes();
+    const otp = this.generateOtpCode();
+    const otpHash = await bcrypt.hash(otp, 10);
+
     await this.databaseService.user.update({
-      where: {
-        id: user.id
-      },
+      where: { id: user.id },
       data: {
-        otp
+        otp: otpHash,
+        otpExpiresAt: new Date(Date.now() + ttlMinutes * 60_000),
+        otpUsedAt: null,
       }
     })
 
     const message: Message = {
       id: user.id,
-      content: otp
+      content: `Your Agro OTP is ${otp}. It expires in ${ttlMinutes} minutes.`
     }
-    // send the otp 
-    return await sendSms(telephone, message)
+    const smsResult = await sendSms(telephone, message)
+    if (smsResult !== 'SMS Sent Successfully' && process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Farmer OTP for ${telephone}: ${otp}`)
+    }
+    return 'OTP Sent Successfully'
   }
 
-
-  async loginWithOtp(otpLogin: OtpLoginDto): Promise<LoginPayload> {
-    let user = await this.databaseService.user.findUnique({
-      where: {
-        telephone: otpLogin.telephone
-      },
-      include: {
-        role: true,
-        farmer: {
-          select: {
-            id: true,
-            cooperative: {
-              select: {
-                id: true,
-                name: true,
-                registrationNumber: true,
-                telephone: true,
-                type: true
-              }
-            }
-          }
-        },
-        cooperativeManager: {
-          select: {
-            id: true,
-            name: true,
-            registrationNumber: true,
-            telephone: true,
-            type: true
-          }
-        }
-      }
+  async verifyFarmerOnboardingOtp(otpLogin: OtpLoginDto): Promise<{ onboardingToken: string }> {
+    const user = await this.databaseService.user.findUnique({
+      where: { telephone: otpLogin.telephone },
+      include: { role: true },
     })
 
     if (!user) {
-      throw new UnauthorizedException("The user with the given id was not found")
+      throw new UnauthorizedException("The user with the given phone number was not found")
     }
-
-    // validate the otp 
-    if (user.otp == null) {
-      throw new UnauthorizedException("No Session was found for this user")
+    if (user.role?.name !== 'FARMER') {
+      throw new UnauthorizedException("OTP onboarding is only available for farmers")
     }
-
-    if (user.otp != otpLogin.otp) {
-      throw new UnauthorizedException("Invalid OTP")
+    if (!user.isDefaultPassword) {
+      throw new BadRequestException("Password already set. Please login with your password.")
     }
-
-    // allown login and delete the otp 
-    await this.databaseService.user.update({
-      where: {
-        id: user.id
-      },
-      data: {
-        otp: null
-      }
-    })
-
-    if (user.status == Status.INACTIVE) {
+    if (user.status === Status.INACTIVE) {
       throw new UnauthorizedException('User Account not active contact support for help');
     }
 
-    const tokenProps: TokenProps = {
-      id: user.id,
-      email: user.email,
-      userName: user.firstName,
-      status: user.status,
-      role: user.role
+    if (!user.otp || user.otpUsedAt) {
+      throw new UnauthorizedException("No active OTP session found for this user")
+    }
+    if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      throw new UnauthorizedException("OTP expired. Please request a new OTP.")
     }
 
-    const loginPayload: LoginPayload = {
-      id: user.id,
-      email: user.email,
-      userName: user.firstName,
-      fullName: user.firstName + " " + user.lastName,
-      status: user.status,
-      role: user.role,
-      isDefaultPassword: user.isDefaultPassword,
-      token: this.jwtService.sign(tokenProps),
-      locationId: user.locationId,
-      cooperativeId: user?.farmer[0]?.cooperative?.id ?? user?.cooperativeManager[0]?.id,
-      cooperativeName: user?.farmer[0]?.cooperative?.name ?? user?.cooperativeManager[0]?.name,
-      registrationNumber: user?.farmer[0]?.cooperative?.registrationNumber,
-      cooperativePhoneNumber: user?.farmer[0]?.cooperative?.telephone,
-      cooperativeType: user?.farmer[0]?.cooperative?.type ?? user?.cooperativeManager[0]?.type,
-      farmerId: user?.farmer[0]?.id
-    };
+    const isValid = await bcrypt.compare(otpLogin.otp, user.otp);
+    if (!isValid) {
+      throw new UnauthorizedException("Invalid OTP")
+    }
 
-    return loginPayload;
+    await this.databaseService.user.update({
+      where: { id: user.id },
+      data: {
+        otp: null,
+        otpExpiresAt: null,
+        otpUsedAt: new Date(),
+      }
+    })
+
+    const onboardingToken = this.jwtService.sign(
+      { id: user.id, tokenType: 'ONBOARDING' },
+      { expiresIn: '15m' }
+    );
+
+    return { onboardingToken };
+  }
+
+  async setFarmerOnboardingPassword(userId: string, dto: SetPasswordDto): Promise<LoginPayload> {
+    if (dto.newPassword !== dto.confirmNewPassword) {
+      throw new BadRequestException("The password and confirmation passwords do not match");
+    }
+
+    const user = await this.databaseService.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    })
+
+    if (!user) {
+      throw new NotFoundException("The user was not found");
+    }
+    if (user.role?.name !== 'FARMER') {
+      throw new BadRequestException("Only farmers can complete this onboarding flow");
+    }
+    if (!user.isDefaultPassword) {
+      throw new BadRequestException("Onboarding already completed");
+    }
+
+    const newPassword = await bcrypt.hash(dto.newPassword, 12);
+    await this.databaseService.user.update({
+      where: { id: user.id },
+      data: {
+        password: newPassword,
+        isDefaultPassword: false,
+        otp: null,
+        otpExpiresAt: null,
+        otpUsedAt: null,
+      }
+    })
+
+    const loginUser = await this.getUserForLoginPayload(user.id);
+    if (!loginUser) {
+      throw new InternalServerErrorException("Unable to load user after onboarding");
+    }
+
+    return this.buildLoginPayload(loginUser);
+  }
+
+  async setActiveRole(user: User & { role?: Role }, activeRole: string): Promise<LoginPayload> {
+    // Only Umufasha can switch; other roles must keep their role
+    if (user?.role?.name !== 'UMUFASHAMYUMVIRE') {
+      throw new UnauthorizedException('Role switching is only available for Umufasha Myumvire');
+    }
+    if (!['UMUFASHAMYUMVIRE', 'FARMER'].includes(activeRole)) {
+      throw new BadRequestException('Invalid active role');
+    }
+
+    // Umufasha in FARMER mode must have a Farmer profile row
+    if (activeRole === 'FARMER') {
+      const existingFarmer = await this.databaseService.farmer.findUnique({
+        where: { userId: user.id },
+        select: { id: true },
+      });
+      if (!existingFarmer) {
+        await this.databaseService.farmer.create({
+          data: { userId: user.id, cooperativeId: null },
+        });
+      }
+    }
+
+    await this.databaseService.user.update({
+      where: { id: user.id },
+      data: { activeRole },
+    });
+
+    const updated = await this.getUserForLoginPayload(user.id);
+    updated.activeRole = activeRole;
+    return this.buildLoginPayload(updated);
   }
 
   async login(loginDto: loginDto): Promise<LoginPayload> {
@@ -339,33 +458,11 @@ export class AuthService {
       throw new UnauthorizedException('User Account not active contact support for help');
     }
 
-    const tokenProps: TokenProps = {
-      id: user.id,
-      email: user.email,
-      userName: user.firstName,
-      status: user.status,
-      role: user.role
+    if (user.role?.name === 'FARMER' && user.isDefaultPassword) {
+      throw new UnauthorizedException('First-time login requires OTP verification and password setup');
     }
 
-    const loginPayload: LoginPayload = {
-      id: user.id,
-      email: user.email,
-      userName: user.firstName,
-      fullName: user.firstName + " " + user.lastName,
-      status: user.status,
-      role: user.role,
-      isDefaultPassword: user.isDefaultPassword,
-      token: this.jwtService.sign(tokenProps),
-      locationId: user.locationId,
-      cooperativeId: user?.farmer[0]?.cooperative?.id ?? user?.cooperativeManager[0]?.id,
-      cooperativeName: user?.farmer[0]?.cooperative?.name ?? user?.cooperativeManager[0]?.name,
-      registrationNumber: user?.farmer[0]?.cooperative?.registrationNumber,
-      cooperativePhoneNumber: user?.farmer[0]?.cooperative?.telephone,
-      cooperativeType: user?.farmer[0]?.cooperative?.type ?? user?.cooperativeManager[0]?.type,
-      farmerId: user?.farmer[0]?.id
-    };
-
-    return loginPayload;
+    return this.buildLoginPayload(user);
   }
 
   // Initiate Password Reset
@@ -463,4 +560,3 @@ export class AuthService {
       throw new UnauthorizedException("Wrong telephone number or password")
   }
 }
-

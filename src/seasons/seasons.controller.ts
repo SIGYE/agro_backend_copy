@@ -18,6 +18,7 @@ import { AuthGuard } from '../guards/auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { Role_Enum } from '../enums/role.enum';
+import { ApiResponse } from 'src/responses/api.response';
 
 @Controller('seasons')
 @UseGuards(AuthGuard, RolesGuard)
@@ -28,12 +29,18 @@ export class SeasonsController {
   @Roles(
     Role_Enum.UMUFASHAMYUMVIRE,
     Role_Enum.FARMER,
-    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async create(@Body() createSeasonDto: CreateSeasonDto, @Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.create(createSeasonDto, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.create(createSeasonDto, userId, userRole);
+      return new ApiResponse(true, "Season created successfully", data, 201);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get()
@@ -44,9 +51,14 @@ export class SeasonsController {
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async findAll(@Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findAll(userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findAll(userId, userRole);
+      return new ApiResponse(true, "All seasons", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get('farmer/:farmerId')
@@ -57,10 +69,15 @@ export class SeasonsController {
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async findAllByFarmerId(@Param('farmerId') farmerId: string, @Request() req) {
-    if (!farmerId) throw new BadRequestException('farmerId is required');
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findAllByFarmerId(farmerId, userId, userRole);
+    try {
+      if (!farmerId) throw new BadRequestException('farmerId is required');
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findAllByFarmerId(farmerId, userId, userRole);
+      return new ApiResponse(true, "Farmer seasons", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get('cooperative/:cooperativeId')
@@ -69,10 +86,15 @@ export class SeasonsController {
     Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
   )
   async findAllByCooperativeId(@Param('cooperativeId') cooperativeId: string, @Request() req) {
-    if (!cooperativeId) throw new BadRequestException('cooperativeId is required');
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findAllByCooperativeId(cooperativeId, userId, userRole);
+    try {
+      if (!cooperativeId) throw new BadRequestException('cooperativeId is required');
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findAllByCooperativeId(cooperativeId, userId, userRole);
+      return new ApiResponse(true, "Cooperative seasons", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get('crop-type/:cropTypeId')
@@ -83,10 +105,15 @@ export class SeasonsController {
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async findAllByCropTypeId(@Param('cropTypeId') cropTypeId: string, @Request() req) {
-    if (!cropTypeId) throw new BadRequestException('cropTypeId is required');
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findAllByCropTypeId(cropTypeId, userId, userRole);
+    try {
+      if (!cropTypeId) throw new BadRequestException('cropTypeId is required');
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findAllByCropTypeId(cropTypeId, userId, userRole);
+      return new ApiResponse(true, "Crop type seasons", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get('farmer/:farmerId/crop-type/:cropTypeId')
@@ -101,9 +128,14 @@ export class SeasonsController {
     @Param('cropTypeId') cropTypeId: string,
     @Request() req
   ) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findAllByFarmerIdAndCropTypeId(farmerId, cropTypeId, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findAllByFarmerIdAndCropTypeId(farmerId, cropTypeId, userId, userRole);
+      return new ApiResponse(true, "Farmer crop seasons", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get('cooperative/:cooperativeId/crop-type/:cropTypeId')
@@ -116,14 +148,19 @@ export class SeasonsController {
     @Param('cropTypeId') cropTypeId: string,
     @Request() req
   ) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findAllByCooperativeIdAndCropTypeId(
-      cooperativeId,
-      cropTypeId,
-      userId,
-      userRole
-    );
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findAllByCooperativeIdAndCropTypeId(
+        cooperativeId,
+        cropTypeId,
+        userId,
+        userRole
+      );
+      return new ApiResponse(true, "Cooperative crop seasons", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Get(':id')
@@ -134,36 +171,53 @@ export class SeasonsController {
     Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async findOne(@Param('id') id: string, @Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.findOne(id, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.findOne(id, userId, userRole);
+      return new ApiResponse(true, "Season retrieved", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Patch(':id')
   @Roles(
     Role_Enum.UMUFASHAMYUMVIRE,
     Role_Enum.FARMER,
-    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async update(
     @Param('id') id: string,
     @Body() updateSeasonDto: UpdateSeasonDto,
     @Request() req
   ) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.update(id, updateSeasonDto, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.update(id, updateSeasonDto, userId, userRole);
+      return new ApiResponse(true, "Season updated", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 
   @Delete(':id')
   @Roles(
     Role_Enum.UMUFASHAMYUMVIRE,
     Role_Enum.FARMER,
-    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER
+    Role_Enum.COLLECTIVE_COOPERATIVE_MANAGER,
+    Role_Enum.NON_COLLECTIVE_COOPERATIVE_MANAGER
   )
   async remove(@Param('id') id: string, @Request() req) {
-    const userId = req.user.id;
-    const userRole = req.user.role?.name || req.user.role;
-    return this.seasonsService.remove(id, userId, userRole);
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.activeRole ?? req.user.effectiveRole ?? req.user.role?.name ?? req.user.role;
+      const data = await this.seasonsService.remove(id, userId, userRole);
+      return new ApiResponse(true, "Season deleted", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
   }
 }

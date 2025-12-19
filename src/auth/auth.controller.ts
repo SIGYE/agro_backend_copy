@@ -14,6 +14,10 @@ import { ValidateCodeDTO } from './dto/ValidateCodeDTO.dto';
 import { OtpLoginDto } from './dto/otp-login.dto';
 import { LoginPayload } from 'src/categories/dto/login-payload.dto';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { SetPasswordDto } from './dto/set-password.dto';
+import { OnboardingGuard } from 'src/guards/onboarding.guard';
+import { SetActiveRoleDto } from './dto/set-active-role.dto';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -35,10 +39,10 @@ export class AuthController {
   // otp login
   @Allow()
   @Post('login/otp')
-  async loginWithOtp(@Body() otpLogin: OtpLoginDto): Promise<ApiResponse<LoginPayload>> {
+  async loginWithOtp(@Body() otpLogin: OtpLoginDto): Promise<ApiResponse<{ onboardingToken: string }>> {
     try {
-      const data = await this.authService.loginWithOtp(otpLogin);
-      return new ApiResponse<LoginPayload>(true, "Logged in Successfully", data, 200);
+      const data = await this.authService.verifyFarmerOnboardingOtp(otpLogin);
+      return new ApiResponse(true, "OTP Verified Successfully", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
@@ -48,8 +52,42 @@ export class AuthController {
   @Post('/login/send-otp/:telephone')
   async sendOtp(@Param('telephone') telephone: string): Promise<ApiResponse<string>> {
     try {
-      const data = await this.authService.sendOtp(telephone);
+      const data = await this.authService.requestFarmerOnboardingOtp(telephone);
       return new ApiResponse<string>(true, "OTP Sent Successfully", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Allow()
+  @Post('onboarding/farmer/request-otp')
+  async requestFarmerOtp(@Body() dto: RequestOtpDto): Promise<ApiResponse<string>> {
+    try {
+      const data = await this.authService.requestFarmerOnboardingOtp(dto.telephone);
+      return new ApiResponse<string>(true, "OTP Sent Successfully", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Allow()
+  @Post('onboarding/farmer/verify-otp')
+  async verifyFarmerOtp(@Body() otpLogin: OtpLoginDto): Promise<ApiResponse<{ onboardingToken: string }>> {
+    try {
+      const data = await this.authService.verifyFarmerOnboardingOtp(otpLogin);
+      return new ApiResponse(true, "OTP Verified Successfully", data, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @Allow()
+  @UseGuards(OnboardingGuard)
+  @Post('onboarding/farmer/set-password')
+  async setFarmerPassword(@CurrentUser() user: User, @Body() dto: SetPasswordDto): Promise<ApiResponse<LoginPayload>> {
+    try {
+      const data = await this.authService.setFarmerOnboardingPassword(user.id, dto);
+      return new ApiResponse<LoginPayload>(true, "Password Set Successfully", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }
@@ -92,6 +130,18 @@ export class AuthController {
   async getCurrentUser(@CurrentUser() user: User): Promise<ApiResponse<User>> {
     try {
       return new ApiResponse(true, "User profile retrieved", user, 200);
+    } catch (e) {
+      return new ApiResponse(false, e.message, null, 400);
+    }
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @Post('active-role')
+  async setActiveRole(@CurrentUser() user: User, @Body() dto: SetActiveRoleDto): Promise<ApiResponse<LoginPayload>> {
+    try {
+      const data = await this.authService.setActiveRole(user, dto.activeRole);
+      return new ApiResponse(true, "Active role updated", data, 200);
     } catch (e) {
       return new ApiResponse(false, e.message, null, 400);
     }

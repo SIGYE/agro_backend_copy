@@ -335,7 +335,7 @@ export class AnalyticsService {
           cropTypeId: true,
           produceHarvested: true,
           plantationArea: true,
-          croType: {
+          cropType: {
             select: {
               id: true,
               name: true,
@@ -353,7 +353,7 @@ export class AnalyticsService {
 
       // Process the data to create hierarchical aggregation
       const cropAggregation = rawSeasons.reduce((acc, season) => {
-        const cropId = season.croType.crop.id;
+        const cropId = season.cropType.crop.id;
         const cropTypeId = season.cropTypeId;
         const produceHarvested = (season.produceHarvested) || 0;
         const plantationArea = (season.plantationArea) || 0;
@@ -361,7 +361,7 @@ export class AnalyticsService {
         if (!acc[cropId]) {
           acc[cropId] = {
             cropId: cropId,
-            cropName: season.croType.crop.name,
+            cropName: season.cropType.crop.name,
             totalProduce: 0,
             totalPlantationArea: 0,
             cropTypes: {},
@@ -372,7 +372,7 @@ export class AnalyticsService {
         if (!acc[cropId].cropTypes[cropTypeId]) {
           acc[cropId].cropTypes[cropTypeId] = {
             cropTypeId: cropTypeId,
-            cropTypeName: season.croType.name,
+            cropTypeName: season.cropType.name,
             totalProduce: 0,
             totalPlantationArea: 0,
             _count: 0,
@@ -461,7 +461,7 @@ export class AnalyticsService {
         select: {
           cropTypeId: true,
           produceHarvested: true,
-          croType: {  // Note the typo in your schema 'croType'
+          cropType: {  // Note the typo in your schema 'cropType'
             select: {
               id: true,
               name: true,
@@ -479,7 +479,7 @@ export class AnalyticsService {
 
       // Process the data to create hierarchical aggregation
       const cropAggregation = rawSeasons.reduce((acc, season) => {
-        const cropId = season.croType.crop.id;
+        const cropId = season.cropType.crop.id;
         const cropTypeId = season.cropTypeId;
         const produceHarvested = (season.produceHarvested) || 0;
 
@@ -487,7 +487,7 @@ export class AnalyticsService {
         if (!acc[cropId]) {
           acc[cropId] = {
             cropId: cropId,
-            cropName: season.croType.crop.name,
+            cropName: season.cropType.crop.name,
             totalProduce: 0,
             cropTypes: {},
             _count: 0
@@ -498,7 +498,7 @@ export class AnalyticsService {
         if (!acc[cropId].cropTypes[cropTypeId]) {
           acc[cropId].cropTypes[cropTypeId] = {
             cropTypeId: cropTypeId,
-            cropTypeName: season.croType.name,
+            cropTypeName: season.cropType.name,
             totalProduce: 0,
             _count: 0
           };
@@ -682,7 +682,7 @@ export class AnalyticsService {
         select: {
           cropTypeId: true,
           produceHarvested: true,
-          croType: {
+          cropType: {
             select: {
               id: true,
               name: true,
@@ -700,13 +700,13 @@ export class AnalyticsService {
 
       // First aggregate by crops
       const cropAggregation = rawSeasons.reduce((acc, season) => {
-        const cropId = season.croType.crop.id;
+        const cropId = season.cropType.crop.id;
         const produceHarvested = (season.produceHarvested) || 0;
 
         if (!acc[cropId]) {
           acc[cropId] = {
             cropId,
-            cropName: season.croType.crop.name,
+            cropName: season.cropType.crop.name,
             totalProduce: 0,
             seasonCount: 0,
             cropTypes: new Set()
@@ -861,7 +861,7 @@ export class AnalyticsService {
           },
           seasons: {
             include: {
-              croType: {
+              cropType: {
                 include: {
                   crop: true
                 }
@@ -917,11 +917,11 @@ export class AnalyticsService {
 
         // Process harvest statistics
         const harvestStats = farmer.seasons.reduce((acc, season) => {
-          const key = `${season.croType.crop.name}-${season.croType.name}`;
+          const key = `${season.cropType.crop.name}-${season.cropType.name}`;
           if (!acc[key]) {
             acc[key] = {
-              cropName: season.croType.crop.name,
-              cropType: season.croType.name,
+              cropName: season.cropType.crop.name,
+              cropType: season.cropType.name,
               totalHarvested: 0,
               totalArea: 0,
               totalSeeds: 0,
@@ -1227,7 +1227,7 @@ export class AnalyticsService {
       const seasons = await this.databaseService.season.findMany({
         where: whereClause,
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true
             }
@@ -1240,8 +1240,8 @@ export class AnalyticsService {
 
       // Process each season
       seasons.forEach(season => {
-        const cropId = season.croType.crop.id;
-        const cropName = season.croType.crop.name;
+        const cropId = season.cropType.crop.id;
+        const cropName = season.cropType.crop.name;
         const plantationArea = season.plantationArea || 0;
 
         if (!cropLandMap.has(cropId)) {
@@ -1287,7 +1287,7 @@ export class AnalyticsService {
     try {
       // Define the base query conditions for seasons
       const whereClause: any = {
-        croType: {
+        cropType: {
           crop: {
             id: cropId
           }
@@ -1339,7 +1339,7 @@ export class AnalyticsService {
           harvestSeasonId: currentHarvestSeason.id
         },
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true
             }
@@ -1356,7 +1356,7 @@ export class AnalyticsService {
           harvestSeasonId: previousHarvestSeason.id
         },
         include: {
-          croType: {
+          cropType: {
             include: {
               crop: true
             }
@@ -1421,8 +1421,8 @@ export class AnalyticsService {
 
       // Get crop name from any season (they should all be the same crop)
       const cropName = currentSeasons.length > 0
-        ? currentSeasons[0].croType.crop.name
-        : (previousSeasons.length > 0 ? previousSeasons[0].croType.crop.name : "Unknown");
+        ? currentSeasons[0].cropType.crop.name
+        : (previousSeasons.length > 0 ? previousSeasons[0].cropType.crop.name : "Unknown");
 
       // Construct and return result
       return {

@@ -50,7 +50,7 @@ export class BuyerController {
     @Body() createBuyerProfileDto: CreateBuyerProfileDto,
     @Request() req: any,
   ) {
-    return this.buyerService.createProfile(req.user.userId, createBuyerProfileDto);
+    return this.buyerService.createProfile(req.user.id, createBuyerProfileDto);
   }
 
   @Get('profile')
@@ -59,7 +59,7 @@ export class BuyerController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get buyer profile' })
   async getProfile(@Request() req: any) {
-    return this.buyerService.getProfile(req.user.userId);
+    return this.buyerService.getProfile(req.user.id);
   }
 
   @Put('profile')
@@ -71,7 +71,7 @@ export class BuyerController {
     @Body() updateBuyerProfileDto: UpdateBuyerProfileDto,
     @Request() req: any,
   ) {
-    return this.buyerService.updateProfile(req.user.userId, updateBuyerProfileDto);
+    return this.buyerService.updateProfile(req.user.id, updateBuyerProfileDto);
   }
 
   // ============== MARKETPLACE ==============
@@ -133,7 +133,7 @@ export class BuyerController {
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
 
-    return this.buyerService.getMyOrders(req.user.userId, filters);
+    return this.buyerService.getMyOrders(req.user.id, filters);
   }
 
   @Get('orders/:id')
@@ -142,7 +142,7 @@ export class BuyerController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get order details' })
   async getOrderDetails(@Param('id') id: string, @Request() req: any) {
-    return this.buyerService.getOrderDetails(id, req.user.userId);
+    return this.buyerService.getOrderDetails(id, req.user.id);
   }
 
   @Put('orders/:id/cancel')
@@ -155,7 +155,7 @@ export class BuyerController {
     @Body('reason') reason: string,
     @Request() req: any,
   ) {
-    return this.buyerService.cancelOrder(id, req.user.userId, reason);
+    return this.buyerService.cancelOrder(id, req.user.id, reason);
   }
 
   // ============== STATISTICS ==============
@@ -166,7 +166,7 @@ export class BuyerController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get buyer statistics' })
   async getStatistics(@Request() req: any) {
-    return this.buyerService.getOrderStatistics(req.user.userId);
+    return this.buyerService.getOrderStatistics(req.user.id);
   }
 
   @Get('favorites')
@@ -175,6 +175,6 @@ export class BuyerController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get favorite crop types' })
   async getFavorites(@Request() req: any) {
-    return this.buyerService.getFavoriteListings(req.user.userId);
+    return this.buyerService.getFavoriteListings(req.user.id);
   }
 }

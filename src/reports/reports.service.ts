@@ -55,7 +55,7 @@ export class ReportsService {
           cropTypeId: true,
           produceHarvested: true,
           createdAt: true,
-          croType: {
+          cropType: {
             select: {
               id: true,
               name: true,
@@ -73,7 +73,7 @@ export class ReportsService {
 
       // Process the data to create hierarchical aggregation
       const cropAggregation = rawSeasons.reduce((acc, season) => {
-        const cropId = season.croType.crop.id;
+        const cropId = season.cropType.crop.id;
         const cropTypeId = season.cropTypeId;
         const produceHarvested = (season.produceHarvested) || 0;
 
@@ -81,7 +81,7 @@ export class ReportsService {
         if (!acc[cropId]) {
           acc[cropId] = {
             cropId,
-            cropName: season.croType.crop.name,
+            cropName: season.cropType.crop.name,
             totalProduce: 0,
             cropTypes: {},
             _count: 0,
@@ -96,7 +96,7 @@ export class ReportsService {
         if (!acc[cropId].cropTypes[cropTypeId]) {
           acc[cropId].cropTypes[cropTypeId] = {
             cropTypeId,
-            cropTypeName: season.croType.name,
+            cropTypeName: season.cropType.name,
             totalProduce: 0,
             _count: 0,
             dateRange: {
@@ -251,7 +251,7 @@ export class ReportsService {
           cropTypeId: true,
           produceHarvested: true,
           createdAt: true,
-          croType: {
+          cropType: {
             select: {
               id: true,
               name: true,
@@ -269,7 +269,7 @@ export class ReportsService {
 
       // Process the data to create hierarchical aggregation
       const cropAggregation = rawSeasons.reduce((acc, season) => {
-        const cropId = season.croType.crop.id;
+        const cropId = season.cropType.crop.id;
         const cropTypeId = season.cropTypeId;
         const produceHarvested = (season.produceHarvested) || 0;
 
@@ -277,7 +277,7 @@ export class ReportsService {
         if (!acc[cropId]) {
           acc[cropId] = {
             cropId,
-            cropName: season.croType.crop.name,
+            cropName: season.cropType.crop.name,
             totalProduce: 0,
             cropTypes: {},
             _count: 0,
@@ -292,7 +292,7 @@ export class ReportsService {
         if (!acc[cropId].cropTypes[cropTypeId]) {
           acc[cropId].cropTypes[cropTypeId] = {
             cropTypeId,
-            cropTypeName: season.croType.name,
+            cropTypeName: season.cropType.name,
             totalProduce: 0,
             _count: 0,
             dateRange: {

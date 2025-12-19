@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { LocationService, LocationWithChildren, LocationWithParent } from './location.service';
+import { LocationService, LocationWithChildren, LocationWithParent, LocationMasterItem } from './location.service';
 import { ApiParam, ApiTags } from '@nestjs/swagger';
 import { Allow } from 'src/decorators/allow.decorator';
 import { Location, locationLevel } from '@prisma/client';
@@ -70,6 +70,19 @@ export class LocationController {
         try {
             const data = await this.locationService.getAllLocationLevels();
             return new ApiResponse<locationLevel[]>(true, "Success", data, 200);
+        } catch (e) {
+            return new ApiResponse(false, e.message, null, 400);
+        }
+    }
+
+    @Get('/master')
+    async getLocationMaster(): Promise<ApiResponse<{ levels: locationLevel[], locations: LocationMasterItem[] }>> {
+        try {
+            const [levels, locations] = await Promise.all([
+                this.locationService.getAllLocationLevels(),
+                this.locationService.getLocationMaster(),
+            ]);
+            return new ApiResponse(true, "Success", { levels, locations }, 200);
         } catch (e) {
             return new ApiResponse(false, e.message, null, 400);
         }

@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { log } from 'console';
 import { Request } from 'express';
 import { UsersService } from 'src/users/users.service';
 
@@ -27,10 +26,33 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException("Please Login");
         }
         try {
-            const payload = await this.jwtService.verify(token, { secret: process.env.SECRET_KEY })
-            if (!this.userService.findOne(payload.id))
-                return false
-            request.user = payload;
+            const payload: any = await this.jwtService.verify(token, { secret: process.env.SECRET_KEY })
+            if (payload?.tokenType === 'ONBOARDING') {
+                throw new UnauthorizedException("Complete onboarding to continue");
+            }
+
+            const user = await this.userService.findOne(payload.id);
+            if (!user) {
+                throw new UnauthorizedException("Invalid token");
+            }
+
+            const baseRole = user?.role?.name ?? user?.role;
+            const activeRole = user?.activeRole ?? payload?.activeRole;
+
+            const allowedRoles =
+                baseRole === 'UMUFASHAMYUMVIRE'
+                    ? ['UMUFASHAMYUMVIRE', 'FARMER']
+                    : [baseRole];
+
+            const effectiveRole = allowedRoles.includes(activeRole) ? activeRole : baseRole;
+
+            // Set both activeRole and effectiveRole for consistency
+            (user as any).activeRole = effectiveRole;
+            (user as any).effectiveRole = effectiveRole;
+            request.user = user;
+            
+            // Debug log for troubleshooting authorization issues
+            console.log(`Auth: User ${user.id} - baseRole: ${baseRole}, activeRole from JWT: ${payload?.activeRole}, effectiveRole: ${effectiveRole}`);
         } catch (error) {
             throw new UnauthorizedException(error.message);
         }

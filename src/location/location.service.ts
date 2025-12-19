@@ -20,6 +20,13 @@ export type LocationWithChildren = Prisma.LocationGetPayload<{
     }
 }>
 
+export type LocationMasterItem = {
+    id: number;
+    name: string;
+    locationId: number | null;
+    locationLevelId: number;
+}
+
 @Injectable()
 export class LocationService {
     prisma: PrismaClient = new PrismaClient()
@@ -222,6 +229,21 @@ export class LocationService {
 
     async getAllLocationLevels(): Promise<locationLevel[]> {
         return this.databaseService.locationLevel.findMany()
+    }
+
+    async getLocationMaster(): Promise<LocationMasterItem[]> {
+        return this.databaseService.location.findMany({
+            select: {
+                id: true,
+                name: true,
+                locationId: true,
+                locationLevelId: true,
+            },
+            orderBy: [
+                { locationLevelId: 'asc' },
+                { name: 'asc' },
+            ]
+        })
     }
 
     async getLOcationLevelById(id: number): Promise<locationLevel> {

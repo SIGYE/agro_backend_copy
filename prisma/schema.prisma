@@ -63,6 +63,12 @@ enum CollectiveType {
   NON_COLLECTIVE
 }
 
+enum FarmerProfileChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -77,6 +83,30 @@ enum OrderType {
   FARMER
   COLLECTIVE_COOPERATIVE
   NON_COLLECTIVE_COOPERATIVE
+}
+
+enum PaymentMethod {
+  MOMO
+  CARD
+}
+
+enum PaymentStatus {
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum NotificationType {
+  ORDER_REQUEST
+  ORDER_ACCEPTED
+  ORDER_REJECTED
+  PAYMENT_REQUIRED
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  ORDER_STATUS_CHANGED
+  PROFILE_CHANGE_REQUESTED
+  PROFILE_CHANGE_APPROVED
+  PROFILE_CHANGE_REJECTED
 }
 
 enum BusinessType {
@@ -119,8 +149,11 @@ model User {
   nationalId          String?            @unique
   password            String
   otp                 String?
+  otpExpiresAt        DateTime?
+  otpUsedAt           DateTime?
   code                String?
   isDefaultPassword   Boolean            @default(false)
+  activeRole          String?
   roleId              String
   role                Role               @relation(fields: [roleId], references: [id], onDelete: Cascade)
   status              Status             @default(ACTIVE)
@@ -136,15 +169,20 @@ model User {
   cooperativeManager  Cooperative[]
   locationChildrenIds String?
 
-  diseases           Disease[]            @relation("DiseaseCreatedBy")
-  pests              Pest[]               @relation("PestCreatedBy")
-  vaccinations       Vaccination[]        @relation("VaccinationCreatedBy")
-  vitamins           Vitamin[]            @relation("VitaminCreatedBy")
-  feterlizers        Feterlizer[]         @relation("FeterlizerCreatedBy")
-  crops              Crop[]               @relation("CropCreatedBy")
-  animals            Animal[]             @relation("AnimalCreatedBy")
-  orderStatusChanges OrderStatusHistory[] @relation("OrderStatusChanges")
-  buyerProfile       Buyer?               @relation("BuyerProfile")
+  diseases                     Disease[]                    @relation("DiseaseCreatedBy")
+  pests                        Pest[]                       @relation("PestCreatedBy")
+  vaccinations                 Vaccination[]                @relation("VaccinationCreatedBy")
+  vitamins                     Vitamin[]                    @relation("VitaminCreatedBy")
+  feterlizers                  Feterlizer[]                 @relation("FeterlizerCreatedBy")
+  crops                        Crop[]                       @relation("CropCreatedBy")
+  animals                      Animal[]                     @relation("AnimalCreatedBy")
+  orderStatusChanges           OrderStatusHistory[]         @relation("OrderStatusChanges")
+  buyerProfile                 Buyer?                       @relation("BuyerProfile")
+  notifications                Notification[]               @relation("UserNotifications")
+  notificationsSent            Notification[]               @relation("UserNotificationActor")
+  paymentTransactionsRecorded  PaymentTransaction[]         @relation("PaymentRecordedBy")
+  farmerProfileChangeRequests  FarmerProfileChangeRequest[] @relation("FarmerProfileChangeRequestRequester")
+  farmerProfileChangeApprovals FarmerProfileChangeRequest[] @relation("FarmerProfileChangeRequestApprover")
 
   @@map("user")
 }
@@ -345,7 +383,7 @@ model Season {
   endDate                           DateTime
   seasonStatus                      SeasonStatus                       @default(ON_GOING)
   cropTypeId                        String
-  croType                           CropType                           @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
+  cropType                          CropType                           @relation(fields: [cropTypeId], references: [id], onDelete: Cascade)
   seedStrainId                      String
   seedStrain                        SeedStrain                         @relation(fields: [seedStrainId], references: [id], onDelete: Cascade)
   farmerId                          String?
@@ -403,18 +441,42 @@ model AnimalProduct {
 }
 
 model Farmer {
-  id                        String                     @id @default(uuid())
-  userId                    String                     @unique
-  user                      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                        String                       @id @default(uuid())
+  userId                    String                       @unique
+  user                      User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   cropFarmerRegistrations   CropFarmerRegistration[]
   animalFarmerRegistrations AnimalFarmerRegistration[]
   seasons                   Season[]
-  cooperative               Cooperative?               @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative               Cooperative?                 @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   cooperativeId             String?
   cropListings              CropListing[]
   orders                    Order[]
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
+  profileChangeRequests     FarmerProfileChangeRequest[]
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+}
+
+model FarmerProfileChangeRequest {
+  id               String                           @id @default(uuid())
+  createdAt        DateTime                         @default(now())
+  updatedAt        DateTime                         @updatedAt
+  farmerId         String
+  farmer           Farmer                           @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  requesterUserId  String
+  requester        User                             @relation("FarmerProfileChangeRequestRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  approverUserId   String?
+  approver         User?                            @relation("FarmerProfileChangeRequestApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  status           FarmerProfileChangeRequestStatus @default(PENDING)
+  requestedChanges Json
+  reason           String?
+  resolvedAt       DateTime?
+  resolutionNote   String?
+
+  @@index([farmerId])
+  @@index([requesterUserId])
+  @@index([approverUserId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Cooperative {
@@ -755,25 +817,32 @@ model CropListing {
 }
 
 model Order {
-  id              String               @id @default(uuid())
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  buyerId         String
-  buyer           Buyer                @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade) // References Buyer
-  farmerId        String?
-  cooperativeId   String?
-  farmer          Farmer?              @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  cooperative     Cooperative?         @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  orderType       OrderType
-  orderNumber     String               @unique
-  totalAmount     Float
-  currency        String               @default("RWF")
-  status          OrderStatus          @default(PENDING)
-  deliveryAddress String?
-  deliveryDate    DateTime?
-  deliveryNotes   String?
-  orderItems      OrderItem[]
-  statusHistory   OrderStatusHistory[]
+  id                      String               @id @default(uuid())
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  buyerId                 String
+  buyer                   Buyer                @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade) // References Buyer
+  farmerId                String?
+  cooperativeId           String?
+  farmer                  Farmer?              @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cooperative             Cooperative?         @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  orderType               OrderType
+  orderNumber             String               @unique
+  itemsSubtotal           Float                @default(0)
+  deliveryFee             Float                @default(0)
+  platformFee             Float                @default(0)
+  taxAmount               Float                @default(0)
+  totalAmount             Float
+  currency                String               @default("RWF")
+  status                  OrderStatus          @default(PENDING)
+  deliveryAddress         String?
+  deliveryDate            DateTime?
+  deliveryNotes           String?
+  buyerPickupConfirmedAt  DateTime?
+  sellerPickupConfirmedAt DateTime?
+  orderItems              OrderItem[]
+  statusHistory           OrderStatusHistory[]
+  paymentTransactions     PaymentTransaction[]
 
   @@index([buyerId])
   @@index([status])
@@ -812,6 +881,48 @@ model OrderStatusHistory {
   changedByUser   User        @relation("OrderStatusChanges", fields: [changedByUserId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+  @@index([createdAt])
+}
+
+model PaymentTransaction {
+  id               String        @id @default(uuid())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  orderId          String
+  order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  attemptNumber    Int           @default(1)
+  status           PaymentStatus
+  method           PaymentMethod
+  amount           Float
+  currency         String        @default("RWF")
+  momoPhoneNumber  String?
+  cardLast4        String?
+  notes            String?
+  metadata         Json?
+  recordedByUserId String?
+  recordedByUser   User?         @relation("PaymentRecordedBy", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Notification {
+  id              String           @id @default(uuid())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  recipientUserId String
+  recipient       User             @relation("UserNotifications", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  actorUserId     String?
+  actor           User?            @relation("UserNotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  type            NotificationType
+  title           String
+  message         String
+  data            Json?
+  readAt          DateTime?
+
+  @@index([recipientUserId])
+  @@index([readAt])
   @@index([createdAt])
 }
 
